@@ -22,6 +22,7 @@ header{height:64px;position:sticky;top:0;z-index:20;display:flex;align-items:cen
 @media(max-width:640px){header{height:auto;min-height:64px;padding:10px 14px;gap:8px}.brand span:not(.brand-mark){display:none}.back{font-size:0;min-width:40px;justify-content:center}.back:after{content:'←';font-size:18px}.controls{gap:5px}.control{padding:8px 10px;min-width:40px;justify-content:center}.layout{padding-inline:16px}h1{font-size:38px}.lead{font-size:16px}pre{font-size:11px;padding:17px}.footer{display:block}.footer a{display:inline-flex;align-items:center;min-height:44px;margin-top:12px}}
 @media(max-width:400px){h1{font-size:33px}.section{padding:40px 0}.mode,.route-stage{padding:16px}.brand-mark{width:38px;height:38px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+html[lang="en"] .api-doc-ru, html:not([lang="en"]) .api-doc-en { display:none; }
 </style>
 <script src="app-content.js"></script>
 </head>
@@ -40,6 +41,23 @@ header{height:64px;position:sticky;top:0;z-index:20;display:flex;align-items:cen
   "suggestions": ["Пример", "Подробнее"]
 }</pre></div></div></section>
 
+<section class="section" id="openai-api">
+  <p class="eyebrow">OpenAI API · Chat Completions</p>
+  <h2><span class="api-doc-ru">Как устроен запрос к модели</span><span class="api-doc-en">How a model request works</span></h2>
+  <div class="api-doc-ru">
+    <p>API — интерфейс, через который приложение обращается к модели. Этот чат отправляет JSON на <code>POST /chat/completions</code>: <code>model</code> выбирает модель, а <code>messages[]</code> содержит инструкции и реплики. OpenAI-совместимый сервер использует похожий формат, но набор поддерживаемых параметров может отличаться.</p>
+    <p><code>temperature</code> и <code>top_p</code> регулируют выбор следующего токена; меняйте один из них за раз. <code>max_completion_tokens</code> ограничивает ответ, <code>n</code> запрашивает варианты. Доступные значения и ограничения зависят от модели; кнопки «?» у полей показывают справку и границы этой формы.</p>
+    <p><code>tools</code> описывает функции. Модель возвращает имя и аргументы; приложение выполняет действие или вы вводите результат вручную. Затем результат отправляется модели для продолжения. Сворачивание карточки скрывает только редактор и не удаляет функцию из запроса.</p>
+    <p>Перед отправкой проверьте предпросмотр JSON. После ответа сравните <code>choices</code>, <code>finish_reason</code> и <code>usage</code> в полном ответе провайдера.</p>
+  </div>
+  <div class="api-doc-en">
+    <p>The API lets an app communicate with a model. This chat posts JSON to <code>/chat/completions</code>: <code>model</code> selects the model and <code>messages[]</code> carries instructions and conversation turns. Compatible providers can support different subsets of parameters.</p>
+    <p><code>temperature</code> and <code>top_p</code> affect token selection; adjust one at a time. <code>max_completion_tokens</code> limits output and <code>n</code> requests alternatives. The question marks beside fields explain the form limits and effects.</p>
+    <p><code>tools</code> defines functions. The model requests a function and arguments; the app executes it or you enter its result, then send that result back for continuation. Collapsing a function hides its editor without removing it from the request.</p>
+    <p>Inspect the JSON preview before sending, then compare <code>choices</code>, <code>finish_reason</code> and <code>usage</code> in the provider response.</p>
+  </div>
+  <p><a href="https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create" target="_blank" rel="noopener noreferrer">OpenAI · Chat Completions reference ↗</a><br><a href="https://developers.openai.com/api/docs/guides/function-calling" target="_blank" rel="noopener noreferrer">OpenAI · Function calling ↗</a></p>
+</section>
 <section class="section" id="routes"><p class="eyebrow" data-t="routeEyebrow">Один чат · три маршрута</p><h2 data-t="routeTitle">Меняется путь, а не привычный чат</h2><p class="section-intro" data-t="routeIntro">Нажмите карточку: это только интерактивная схема будущих настроек, она не переключает реальное подключение.</p><div class="modes" role="tablist"><button class="mode active" role="tab" aria-selected="true" data-route="n8n"><span class="tag now" data-t="now">Работает сейчас</span><h3>n8n webhook</h3><p data-t="n8nDesc">Гибкий визуальный workflow: модель, базы и сервисы соединяются в n8n.</p><div class="mode-path">UI → n8n → services → JSON</div></button><button class="mode" role="tab" aria-selected="false" data-route="direct"><span class="tag" data-t="planned">Планируется</span><h3>Direct LLM API</h3><p data-t="directDesc">Прямой учебный запрос к OpenAI-совместимому API NeuralDeep.</p><div class="mode-path">UI → NeuralDeep → UI</div></button><button class="mode" role="tab" aria-selected="false" data-route="python"><span class="tag" data-t="planned">Планируется</span><h3>Python backend</h3><p data-t="pythonDesc">Сервер хранит ключи и управляет логикой через LangChain или LangGraph.</p><div class="mode-path">UI → Python → NeuralDeep</div></button></div><div class="route-diagram" aria-live="polite"><div class="route-end"><small data-t="diagramInput">Всегда одинаковый вход</small><h3 data-t="diagramMessage">Сообщение пользователя</h3><code>{ message, sessionId }</code></div><div class="route-rail"><span>→</span></div><div class="route-stage" id="route-panel" role="tabpanel"></div><div class="route-rail"><span>→</span></div><div class="route-end"><small data-t="diagramOutput">Всегда одинаковый выход</small><h3 data-t="diagramAnswer">Ответ в чате</h3><code>{ message: "…" }</code></div></div>
 <h3 style="margin-top:32px" data-t="switchTitle">Концепт переключателя в UI</h3><p class="section-intro" data-t="switchText">В бургер-меню появится раздел «Режим подключения» с тремя карточками, а в десктопной шапке — компактный индикатор активного режима. После выбора видны только нужные поля: webhook URL; либо API URL, ключ и модель; либо URL Python-бэкенда. Поле сообщения и формат ответа не меняются.</p></section>
 

@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.1.2';
+const APP_VERSION = '1.1.4';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -1835,6 +1835,7 @@ const CFG_OPENAI_PRESETS = [{
     <button class="cfg-btn profile-action" id="openai-profile-delete" type="button" onclick="deleteOpenAIProfile()" data-i18n-title="profileDeleteAction" data-i18n-aria-label="profileDeleteAction" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg></button>
   </div>
   <div class="openai-section-label" data-i18n="openaiApiSection">OpenAI API request</div>
+  <a class="api-docs-link" href="documentation.html#openai-api" data-i18n="openaiDocsLink">OpenAI API: пояснения и справочник →</a>
   <label class="api-field"><span data-i18n="openaiBaseUrl">Base URL</span><input class="api-input" id="openai-base-url" type="text" inputmode="url" value="" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"></label>
   <label class="api-field"><span data-i18n="openaiApiKey">API key · saved in this browser</span><div class="api-secret-wrap"><input class="api-input" id="openai-api-key" type="password" autocomplete="new-password" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="api-eye" id="openai-eye-btn" type="button" onclick="toggleApiKeyVisibility()" data-i18n-title="openaiShowKey" data-i18n-aria-label="openaiShowKey" title="Show key" aria-label="Show key"><svg id="openai-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></label>
   <label class="api-field"><span data-i18n="openaiModel">Model</span><input class="api-input" id="openai-model" type="text" value="qwen3.8-27b" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true"></label>
@@ -1858,6 +1859,7 @@ const CFG_OPENAI_PRESETS = [{
         <label class="api-field"><span data-i18n="openaiForcedTool">Forced function name</span><input class="api-input" id="openai-forced-tool" type="text" value="geocode_city" maxlength="64" autocomplete="off" spellcheck="false"></label>
         <div class="api-toggle-row"><span><strong data-i18n="openaiParallelTools">Parallel tool calls</strong><small data-i18n="openaiParallelToolsHint">Allow several calls in one response</small></span><label class="switch"><input type="checkbox" id="openai-parallel-tools" checked><span class="slider"></span></label></div>
       </div>
+      <div class="tool-fold-actions"><button class="cfg-btn" id="tools-fold-toggle" type="button" onclick="toggleAllToolDefinitions()" aria-controls="openai-tool-definitions" aria-expanded="false" data-i18n="toolsExpandAll">Развернуть все функции</button></div>
       <div class="tool-definitions" id="openai-tool-definitions"></div>
       <button class="cfg-btn tool-add" type="button" onclick="addOpenAITool()" data-i18n="openaiAddTool">+ Add function</button>
 
@@ -2092,6 +2094,9 @@ function copyText(text) {
 // ── I18N ──
 const i18n = {
   en: {
+    toolsCollapseAll: 'Collapse all functions',
+    toolsExpandAll: 'Expand all functions',
+    openaiDocsLink: 'OpenAI API: explanation and reference →',
     navLabs: 'Labs',
     navChat: 'Chat',
     btnNewSession:      'New Session',
@@ -2313,6 +2318,9 @@ const i18n = {
     chatClearedSub:     'Start a new conversation',
   },
   ru: {
+    toolsCollapseAll: 'Свернуть все функции',
+    toolsExpandAll: 'Развернуть все функции',
+    openaiDocsLink: 'OpenAI API: пояснения и справочник →',
     navLabs: 'Лабы',
     navChat: 'Чат',
     btnNewSession:      'Новая сессия',
@@ -3343,27 +3351,52 @@ function resetOpenAIToolTurn() {
   panel.hidden = true; panel.replaceChildren(); document.body.appendChild(panel);
 }
 
+function syncToolFoldToggle() {
+  const rows = [...document.querySelectorAll('.tool-definition')];
+  const expanded = rows.length > 0 && rows.every(row => row.open);
+  const button = document.getElementById('tools-fold-toggle');
+  button.dataset.i18n = expanded ? 'toolsCollapseAll' : 'toolsExpandAll';
+  button.textContent = t(button.dataset.i18n);
+  button.setAttribute('aria-expanded', String(expanded));
+  button.disabled = rows.length === 0;
+}
+function toggleAllToolDefinitions() {
+  const rows = [...document.querySelectorAll('.tool-definition')];
+  const expand = !rows.every(row => row.open);
+  rows.forEach(row => { row.open = expand; });
+  syncToolFoldToggle();
+}
 function renderOpenAITools(tools = []) {
   const container = document.getElementById('openai-tool-definitions');
+  const expanded = [...container.children].map(row => row.open);
   container.innerHTML = '';
-  tools.forEach(tool => {
-    const row = document.createElement('section');
+  tools.forEach((tool, index) => {
+    const row = document.createElement('details');
+    row.open = expanded[index] ?? false;
     row.className = 'tool-definition';
     row.innerHTML = `<label class="api-field"><span>${t('openaiToolName')}</span><input class="api-input" data-tool-field="name" maxlength="64" autocomplete="off" spellcheck="false"></label><label class="api-field"><span>${t('openaiToolDescription')}</span><input class="api-input" data-tool-field="description" autocomplete="off"></label><button class="cfg-btn tool-remove" type="button" title="${t('openaiRemoveTool')}" aria-label="${t('openaiRemoveTool')}">×</button><label class="api-field tool-definition-schema"><span>${t('openaiToolParameters')}</span><textarea class="api-textarea" data-tool-field="parameters" autocomplete="off" spellcheck="false"></textarea></label><div class="api-toggle-row"><span><strong>${t('openaiToolStrict')}</strong></span><label class="switch"><input type="checkbox" data-tool-field="strict"><span class="slider"></span></label></div>`;
     row.querySelector('[data-tool-field="name"]').value = tool.name || '';
     row.querySelector('[data-tool-field="description"]').value = tool.description || '';
     row.querySelector('[data-tool-field="parameters"]').value = tool.parameters || CFG_OPENAI_EMPTY_TOOL.parameters;
     row.querySelector('[data-tool-field="strict"]').checked = Boolean(tool.strict);
-    row.querySelector('.tool-remove').onclick = () => { row.remove(); onOpenAIToolDraftChange(); commitOpenAISettings(); };
+    row.querySelector('.tool-remove').onclick = () => { row.remove(); syncToolFoldToggle(); onOpenAIToolDraftChange(); commitOpenAISettings(); };
     row.querySelectorAll('input, textarea').forEach(field => {
       field.addEventListener('input', onOpenAIToolDraftChange);
       field.addEventListener('change', onOpenAIToolDraftChange);
       field.addEventListener('blur', commitOpenAISettings);
     });
     renderToolHttpEditor(row, tool.http);
+    const body = document.createElement('div'); body.className = 'tool-definition-body';
+    body.append(...row.childNodes);
+    const summary = document.createElement('summary');
+    const updateName = () => { summary.textContent = (index + 1) + ' · ' + (row.querySelector('[data-tool-field="name"]').value.trim() || t('openaiToolName')); };
+    row.append(summary, body); updateName();
+    row.addEventListener('toggle', syncToolFoldToggle);
+    row.querySelector('[data-tool-field="name"]').addEventListener('input', updateName);
     container.appendChild(row);
   });
   syncOpenAIToolControls();
+  syncToolFoldToggle();
 }
 function syncOpenAIToolControls() {
   const enabled = document.getElementById('openai-tools-enabled').checked;
@@ -3382,6 +3415,7 @@ function addOpenAITool() {
   tools.push({ ...CFG_OPENAI_EMPTY_TOOL });
   renderOpenAITools(tools);
   onOpenAIToolDraftChange();
+  document.querySelector('.tool-definition:last-child').open = true;
   document.querySelector('.tool-definition:last-child [data-tool-field="name"]')?.focus();
 }
 function onOpenAIToolDraftChange() { updateOpenAIRequestPreview(); validateOpenAIDraft(); scheduleOpenAIAutosave(); }
@@ -4596,6 +4630,10 @@ async function fetchWithRequestDebug(endpoint, options) {
     // Keep the request visible through body parsing and HTTP/parse errors.
     contract.summary.status = response.ok ? 'ok' : 'error';
     contract.response = { http_status: response.status, status_text: response.statusText };
+    // Preserve the received body even when parsing or reply validation later fails.
+    const receivedBody = await response.clone().text();
+    try { contract.raw_response = JSON.parse(receivedBody); }
+    catch (_) { contract.raw_response = receivedBody; }
     contract.timing.elapsed_ms = Math.round(performance.now() - started);
     if (!response.ok) contract.error = `HTTP ${response.status}: ${response.statusText}`;
     return response;
@@ -4710,6 +4748,29 @@ function reSend(idx) {
   const input = document.getElementById('msg-input');
   input.value = text;
   sendMessage();
+}
+
+function openAIMessageText(message) {
+  const content = message?.content;
+  if (typeof content === 'string' && content.trim()) return content;
+  if (Array.isArray(content)) {
+    const text = content.map(part => typeof part === 'string' ? part : typeof part?.text === 'string' ? part.text : '').join('\n');
+    if (text.trim()) return text;
+  }
+  return typeof message?.refusal === 'string' ? message.refusal : '';
+}
+function openAIReasoning(message) {
+  return [message?.reasoning_content, message?.reasoning, message?.provider_specific_fields?.reasoning_content, message?.provider_specific_fields?.reasoning].find(value => typeof value === 'string' && value.trim()) || '';
+}
+function openAIReasoningNotice() {
+  return lang === 'ru' ? 'Сервер вернул рассуждение, но не финальный текст ответа. Рассуждение доступно ниже, исходный JSON — в полном ответе сервера.' : 'The server returned reasoning without a final answer. Reasoning is available below; the original JSON is in the full server response.';
+}
+function appendOpenAIReasoning(row, reasoning) {
+  if (!reasoning) return;
+  const details = document.createElement('details'); details.className = 'provider-reasoning';
+  const summary = document.createElement('summary'); summary.textContent = lang === 'ru' ? 'Рассуждение провайдера · не финальный ответ' : 'Provider reasoning · not a final answer';
+  const content = document.createElement('pre'); content.className = 'request-preview-code'; content.style.whiteSpace = 'pre-wrap'; content.style.overflowWrap = 'anywhere'; content.textContent = reasoning;
+  details.append(summary, content); row.querySelector('.bubble-wrap').append(details);
 }
 
 function appendError(msg, labelKey, hint) {
@@ -4928,13 +4989,16 @@ async function continueOpenAIWithToolResults() {
     hideTyping();
     const choice = data?.choices?.[0];
     const calls = choice?.message?.tool_calls || [];
-    const rawReply = choice?.message?.content || (calls.length ? calls.map(call => `${call.function?.name || 'function'} · ${call.id}`).join('\n') : t('errEmptyMsg'));
+    const reasoning = openAIReasoning(choice?.message);
+    const rawReply = openAIMessageText(choice?.message) || (calls.length ? calls.map(call => `${call.function?.name || 'function'} · ${call.id}`).join('\n') : reasoning ? openAIReasoningNotice() : '');
+    if (!rawReply) { appendError(t('errEmptyMsg'), 'errEmpty'); return; }
     const legacyPayload = extractLegacyReplyPayload(rawReply, true);
     const reply = legacyPayload?.reply_html || rawReply;
     const elapsed = Math.round(performance.now() - started);
     const row = appendMessage('agent', reply, `OpenAI · ${requestConfig.model}`);
     row.dataset.openaiMessage = JSON.stringify(choice.message);
     addOpenAIResponseView(row, rawReply, legacyPayload);
+    appendOpenAIReasoning(row, reasoning);
     appendDebug(row, adaptOpenAIDebug(data, { endpoint: openAIRequestEndpoint(requestConfig), payload, status: res.status, statusText: res.statusText, elapsed }));
     if (calls.length) showOpenAIToolResults(calls, payload, choice.message, row, requestConfig); else resetOpenAIToolTurn();
   } catch (err) {
@@ -4979,7 +5043,8 @@ async function sendOpenAIMessage(text) {
     hideTyping();
     const choice = data?.choices?.[0];
     const toolCalls = choice?.message?.tool_calls;
-    const rawReply = choice?.message?.content || (toolCalls?.length ? toolCalls.map(call => `${call.function?.name || 'function'} · ${call.id}`).join('\n') : '');
+    const reasoning = openAIReasoning(choice?.message);
+    const rawReply = openAIMessageText(choice?.message) || (toolCalls?.length ? toolCalls.map(call => `${call.function?.name || 'function'} · ${call.id}`).join('\n') : reasoning ? openAIReasoningNotice() : '');
     const legacyPayload = extractLegacyReplyPayload(rawReply, true);
     const reply = legacyPayload ? legacyPayload.reply_html || legacyPayload.text || rawReply : rawReply;
     if (!reply && !legacyPayload) { appendError(t('errEmptyMsg'), 'errEmpty'); return; }
@@ -4987,6 +5052,7 @@ async function sendOpenAIMessage(text) {
     const row = appendMessage('agent', reply, `OpenAI · ${requestConfig.model}`);
     row.dataset.openaiMessage = JSON.stringify(choice.message);
     addOpenAIResponseView(row, rawReply, legacyPayload);
+    appendOpenAIReasoning(row, reasoning);
     const debugPayload = adaptOpenAIDebug(data, {
           endpoint: openAIRequestEndpoint(requestConfig), payload,
           status: res.status, statusText: res.statusText, elapsed
@@ -5519,5 +5585,6 @@ function acceptConsent() {
 })();
 </script>
 <script src="app-navigation.js"></script>
+<script src="openai-field-help.js"></script>
 </body>
 </html>

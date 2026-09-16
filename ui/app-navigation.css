@@ -19,6 +19,24 @@
 #workspace .welcome { position: relative; top: auto; left: auto; transform: none; margin: auto; flex-shrink: 0; max-width: 540px; }
 #workspace .transport-settings-panel { position: static; width: 100%; min-height: 0; flex: 1; grid-template-columns: minmax(0, 1fr); padding: 12px; transition: none; }
 #workspace .transport-settings-panel.open { height: auto; max-height: none; overflow-y: auto; box-shadow: none; }
+#workspace #openai-settings { min-width: 0; max-width: 100%; overflow-x: hidden; scrollbar-gutter: stable; }
+#openai-settings .request-preview-content { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+#openai-settings .request-preview-content > *, #openai-settings .request-preview-line > * { min-width: 0; max-width: 100%; }
+#openai-settings .request-preview-code { width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; scrollbar-gutter: stable; }
+#openai-settings .request-preview-line code { overflow-wrap: anywhere; }
+#openai-settings .tool-definition { display: block; min-width: 0; padding: 0; }
+#openai-settings .tool-definition::before { display: none; }
+.tool-definition > summary { padding: 10px; cursor: pointer; color: var(--accent2); font: 600 11px var(--font-mono); overflow-wrap: anywhere; }
+.tool-definition-body { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr) auto; gap: 8px; padding: 9px; min-width: 0; }
+.tool-definition-body > * { min-width: 0; }
+.tool-fold-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.api-docs-link { grid-column: 1 / -1; color: var(--accent2); font-size: 11px; margin: 0 0 10px; }
+.api-help { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; width: 15px; height: 15px; margin-left: 5px; border: 1px solid var(--text-muted); border-radius: 50%; color: var(--text-muted); font: 10px/1 var(--font-ui); cursor: help; flex-shrink: 0; }
+.api-help:hover, .api-help:focus-visible { color: var(--accent2); border-color: currentColor; outline: 1px solid currentColor; outline-offset: 2px; }
+.profile-combo > .api-help { position: absolute; right: 35px; top: -8px; z-index: 2; background: var(--surface); }
+.profile-combo > .api-help[data-help-key="openai-profile-name"] { right: 55px; }
+#api-field-tooltip { position: fixed; z-index: 1500; width: max-content; max-width: min(330px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow-y: auto; white-space: pre-line; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: 12px/1.5 var(--font-ui); box-shadow: 0 5px 20px rgba(0,0,0,.25); pointer-events: none; }
+@media(max-width:640px) { .tool-definition-body { grid-template-columns: minmax(0, 1fr); } }
 #workspace .transport-settings-panel:not(.open) { display: none; }
 #workspace .transport-settings-panel > * { grid-column: 1 / -1; grid-row: auto; min-width: 0; }
 #workspace .api-settings-head { flex-wrap: wrap; gap: 8px; }
