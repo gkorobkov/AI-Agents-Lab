@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ai-agents-lab.gkorobkov.ru/sitemap.xml

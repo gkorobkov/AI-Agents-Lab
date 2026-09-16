@@ -5,7 +5,7 @@
   document.querySelector('body > header').after(workspace);
   const definitions = {
     chat: ['Чат', 'Chat'], settings: ['Настройки API', 'API settings'],
-    labs: ['Лабы', 'Labs', 'labs.html'], documentation: ['Документация', 'Documentation', 'documentation.html']
+    labs: ['Лабы', 'Labs', 'labs.html'], tools: ['Библиотека Tools', 'Tool library', 'tools.html'], documentation: ['Документация', 'Documentation', 'documentation.html']
   };
   const panels = {};
   let slots = ['chat', null];
@@ -26,6 +26,7 @@
     chat: document.querySelector('[data-app-page="chat"] svg').outerHTML,
     labs: document.querySelector('[data-app-page="labs"] svg').outerHTML,
     settings: document.querySelector('#mode-settings-btn svg').outerHTML,
+    tools: document.querySelector('[data-app-page="tools"] svg').outerHTML,
     documentation: icon('<path d="M4 3h11l5 5v13H4zM14 3v6h6M8 13h8M8 17h6"/>')
   };
   const actionIcons = {
@@ -88,7 +89,7 @@
       const caption = document.createElement('span'); caption.textContent = label(id);
       title.append(caption); title.title = label(id); head.append(title);
       panel.setAttribute('aria-label', label(id));
-      ['chat', 'settings', 'labs'].filter(candidate => !slots.includes(candidate)).forEach(candidate => {
+      ['chat', 'settings', 'labs', 'tools'].filter(candidate => !slots.includes(candidate)).forEach(candidate => {
         const split = slots.filter(Boolean).length > 1;
         const target = split ? slots.indexOf(id) : undefined;
         const targetStart = split ? target === 0 : side === 'start';
@@ -220,7 +221,7 @@
     if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button) return;
     const url = new URL(link.href, location.href); if (url.origin !== location.origin) return;
     const file = url.pathname.split('/').pop().replace(/\.html$/, '');
-    const page = link.dataset.appPage || (['labs', 'documentation'].includes(file) ? file : null);
+    const page = link.dataset.appPage || (['labs', 'documentation', 'tools'].includes(file) ? file : null);
     if (!page) return;
     event.preventDefault(); navigateApp(page, url.hash);
   });

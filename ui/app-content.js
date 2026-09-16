@@ -1,8 +1,8 @@
 // Standalone content URLs enter the same app shell; embedded pages omit their header.
 (() => {
-  const page = location.pathname.includes('labs') ? 'labs' : 'documentation';
+  const page = location.pathname.includes('labs') ? 'labs' : location.pathname.includes('tools') ? 'tools' : 'documentation';
   if (window === window.parent) {
-    location.replace('./?page=' + page + location.hash);
+    // Keep public content readable at its own URL for readers and search engines.
     return;
   }
   document.documentElement.classList.add('app-embedded');
@@ -15,7 +15,7 @@
     const url = new URL(link.href, location.href);
     if (url.origin !== location.origin) return;
     const file = url.pathname.split('/').pop().replace(/\.html$/, '');
-    if (!['index', 'labs', 'documentation', ''].includes(file) || url.pathname === location.pathname && url.hash) return;
+    if (!['index', 'labs', 'documentation', 'tools', ''].includes(file) || url.pathname === location.pathname && url.hash) return;
     event.preventDefault();
     parent.navigateApp(file === 'index' || file === '' ? 'chat' : file, url.hash);
   });

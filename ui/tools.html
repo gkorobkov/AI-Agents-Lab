@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tools / function calling — AI Agents Lab</title>
+<meta name="description" content="Библиотека инструментов для AI агентов в AI Agents Lab: Tools / function calling, JSON Schema, URL, параметры и проверка Open-Meteo Geocoding.">
+<link rel="canonical" href="https://ai-agents-lab.gkorobkov.ru/tools.html">
+  <script>try { document.documentElement.dataset.theme = localStorage.getItem('n8n_theme') === 'light' ? 'light' : 'dark'; } catch (_) {}</script>
+  <link rel="stylesheet" href="tools-page.css">
+  <script src="app-content.js"></script>
+</head>
+<body>
+  <header><a href="./?page=tools">AI Agents Lab · Открыть библиотеку в приложении / Open in app →</a></header>
+  <div class="tools-layout">
+    <aside class="library-nav">
+      <div class="eyebrow" data-i18n="library">БИБЛИОТЕКА</div>
+      <h1>Tools <span>/ function calling</span></h1>
+      <div id="library-list" class="library-list"></div>
+      <button id="create-tool" type="button" data-i18n="create">+ Свой инструмент</button>
+      <p class="nav-note" data-i18n="navNote">Настройте один раз. Подключайте к агенту и меняйте только нужные поля.</p>
+    </aside>
+    <main>
+      <section class="tool-intro">
+        <div class="intro-line"><span id="tool-kind" class="eyebrow"></span><span id="dirty-state" class="state"></span></div>
+        <h2 id="tool-title"></h2>
+        <p id="tool-summary" class="lead"></p>
+        <div id="official-links" class="official-links"></div>
+        <p class="note" data-i18n="modelNote">Модель видит имя, описание и схему аргументов. Она решает, когда запросить вызов функции. Сам HTTP-запрос выполняет приложение: наличие инструмента не гарантирует его вызов.</p>
+      </section>
+      <form id="tool-form">
+        <section>
+          <h3><span>01</span> <span data-i18n="definition">Что умеет инструмент</span></h3>
+          <div class="fields two"><label><span data-i18n="title">Название в библиотеке</span><input id="edit-title" required maxlength="120"></label><label><span data-i18n="name">Имя функции для модели</span><input id="edit-name" required pattern="[a-zA-Z0-9_-]{1,64}" spellcheck="false"></label></div>
+          <label><span data-i18n="description">Описание для модели</span><textarea id="edit-description" rows="5" required></textarea></label>
+          <p class="hint" data-i18n="descriptionHint">Объясните, когда вызывать функцию, какие данные передать и что будет в результате. По этому описанию модель также объясняет пользователю свои возможности.</p>
+          <details><summary data-i18n="schema">Аргументы модели · JSON Schema</summary><label><span>parameters</span><textarea id="edit-schema" class="code" rows="12" spellcheck="false" required></textarea></label><label class="check"><input id="edit-strict" type="checkbox"><span data-i18n="strict">Строгое соответствие схеме (strict)</span></label></details>
+        </section>
+        <section>
+          <h3><span>02</span> <span data-i18n="http">Куда отправлять запрос</span></h3>
+          <div class="fields endpoint"><label><span data-i18n="method">Метод</span><select id="edit-method"><option>GET</option><option>POST</option></select></label><label><span>URL</span><input id="edit-url" type="url" required spellcheck="false"></label></div>
+          <div class="subhead"><strong data-i18n="query">Параметры URL</strong><button id="add-mapping" type="button" class="small" data-i18n="addParameter">+ Параметр</button></div>
+          <p class="hint" data-i18n="mappingHint">Значение {{name}} берётся из аргумента модели. Обычный текст — постоянное значение, например language = ru.</p>
+          <div id="mappings"></div>
+          <details><summary data-i18n="advanced">Авторизация, тело запроса и описание библиотеки</summary>
+            <label><span data-i18n="body">Тело запроса (POST, шаблон JSON)</span><textarea id="edit-body" class="code" rows="3" spellcheck="false"></textarea></label>
+            <label><span data-i18n="auth">Авторизация</span><select id="edit-auth"><option value="none" data-i18n="authNone">Не требуется</option><option value="query" data-i18n="authQuery">API key в параметре URL</option><option value="header" data-i18n="authHeader">API key в заголовке</option></select></label>
+            <div id="auth-fields" hidden><div class="fields two"><label><span data-i18n="authName">Имя параметра / заголовка</span><input id="edit-auth-name" placeholder="apikey / Authorization"></label><label><span data-i18n="authPrefix">Префикс (если нужен)</span><input id="edit-auth-prefix" placeholder="Bearer "></label></div><label><span>API key</span><input id="edit-key" class="ym-hide-content" type="password" autocomplete="off"></label><p id="key-state" class="hint"></p><button id="clear-key" type="button" class="small" data-i18n="clearKey">Удалить ключ из сессии</button><p class="hint" data-i18n="keyHint">Ключ хранится только в текущей сессии браузера и привязан к серверу. Определение функции для модели его не содержит.</p></div>
+            <label><span data-i18n="summary">Пояснение в библиотеке</span><textarea id="edit-summary" rows="3"></textarea></label>
+            <div class="fields two"><label><span data-i18n="docs">Официальная документация</span><input id="edit-docs" type="url"></label><label><span data-i18n="provider">Сайт провайдера</span><input id="edit-provider" type="url"></label></div>
+          </details>
+        </section>
+        <section>
+          <h3><span>03</span> <span data-i18n="test">Проверить реальный вызов</span></h3>
+          <label><span data-i18n="arguments">Аргументы функции · JSON</span><textarea id="test-args" class="code" rows="4" spellcheck="false">{"name":"Москва"}</textarea></label>
+          <div class="actions"><button id="run-test" type="button" class="primary" data-i18n="run">Выполнить HTTP-запрос</button><button id="abort-test" type="button" hidden data-i18n="abort">Остановить</button></div>
+          <p class="hint" data-i18n="cors">Запрос выполняется из браузера. Сервер инструмента должен разрешать CORS.</p>
+          <div class="result"><div class="result-label" data-i18n="request">Запрос · без секретов</div><pre id="request-preview">—</pre></div>
+          <div class="result"><div id="test-status" class="result-label" role="status" data-i18n="response">Ответ сервера появится здесь</div><pre id="response-output" class="ym-hide-content">—</pre></div>
+        </section>
+        <div class="savebar"><div class="actions"><button id="save-tool" type="submit" data-i18n="saveCopy">Сохранить копию</button><button id="add-agent" type="button" class="primary" data-i18n="addAgent">Подключить к агенту →</button><button id="delete-tool" type="button" class="danger" hidden data-i18n="delete">Удалить</button></div><p id="page-status" role="status"></p></div>
+      </form>
+    </main>
+  </div>
+  <script src="tool-library.js"></script>
+  <script src="tools-page.js"></script>
+</body>
+</html>

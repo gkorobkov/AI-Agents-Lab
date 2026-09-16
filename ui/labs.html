@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Лабораторные работы — AI Agents Lab</title>
+<meta name="description" content="Лабораторные работы AI Agents Lab: изучение ИИ агентов, контекста диалога, параметров OpenAI API, JSON Schema и function calling.">
+<link rel="canonical" href="https://ai-agents-lab.gkorobkov.ru/labs.html">
   <script>try { document.documentElement.dataset.theme = localStorage.getItem('n8n_theme') === 'light' ? 'light' : 'dark'; } catch (_) {}</script>
   <style>
     :root { --bg:#12151d; --surface:#1a1e2c; --border:#303754; --text:#edf2ff; --muted:#a5b2cb; --accent:#4fffb0; --cyan:#00c8ff; --tint:rgba(0,200,255,.07); --mono:Consolas,'Courier New',monospace; }
@@ -37,7 +39,7 @@
       <div class="intro-actions"><a class="button primary" href="index.html">Открыть чат для практики →</a><p><a href="documentation.html#openai-api">Как устроен OpenAI API и что меняют параметры →</a></p></div>
       <div class="note"><p><strong>12 экспериментов, один принцип:</strong> меняйте только один независимый параметр за раз. Задания 1–7 и 12 выполняются в чате; для 8–11 нужен API-клиент преподавателя — этих полей пока нет в форме сайта.</p></div>
       <section id="prepare"><p class="eyebrow">Перед первым запросом</p><h2>Подготовьте рабочее место</h2>
-        <ol><li>Перейдите в чат по ссылке в хедере и примите соглашение. Выберите <strong>OpenAI API</strong> в хедере, затем нажмите значок инструментов для открытия настроек режима.</li><li>Выберите настроенный преподавателем профиль и нажмите <strong>Clone</strong>, чтобы проводить опыты в копии. Используйте предоставленные URL и модель.</li><li>Очистите <strong>«Системный промпт»</strong>, выключите <strong>«Отправлять предыдущие сообщения в OpenAI API»</strong> и <strong>Tools / function calling</strong>. Очистите чат.</li><li>Задайте параметры ниже. Включите режим <strong>«Дебаг раскрыт»</strong> кнопкой жука в хедере или в настройках.</li></ol>
+        <ol><li>Перейдите в чат по ссылке в хедере и примите соглашение. Выберите <strong>OpenAI API</strong> в хедере, затем нажмите значок шестерёнки для открытия настроек режима.</li><li>Выберите настроенный преподавателем профиль и нажмите <strong>Clone</strong>, чтобы проводить опыты в копии. Используйте предоставленные URL и модель.</li><li>Очистите <strong>«Системный промпт»</strong>, выключите <strong>«Отправлять предыдущие сообщения в OpenAI API»</strong> и <strong>Tools / function calling</strong>. Очистите чат.</li><li>Задайте параметры ниже. Включите режим <strong>«Дебаг раскрыт»</strong> кнопкой жука в хедере или в настройках.</li></ol>
         <div class="baseline"><strong>Контрольные настройки</strong><br><code>temperature: 0.7 · top_p: 1 · n: 1 · max_completion_tokens: 512</code></div>
         <p>Перед отправкой введите текст и проверьте <strong>«Предпросмотр запроса» → «Тело JSON»</strong>. После отправки раскройте <strong>Debug → «Запрос» / «Полный ответ»</strong>. Сохраняйте фактические JSON каждой попытки.</p>
         <p class="observe">Поля <code>choices</code> и <code>usage</code> ищите в полном ответе провайдера. Время выполнения и другие служебные данные UI — отдельные измерения интерфейса. Предпросмотр показывает запрос, но не является JSON-редактором.</p>

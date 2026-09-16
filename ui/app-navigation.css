@@ -48,6 +48,20 @@
 #workspace-separator:hover { background: var(--accent2); }
 #workspace.resizing iframe { pointer-events: none; }
 header > .icon-btn, header > .lang-btn { width: 22px; height: 22px; padding: 0; }
+#tool-library-btn { text-decoration:none; color:var(--accent2); }
+.tool-library-picker { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0; }
+.tool-library-picker select { flex:1 1 150px; min-width:0; }
+.tool-library-picker a { font-size:11px; color:var(--accent2); }
+.library-tool-intro { padding:10px; font-size:11px; color:var(--text-muted); }
+.library-tool-intro strong { color:var(--text); }
+.library-tool-intro code { display:block; overflow-wrap:anywhere; margin:8px 0; }
+.library-tool-intro button { margin:4px 6px 0 0; }
+.library-editor { margin:0 10px 10px; border-top:1px solid var(--border); }
+.library-editor > summary { padding:8px 0; cursor:pointer; color:var(--accent2); font-size:11px; }
+.library-editor .tool-definition-body, .library-editor .tool-http, .library-editor .tool-http-mapping { display:flex; flex-direction:column; gap:6px; }
+.library-override-label { display:flex; align-items:center; gap:5px; font-size:10px; color:var(--text-muted); margin-top:8px; }
+.library-override-label input { width:13px; height:13px; }
+.library-editor input:disabled, .library-editor textarea:disabled, .library-editor select:disabled { opacity:.65; }
 header > .lang-btn { display: inline-flex; align-items: center; justify-content: center; }
 #panel-side-btn { flex-shrink: 0; color: var(--accent2); margin-left: auto; }
 #panel-side-btn svg { width: 16px; height: 16px; }
