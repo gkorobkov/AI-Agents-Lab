@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.2.2';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -940,7 +940,32 @@ const CFG_OPENAI_PRESETS = [{
   .debug-section .dbg-copy { margin-left: auto; width: 24px; height: 24px; display: grid; place-items: center; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; }
   .debug-section .dbg-copy:hover, .debug-section .dbg-copy:focus-visible { color: var(--accent2); outline: 1px solid var(--accent2); }
   .debug-section pre { max-height: 320px; overflow: auto; border: 0; border-radius: 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; }
-  .debug-section[data-section="summary"] pre { max-height: 210px; color: var(--text); }
+  .debug-section[data-section="summary"] .debug-summary-text { display: flex; flex-wrap: wrap; gap: 3px 18px; padding: 5px 2px; white-space: normal; color: var(--text); }
+  .debug-summary-field { min-width: 0; overflow-wrap: anywhere; }
+  .debug-reasoning { margin-top: 5px; border-top: 1px solid var(--border); padding-top: 5px; }
+  .debug-block .debug-reasoning > summary { padding: 5px 7px; border-radius: 5px; background: rgba(0,200,255,.06); color: var(--accent2); font: 600 10px/1.5 var(--font-mono); white-space: normal; }
+  .debug-reasoning > summary::before { content: '›'; margin-right: 6px; }
+  .debug-reasoning[open] > summary::before { transform: rotate(90deg); }
+  .debug-view-toggle { display: inline-flex; margin-left: auto; border: 1px solid var(--border); border-radius: 5px; overflow: hidden; flex-shrink: 0; }
+  .debug-view-toggle button { border: 0; padding: 4px 6px; background: transparent; color: var(--text-muted); font: 9px var(--font-mono); cursor: pointer; }
+  .debug-view-toggle button[aria-pressed="true"] { background: rgba(0,200,255,.12); color: var(--accent2); }
+  .debug-view-toggle button:focus-visible { outline: 1px solid var(--accent2); outline-offset: -1px; }
+  .debug-view-toggle button:disabled { opacity: .4; cursor: default; }
+  .debug-section .debug-view-toggle + .dbg-copy { margin-left: 3px; flex-shrink: 0; }
+  .debug-json-tree { max-height: 320px; overflow: auto; padding: 8px 10px; font: 11px/1.6 var(--font-mono); }
+  .debug-json-tree[hidden], .debug-section pre[hidden] { display: none; }
+  .debug-json-children { padding-left: 14px; border-left: 1px solid var(--border); margin-left: 3px; }
+  .debug-json-leaf { padding-left: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .debug-block .debug-json-node > summary { display: block; padding: 1px 0; border: 0; background: transparent; font: inherit; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .debug-json-node > summary::before { content: '›'; display: inline-block; width: 13px; color: var(--accent2); }
+  .debug-json-node[open] > summary::before { content: '⌄'; }
+  .debug-json-node > summary:focus-visible { outline: 1px solid var(--accent2); outline-offset: -1px; }
+  .debug-reasoning-content { max-height: 180px; overflow: auto; overflow-wrap: anywhere; font: 11px/1.55 var(--font-mono); }
+  .debug-reasoning-content > :first-child { margin-top: 4px; }
+  .debug-reasoning-content > :last-child { margin-bottom: 0; }
+  .debug-reasoning-content p, .debug-reasoning-content ul, .debug-reasoning-content ol { margin: 5px 0; }
+  .debug-reasoning-content ul, .debug-reasoning-content ol { padding-left: 20px; }
+  .debug-reasoning-content h1, .debug-reasoning-content h2, .debug-reasoning-content h3 { font-size: 12px; margin: 6px 0; }
   .debug-section[data-section="summary"] { border: 0; background: transparent; }
   .debug-summary-heading { display: flex; align-items: center; padding: 8px 10px 0; color: #7ac1d4; font: 700 12px var(--font-mono); }
   .debug-summary-heading .dbg-chevron, .debug-summary-heading .debug-section-badge { display: none; }
@@ -951,6 +976,7 @@ const CFG_OPENAI_PRESETS = [{
     .debug-block > summary { white-space: normal; }
     .debug-section-badge { display: none; }
     .debug-section pre { max-height: 260px; font-size: 10px; }
+    .debug-json-tree { max-height: 260px; font-size: 10px; }
   }
 
   /* copy button always visible on agent messages */
@@ -2167,6 +2193,8 @@ const i18n = {
     debugError:         'Error',
     debugRequest:       'Request',
     debugResponse:      'Full response',
+    debugResponseHeaders: 'Response headers',
+    debugHeadersUnavailable: 'No response headers available (no HTTP response received).',
     debugBackend:       'Backend debug',
     debugTiming:        'Timing & usage',
     debugUiGenerated:   'UI-generated',
@@ -2379,7 +2407,7 @@ const i18n = {
     toastDebugOn:       'Debug-инфо видна в чате',
     toastDebugOff:      'Debug-инфо скрыта',
     debugLabel:         'Debug',
-    debugSummary:       'Debug',
+    debugSummary:       'Сводка',
     debugStatus:        'Статус',
     debugSuccess:       'Выполнено',
     debugPending:       'Ожидание ответа',
@@ -2395,6 +2423,8 @@ const i18n = {
     debugError:         'Ошибка',
     debugRequest:       'Запрос',
     debugResponse:      'Полный ответ',
+    debugResponseHeaders: 'Заголовки ответа',
+    debugHeadersUnavailable: 'Заголовки недоступны (HTTP-ответ не получен).',
     debugBackend:       'Debug бэкенда',
     debugTiming:        'Время и токены',
     debugUiGenerated:   'Сформировано UI',
@@ -4273,10 +4303,10 @@ function extractLegacyReplyPayload(content, enabled = true) {
   return null;
 }
 
-function renderAgentText(raw) {
+function renderAgentText(raw, allowHtml = true) {
   if (!raw) return '';
   const withHtml = typeof raw === 'string' ? raw : String(raw);
-  if (/<[a-z]/i.test(withHtml)) {
+  if (allowHtml && /<[a-z]/i.test(withHtml)) {
     const clean = withHtml.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)[^>]*>/g, (match, tag) => {
       if (tag.toLowerCase() === 'a') {
         if (match.startsWith('</')) return '</a>';
@@ -4626,6 +4656,9 @@ function formatDebugSummary(contract) {
   const info = contract.summary;
   const lines = [];
   const logic = readableAgentLogic(contract.agent_logic ?? contract.trace?.agent_logic);
+  lines.push(`${t('debugStatus')}: ${t(info.status === 'pending' ? 'debugPending' : info.status === 'error' ? 'debugError' : 'debugSuccess')}`);
+  if (info.model) lines.push(`${lang === 'ru' ? 'Модель' : 'Model'}: ${info.model}`);
+  if (contract.response?.http_status != null) lines.push(`HTTP: ${contract.response.http_status} ${contract.response.status_text || ''}`.trim());
   if (info.finish_reason) lines.push(`${t('debugFinish')}: ${info.finish_reason}`);
   const elapsed = contract.timing?.elapsed_ms;
   lines.push(`${t('debugElapsed')}: ${formatResponseTime(elapsed)}`);
@@ -4649,12 +4682,31 @@ function formatDebugSummary(contract) {
 
 function debugContractSections(contract, responseBadge = 'debugServerProvided') {
   const sections = [];
+  sections.push({ id: 'summary', titleKey: 'debugSummary', badgeKey: 'debugUiGenerated', data: formatDebugSummary(contract) });
   sections.push({ id: 'request', titleKey: 'debugRequest', badgeKey: 'debugUiSent', data: contract.request, open: contract.summary.status === 'pending' });
-  sections.push({ id: 'response', titleKey: 'debugResponse', badgeKey: responseBadge, data: contract.raw_response });
+  sections.push({ id: 'response', titleKey: 'debugResponse', badgeKey: responseBadge, data: contract.raw_response_text ?? contract.raw_response });
+  if (contract.summary.status === 'error' || contract.raw_response == null || contract.raw_response === '') {
+    sections.push({ id: 'headers', titleKey: 'debugResponseHeaders', badgeKey: responseBadge, data: contract.response?.headers ?? t('debugHeadersUnavailable') });
+  }
   return sections;
 }
 function renderDebugJson(container, content) {
   try { JSON.parse(content); } catch (_) { container.textContent = content; return; }
+  // Format whitespace only: preserve number precision, duplicate keys and string escapes.
+  const parts = content.match(/"(?:\\.|[^"\\])*"|[{}\[\],:]|[^\s{}\[\],:]+/g) || [];
+  let depth = 0;
+  content = parts.map((part, index) => {
+    if (part === '{' || part === '[') {
+      depth++;
+      return part + (/^[}\]]$/.test(parts[index + 1] || '') ? '' : '\n' + '  '.repeat(depth));
+    }
+    if (part === '}' || part === ']') {
+      depth--;
+      return (/^[{\[]$/.test(parts[index - 1] || '') ? '' : '\n' + '  '.repeat(depth)) + part;
+    }
+    if (part === ',') return ',\n' + '  '.repeat(depth);
+    return part === ':' ? ': ' : part;
+  }).join('');
   const tokens = /"(?:\\.|[^"\\])*"(?=\s*:)|"(?:\\.|[^"\\])*"|-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|\b(?:true|false|null)\b/g;
   let offset = 0;
   for (const match of content.matchAll(tokens)) {
@@ -4665,6 +4717,47 @@ function renderDebugJson(container, content) {
     offset = match.index + match[0].length;
   }
   container.appendChild(document.createTextNode(content.slice(offset)));
+}
+function renderDebugTree(container, content) {
+  // Keep literal tokens intact, including large numbers and duplicate object keys.
+  const tokens = content.match(/"(?:\\.|[^"\\])*"|[{}\[\],:]|[^\s{}\[\],:]+/g) || [];
+  const stack = [];
+  let root;
+  tokens.forEach((token, index) => {
+    if (token === ':' || token === ',') return;
+    if (token === '}' || token === ']') { stack.pop(); return; }
+    const parent = stack[stack.length - 1];
+    if (tokens[index + 1] === ':') { parent.nextKey = token; return; }
+    const node = { key: parent ? parent.type === '[' ? String(parent.children.length) : parent.nextKey : '', type: token, children: [] };
+    if (parent) parent.children.push(node); else root = node;
+    if (token === '{' || token === '[') stack.push(node);
+  });
+  function appendNode(parent, node, open = false) {
+    const branch = node.type === '{' || node.type === '[';
+    const el = document.createElement(branch ? 'details' : 'div');
+    el.className = branch ? 'debug-json-node' : 'debug-json-leaf';
+    const line = branch ? document.createElement('summary') : el;
+    if (node.key) {
+      const key = document.createElement('span'); key.className = 'json-key'; key.textContent = node.key + ': '; line.appendChild(key);
+    }
+    const value = document.createElement('span');
+    value.className = branch ? '' : node.type.startsWith('"') ? 'json-string' : /^(true|false|null)$/.test(node.type) ? 'json-literal' : 'json-number';
+    value.textContent = branch ? `${node.type}${node.children.length ? '…' : ''}${node.type === '{' ? '}' : ']'} (${node.children.length})` : node.type;
+    line.appendChild(value);
+    if (branch) {
+      el.appendChild(line);
+      let loaded = false;
+      const populate = () => {
+        if (!el.open || loaded) return;
+        loaded = true;
+        const children = document.createElement('div'); children.className = 'debug-json-children';
+        node.children.forEach(child => appendNode(children, child)); el.appendChild(children);
+      };
+      el.addEventListener('toggle', populate); el.open = open; populate();
+    }
+    parent.appendChild(el);
+  }
+  if (root) appendNode(container, root, true);
 }
 function debugText(value) { return typeof value === 'string' ? value : JSON.stringify(value, null, 2); }
 
@@ -4685,11 +4778,16 @@ async function fetchWithRequestDebug(endpoint, options) {
     const response = await fetch(endpoint, options);
     // Keep the request visible through body parsing and HTTP/parse errors.
     contract.summary.status = response.ok ? 'ok' : 'error';
-    contract.response = { http_status: response.status, status_text: response.statusText };
+    contract.response = { http_status: response.status, status_text: response.statusText, headers: Object.fromEntries(response.headers.entries()) };
     // Preserve the received body even when parsing or reply validation later fails.
     const receivedBody = await response.clone().text();
+    contract.raw_response_text = receivedBody;
     try { contract.raw_response = JSON.parse(receivedBody); }
     catch (_) { contract.raw_response = receivedBody; }
+    const data = contract.raw_response;
+    contract.summary.model = data?.model ?? contract.summary.model;
+    contract.summary.finish_reason = data?.choices?.[0]?.finish_reason ?? null;
+    contract.usage = normalizeUsage(data?.usage);
     contract.timing.elapsed_ms = Math.round(performance.now() - started);
     if (!response.ok) contract.error = `HTTP ${response.status}: ${response.statusText}`;
     return response;
@@ -4706,6 +4804,7 @@ async function fetchWithRequestDebug(endpoint, options) {
 
 function appendDebug(row, debugData) {
   let pendingOpen = null;
+  const receivedContract = pendingNetworkDebug?.debugContract;
   if (pendingNetworkDebug && pendingNetworkDebug !== row) {
     pendingOpen = pendingNetworkDebug.querySelector('.debug-block')?.open;
     pendingNetworkDebug.remove();
@@ -4714,6 +4813,10 @@ function appendDebug(row, debugData) {
   const contract = debugData?.schema === 'ai-agent-debug/v1' ? debugData : createDebugContract({
     summary: { transport: row.dataset.transport || 'legacy' }, trace: debugData, rawResponse: debugData
   });
+  if (receivedContract && receivedContract !== contract) {
+    contract.raw_response_text = receivedContract.raw_response_text;
+    if (receivedContract.response) contract.response = { ...contract.response, headers: receivedContract.response.headers };
+  }
   const responseBadge = contract.summary.transport === 'stub' || contract.summary.transport === 'webhook-inline' ? 'debugLocalProvided' : 'debugServerProvided';
   const debugPackage = { sections: debugContractSections(contract, responseBadge) };
   const wrap = row.querySelector('.bubble-wrap');
@@ -4763,19 +4866,57 @@ function appendDebug(row, debugData) {
     const pre = document.createElement(safeSection.id === 'summary' ? 'div' : 'pre');
     if (safeSection.id === 'summary') pre.className = 'debug-summary-text';
     if (safeSection.id === 'summary') {
-      content.split('\n').forEach((line, index) => {
-        if (index) pre.appendChild(document.createTextNode('\n'));
+      content.split('\n').filter(Boolean).forEach(line => {
+        const field = document.createElement('span');
+        field.className = 'debug-summary-field';
+        pre.appendChild(field);
         const split = line.indexOf(':');
-        if (split < 0) { pre.appendChild(document.createTextNode(line)); return; }
+        if (split < 0) { field.textContent = line; return; }
         const label = document.createElement('span');
         label.className = 'debug-field-name'; label.textContent = line.slice(0, split + 1);
         const value = document.createElement('span');
         value.className = 'debug-field-value'; value.textContent = line.slice(split + 1);
-        pre.append(label, value);
+        field.append(label, value);
       });
     } else renderDebugJson(pre, content);
-    section.appendChild(heading);
+    if (safeSection.id !== 'summary') section.appendChild(heading);
     section.appendChild(pre);
+    if (safeSection.id === 'request' || safeSection.id === 'response') {
+      const toggle = document.createElement('span'); toggle.className = 'debug-view-toggle';
+      toggle.setAttribute('role', 'group'); toggle.setAttribute('aria-label', lang === 'ru' ? 'Просмотр JSON' : 'JSON view');
+      const tree = document.createElement('div'); tree.className = 'debug-json-tree'; tree.hidden = true;
+      let validJson = true;
+      try { JSON.parse(content); } catch (_) { validJson = false; }
+      let treeLoaded = false;
+      ['text', 'tree'].forEach(mode => {
+        const button = document.createElement('button'); button.type = 'button'; button.dataset.view = mode;
+        button.textContent = mode === 'text' ? (lang === 'ru' ? 'Текст' : 'Text') : (lang === 'ru' ? 'Дерево' : 'Tree');
+        button.setAttribute('aria-pressed', String(mode === 'text'));
+        button.disabled = mode === 'tree' && !validJson;
+        if (button.disabled) button.title = lang === 'ru' ? 'Ответ не содержит корректный JSON' : 'Response is not valid JSON';
+        button.addEventListener('click', event => {
+          event.preventDefault(); event.stopPropagation();
+          if (mode === 'tree' && !treeLoaded) { renderDebugTree(tree, content); treeLoaded = true; }
+          pre.hidden = mode === 'tree'; tree.hidden = mode !== 'tree';
+          toggle.querySelectorAll('button').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+        });
+        toggle.appendChild(button);
+      });
+      heading.insertBefore(toggle, sectionCopy); section.appendChild(tree);
+    }
+    if (safeSection.id === 'summary') {
+      const reasoning = openAIReasoning(safeContract.raw_response?.choices?.[0]?.message);
+      if (reasoning) {
+        const block = document.createElement('details'); block.className = 'debug-reasoning'; block.open = true;
+        const label = document.createElement('summary'); label.className = 'debug-reasoning-label';
+        label.textContent = lang === 'ru' ? 'Рассуждение провайдера · не финальный ответ' : 'Provider reasoning · not a final answer';
+        const body = document.createElement('div'); body.className = 'debug-reasoning-content';
+        body.tabIndex = 0;
+        body.setAttribute('role', 'region'); body.setAttribute('aria-label', label.textContent);
+        body.innerHTML = renderAgentText(reasoning, false);
+        block.append(label, body); section.appendChild(block);
+      }
+    }
     packageEl.appendChild(section);
   });
   details.appendChild(packageEl);
@@ -4819,14 +4960,7 @@ function openAIReasoning(message) {
   return [message?.reasoning_content, message?.reasoning, message?.provider_specific_fields?.reasoning_content, message?.provider_specific_fields?.reasoning].find(value => typeof value === 'string' && value.trim()) || '';
 }
 function openAIReasoningNotice() {
-  return lang === 'ru' ? 'Сервер вернул рассуждение, но не финальный текст ответа. Рассуждение доступно ниже, исходный JSON — в полном ответе сервера.' : 'The server returned reasoning without a final answer. Reasoning is available below; the original JSON is in the full server response.';
-}
-function appendOpenAIReasoning(row, reasoning) {
-  if (!reasoning) return;
-  const details = document.createElement('details'); details.className = 'provider-reasoning';
-  const summary = document.createElement('summary'); summary.textContent = lang === 'ru' ? 'Рассуждение провайдера · не финальный ответ' : 'Provider reasoning · not a final answer';
-  const content = document.createElement('pre'); content.className = 'request-preview-code'; content.style.whiteSpace = 'pre-wrap'; content.style.overflowWrap = 'anywhere'; content.textContent = reasoning;
-  details.append(summary, content); row.querySelector('.bubble-wrap').append(details);
+  return lang === 'ru' ? 'Сервер вернул рассуждение, но не финальный текст ответа. Рассуждение доступно в сводке Debug, исходный JSON — в полном ответе сервера.' : 'The server returned reasoning without a final answer. Reasoning is available in the Debug summary; the original JSON is in the full server response.';
 }
 
 function appendError(msg, labelKey, hint) {
@@ -5054,7 +5188,6 @@ async function continueOpenAIWithToolResults() {
     const row = appendMessage('agent', reply, `OpenAI · ${requestConfig.model}`);
     row.dataset.openaiMessage = JSON.stringify(choice.message);
     addOpenAIResponseView(row, rawReply, legacyPayload);
-    appendOpenAIReasoning(row, reasoning);
     appendDebug(row, adaptOpenAIDebug(data, { endpoint: openAIRequestEndpoint(requestConfig), payload, status: res.status, statusText: res.statusText, elapsed }));
     if (calls.length) showOpenAIToolResults(calls, payload, choice.message, row, requestConfig); else resetOpenAIToolTurn();
   } catch (err) {
@@ -5108,7 +5241,6 @@ async function sendOpenAIMessage(text) {
     const row = appendMessage('agent', reply, `OpenAI · ${requestConfig.model}`);
     row.dataset.openaiMessage = JSON.stringify(choice.message);
     addOpenAIResponseView(row, rawReply, legacyPayload);
-    appendOpenAIReasoning(row, reasoning);
     const debugPayload = adaptOpenAIDebug(data, {
           endpoint: openAIRequestEndpoint(requestConfig), payload,
           status: res.status, statusText: res.statusText, elapsed
