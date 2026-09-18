@@ -68,7 +68,7 @@
         const anchor = /^#(lab\d+|prepare|experiments|report|start|routes|contract|neuraldeep|setup|help)$/.test(url.hash) ? url.hash : '';
         return { element: 'link_' + (file || 'index') + anchor, label: names[file] + (anchor ? ' · ' + anchor.slice(1) : ''), type };
       }
-      if (url.hostname === 'github.com' && ['/gkorobkov', '/gkorobkov/AI-Agents-Demo'].includes(url.pathname)) return { element: 'github' + url.pathname, label: url.pathname.endsWith('AI-Agents-Demo') ? 'GitHub: проект' : 'GitHub: автор', type };
+      if (url.hostname === 'github.com' && ['/gkorobkov', '/gkorobkov/AI-Agents-Lab'].includes(url.pathname)) return { element: 'github' + url.pathname, label: url.pathname.endsWith('AI-Agents-Lab') ? 'GitHub: проект' : 'GitHub: автор', type };
       return { element: 'other_link', label: 'Другая ссылка', type };
     }
     // Only control identifiers, never user-generated text, hrefs or form values.
