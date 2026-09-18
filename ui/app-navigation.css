@@ -48,7 +48,6 @@
 #workspace-separator:hover { background: var(--accent2); }
 #workspace.resizing iframe { pointer-events: none; }
 header > .icon-btn, header > .lang-btn { width: 22px; height: 22px; padding: 0; }
-#tool-library-btn { text-decoration:none; color:var(--accent2); }
 .tool-library-picker { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0; }
 .tool-library-picker select { flex:1 1 150px; min-width:0; }
 .tool-library-picker a { font-size:11px; color:var(--accent2); }
@@ -102,4 +101,7 @@ header > .lang-btn { display: inline-flex; align-items: center; justify-content:
   #panel-side-btn { margin-left: auto; }
   #theme-btn, #lang-btn { width: 22px; height: 22px; }
   .app-nav-subpage { font-size: 10px; }
+}
+@media (max-width: 400px) {
+  header .header-title { display: none; }
 }
