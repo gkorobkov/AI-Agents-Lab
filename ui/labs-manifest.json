@@ -1,0 +1,4 @@
+{
+  "schemaVersion": 1,
+  "labs": ["lab-chat-completions.json"]
+}

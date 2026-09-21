@@ -1,0 +1,14 @@
+fieldset { border:0; padding:0; margin:0; min-width:0; }
+.mcp-tool { border:1px solid var(--border); border-radius:5px; padding:14px; margin:14px 0; background:var(--tint); }
+.mcp-tool > summary { font-size:14px; font-weight:600; }
+.mcp-argument { display:grid; grid-template-columns:minmax(0,1fr) 110px auto 32px; gap:8px; align-items:center; margin:8px 0; }
+.mcp-argument .check { margin:0; }
+.mcp-argument button { padding:0; }
+.mcp-library-picker { display:flex; align-items:end; flex-wrap:wrap; gap:10px; margin-top:18px; }
+.mcp-library-picker label { flex:1 1 150px; margin:0; }
+.mcp-library-picker a { font-size:12px; }
+#mcp-status, #connection-status { font-size:12px; color:var(--muted); overflow-wrap:anywhere; }
+#mcp-test-args { min-height:90px; }
+.mcp-tool input, .mcp-tool textarea { background:var(--bg); }
+.library-nav > .actions { margin-bottom:14px; }
+@media(max-width:400px) { .mcp-tool { padding:10px; } .mcp-argument { grid-template-columns:minmax(0,1fr) 85px 32px; gap:6px; } .mcp-argument .check { grid-row:2; grid-column:1 / -1; } .mcp-argument button { grid-column:3; grid-row:1; } }

@@ -12,11 +12,12 @@
   document.addEventListener('click', event => {
     const link = event.target.closest('a');
     if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    if (link.dataset.labId) return;
     const url = new URL(link.href, location.href);
     if (url.origin !== location.origin) return;
     const file = url.pathname.split('/').pop().replace(/\.html$/, '');
-    if (!['index', 'labs', 'documentation', 'tools', ''].includes(file) || url.pathname === location.pathname && url.hash) return;
+    if (!['index', 'labs', 'documentation', 'tools', 'mcp', ''].includes(file) || url.pathname === location.pathname && url.hash) return;
     event.preventDefault();
-    parent.navigateApp(file === 'index' || file === '' ? 'chat' : file, url.hash);
+    parent.navigateApp(file === 'index' || file === '' ? 'chat' : file, url.hash, true, url.searchParams.get('lab'));
   });
 })();

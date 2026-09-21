@@ -5,7 +5,7 @@
   document.querySelector('body > header').after(workspace);
   const definitions = {
     chat: ['Чат', 'Chat'], settings: ['Настройки API', 'API settings'],
-    labs: ['Лабы', 'Labs', 'labs.html'], tools: ['Библиотека Tools', 'Tool library', 'tools.html'], documentation: ['Документация', 'Documentation', 'documentation.html']
+    labs: ['Лабы', 'Labs', 'labs.html'], tools: ['Библиотека Tools', 'Tool library', 'tools.html'], mcp: ['Библиотека MCP', 'MCP library', 'mcp.html'], documentation: ['Документация', 'Documentation', 'documentation.html']
   };
   const panels = {};
   let slots = ['chat', null];
@@ -27,6 +27,7 @@
     labs: document.querySelector('[data-app-page="labs"] svg').outerHTML,
     settings: document.querySelector('#mode-settings-btn svg').outerHTML,
     tools: document.querySelector('[data-app-page="tools"] svg').outerHTML,
+    mcp: document.querySelector('[data-app-page="mcp"] svg').outerHTML,
     documentation: icon('<path d="M4 3h11l5 5v13H4zM14 3v6h6M8 13h8M8 17h6"/>')
   };
   const actionIcons = {
@@ -89,7 +90,7 @@
       const caption = document.createElement('span'); caption.textContent = label(id);
       title.append(caption); title.title = label(id); head.append(title);
       panel.setAttribute('aria-label', label(id));
-      ['chat', 'settings', 'labs', 'tools'].filter(candidate => !slots.includes(candidate)).forEach(candidate => {
+      ['chat', 'settings', 'labs', 'tools', 'mcp'].filter(candidate => !slots.includes(candidate)).forEach(candidate => {
         const split = slots.filter(Boolean).length > 1;
         const target = split ? slots.indexOf(id) : undefined;
         const targetStart = split ? target === 0 : side === 'start';
@@ -177,6 +178,11 @@
   }
   const api = window.appWorkspace = {
     preparing: false, open, refreshLabels,
+    setLabLocation(id) {
+      const url = new URL(location.href);
+      url.searchParams.set('page', 'labs'); url.searchParams.set('lab', id); url.hash = '';
+      history.replaceState({ page: 'labs' }, '', url);
+    },
     openSettings(mode) {
       if (mode !== transportMode) setTransport(mode);
       prepareSettings(mode); open('settings');
@@ -204,16 +210,20 @@
     if (!keys.includes(event.key)) return;
     event.preventDefault(); resize(ratio + (event.key === keys[0] ? -5 : 5));
   });
-  window.navigateApp = (page, hash = '', push = true) => {
+  window.navigateApp = (page, hash = '', push = true, labId = null) => {
     const id = definitions[page] ? page : 'chat'; closeDrawer(); open(id);
     const frame = panels[id].frame;
-    if (frame && hash) {
-      const jump = () => frame.contentDocument.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView();
+    if (frame && (hash || (id === 'labs' && labId))) {
+      const jump = () => {
+        if (id === 'labs' && frame.contentWindow.openLab) frame.contentWindow.openLab(labId, hash);
+        else frame.contentDocument.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView();
+      };
       if (frame.contentDocument?.readyState === 'complete' && frame.contentDocument.URL !== 'about:blank') jump();
       else frame.addEventListener('load', jump, { once: true });
     }
     const url = new URL(location.href);
     if (id === 'chat') url.searchParams.delete('page'); else url.searchParams.set('page', id);
+    if (id === 'labs' && labId) url.searchParams.set('lab', labId); else url.searchParams.delete('lab');
     url.hash = hash; if (push) history.pushState({ page: id }, '', url);
   };
   document.addEventListener('click', event => {
@@ -221,9 +231,9 @@
     if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button) return;
     const url = new URL(link.href, location.href); if (url.origin !== location.origin) return;
     const file = url.pathname.split('/').pop().replace(/\.html$/, '');
-    const page = link.dataset.appPage || (['labs', 'documentation', 'tools'].includes(file) ? file : null);
+    const page = link.dataset.appPage || (['labs', 'documentation', 'tools', 'mcp'].includes(file) ? file : null);
     if (!page) return;
-    event.preventDefault(); navigateApp(page, url.hash);
+    event.preventDefault(); navigateApp(page, url.hash, true, url.searchParams.get('lab'));
   });
   new MutationObserver(() => { syncTheme(); refreshLabels(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'lang'] });
   mobile.addEventListener('change', refreshLabels);
@@ -233,8 +243,8 @@
   }
   document.addEventListener('app:consent', syncConsent);
   syncConsent();
-  window.addEventListener('popstate', () => navigateApp(new URL(location.href).searchParams.get('page'), location.hash, false));
+  window.addEventListener('popstate', () => navigateApp(new URL(location.href).searchParams.get('page'), location.hash, false, new URL(location.href).searchParams.get('lab')));
   render();
   const initialPage = new URL(location.href).searchParams.get('page');
-  if (initialPage) navigateApp(initialPage, location.hash, false);
+  if (initialPage) navigateApp(initialPage, location.hash, false, new URL(location.href).searchParams.get('lab'));
 })();

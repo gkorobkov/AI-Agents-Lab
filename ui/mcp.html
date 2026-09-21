@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Библиотека MCP — AI Agents Lab</title>
+  <script>try { document.documentElement.dataset.theme = localStorage.getItem('n8n_theme') === 'light' ? 'light' : 'dark'; } catch (_) {}</script>
+  <link rel="stylesheet" href="tools-page.css">
+  <link rel="stylesheet" href="mcp-page.css">
+  <script src="app-content.js"></script>
+</head>
+<body>
+  <header><a href="./?page=mcp">AI Agents Lab · Открыть библиотеку в приложении →</a></header>
+  <div class="tools-layout">
+    <aside class="library-nav">
+      <div class="eyebrow">БИБЛИОТЕКА</div><h1>MCP <span>/ Model Context Protocol</span></h1>
+      <div id="mcp-list" class="library-list"></div>
+      <div class="actions"><button id="create-mcp" type="button">+ Собрать свой MCP</button><button id="create-remote" type="button">Подключить сервер</button></div>
+      <p class="nav-note">Начните с примера. Соберите инструменты, проверьте вызов и подключите их к агенту.</p>
+      <button id="import-mcp" type="button">Загрузить JSON</button><input id="mcp-file" type="file" accept=".json,application/json" hidden>
+    </aside>
+    <main>
+      <section class="tool-intro">
+        <div class="intro-line"><span id="mcp-kind" class="eyebrow"></span><span id="mcp-dirty" class="state"></span></div>
+        <h2 id="mcp-title"></h2>
+        <p class="lead">Один MCP-сервер предоставляет агенту набор инструментов. Клиент узнаёт их через tools/list и вызывает нужный через tools/call.</p>
+        <p id="mcp-mode-note" class="note"></p>
+        <details><summary>Первый раз с MCP? Три шага</summary><ol><li>Оставьте учебный пример или добавьте свои инструменты.</li><li>Нажмите «Проверить MCP», выберите инструмент и передайте аргументы.</li><li>Подключите инструменты к агенту или скачайте сервер для запуска на Node.js.</li></ol><a href="https://modelcontextprotocol.io/specification/2025-11-25/server/tools" target="_blank" rel="noopener noreferrer">Официальная спецификация MCP →</a></details>
+      </section>
+      <form id="mcp-form">
+        <fieldset id="mcp-editor" class="ym-hide-content">
+          <section>
+            <h3><span>01</span> Ваш сервер</h3>
+            <div class="fields two"><label>Название в библиотеке<input id="mcp-edit-title" required maxlength="120"></label><label>Имя сервера<input id="mcp-edit-name" required pattern="[a-zA-Z0-9_-]{1,64}"></label></div>
+            <label>Описание<textarea id="mcp-description" rows="2" maxlength="5000"></textarea></label>
+            <div id="remote-fields" hidden>
+              <label>Адрес MCP · Streamable HTTP<input id="mcp-url" type="url" placeholder="http://127.0.0.1:3100/mcp"></label>
+              <label>Bearer token · если требуется<input id="mcp-token" type="password" autocomplete="off" class="ym-disable-keys ym-hide-content"></label><button id="clear-mcp-token" type="button" class="small">Удалить токен из сессии</button>
+              <p class="hint">Токен остаётся в этой вкладке и привязан к серверу. Сервер должен разрешать CORS для адреса лаборатории и открывать заголовок Mcp-Session-Id. OAuth и старый HTTP+SSE здесь не поддерживаются.</p>
+            </div>
+          </section>
+          <section id="builder-section">
+            <h3><span>02</span> Соберите инструменты</h3>
+            <p class="hint">Задайте имя, аргументы и ответ. В шаблоне ответа {{name}} подставляет аргумент name. Для настоящего HTTP-запроса добавьте инструмент из библиотеки.</p>
+            <div id="mcp-tools"></div>
+            <div class="actions"><button id="add-mcp-tool" type="button">+ Инструмент с ответом</button></div>
+            <div class="mcp-library-picker"><label>Из библиотеки Tools<select id="mcp-tool-source"></select></label><button id="add-http-tool" type="button">Добавить HTTP-инструмент</button><a href="tools.html">Создать инструмент →</a></div>
+          </section>
+        </fieldset>
+        <section>
+          <h3><span>03</span> Проверьте MCP</h3>
+          <div class="actions"><button id="connect-mcp" type="button" class="primary">Проверить MCP</button><button id="stop-mcp" type="button" hidden>Остановить</button></div>
+          <p id="connection-status" role="status">Сначала проверьте сервер, чтобы получить список инструментов.</p>
+          <label>Инструмент<select id="mcp-test-tool" disabled></select></label>
+          <label>Аргументы · JSON<textarea id="mcp-test-args" rows="4" class="code ym-disable-keys ym-hide-content">{"name":"Студент"}</textarea></label>
+          <button id="call-mcp" type="button" disabled>Вызвать инструмент</button>
+          <div class="result ym-hide-content"><div class="result-label">Результат tools/call</div><pre id="mcp-result">—</pre></div>
+          <details><summary>Как это работает · обмен MCP</summary><pre id="mcp-trace" class="ym-hide-content">—</pre></details>
+        </section>
+        <div class="savebar"><div class="actions"><button type="submit" id="save-mcp">Сохранить копию</button><button type="button" id="mcp-add-agent" class="primary">Подключить к агенту →</button><button type="button" id="export-mcp">Скачать JSON</button><button type="button" id="delete-mcp" class="danger" hidden>Удалить</button></div><p id="mcp-status" role="status"></p></div>
+        <section id="server-export">
+          <h3><span>04</span> Запустите настоящий сервер</h3>
+          <p class="hint">Скачайте файл в отдельную папку. Установите Node.js 20+ и выполните команды в этой папке. Сервер работает на вашем компьютере, пока запущена команда node.</p>
+          <button type="button" id="download-server">Скачать server.mjs</button>
+          <pre>npm install @modelcontextprotocol/sdk@1.30.0
+node server.mjs</pre>
+          <p class="hint">Затем выберите «Подключить сервер» и адрес <code>http://127.0.0.1:3100/mcp</code>. Разрешённый адрес лаборатории будет включён в скачанный файл. Для HTTP-инструментов с ключом сервер использует переменные окружения MCP_TOOL_KEY_1, MCP_TOOL_KEY_2 и т. д. — по номеру инструмента.</p>
+        </section>
+      </form>
+    </main>
+  </div>
+  <script src="tool-library.js"></script><script src="mcp-runtime.js"></script><script src="mcp-library.js"></script><script src="mcp-client.js"></script><script src="mcp-export.js"></script><script src="mcp-page.js"></script>
+</body>
+</html>

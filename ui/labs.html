@@ -4,161 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Лабораторные работы — AI Agents Lab</title>
-<meta name="description" content="Лабораторные работы AI Agents Lab: изучение ИИ агентов, контекста диалога, параметров OpenAI API, JSON Schema и function calling.">
-<link rel="canonical" href="https://ai-agents-lab.gkorobkov.ru/labs.html">
+  <meta name="description" content="Лабораторные работы AI Agents Lab: эксперименты, сохранение прогресса и отчёты для проверки.">
+  <link rel="canonical" href="https://ai-agents-lab.gkorobkov.ru/labs.html">
   <script>try { document.documentElement.dataset.theme = localStorage.getItem('n8n_theme') === 'light' ? 'light' : 'dark'; } catch (_) {}</script>
-  <style>
-    :root { --bg:#12151d; --surface:#1a1e2c; --border:#303754; --text:#edf2ff; --muted:#a5b2cb; --accent:#4fffb0; --cyan:#00c8ff; --tint:rgba(0,200,255,.07); --mono:Consolas,'Courier New',monospace; }
-    html[data-theme="light"] { --bg:#eef1f9; --surface:#fff; --border:#c4cfea; --text:#192036; --muted:#53617d; --accent:#007e51; --cyan:#006e98; --tint:rgba(0,127,172,.06); }
-    * { box-sizing:border-box; } html { scroll-padding-top:90px; } body { margin:0; background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; line-height:1.65; }
-    a { color:var(--accent); text-underline-offset:4px; } button,a { -webkit-tap-highlight-color:transparent; } :focus-visible { outline:3px solid var(--cyan); outline-offset:4px; }
-    header { position:sticky; top:0; z-index:2; background:var(--surface); border-bottom:1px solid var(--border); } .header-inner { max-width:1220px; margin:auto; padding:12px 22px; display:flex; align-items:center; justify-content:space-between; gap:16px; } .brand { font-weight:650; color:var(--text); text-decoration:none; } .brand span { color:var(--accent); font-family:var(--mono); margin-right:10px; } .actions { display:flex; flex-wrap:wrap; gap:8px; }
-    .button,button { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:8px 13px; border:1px solid var(--border); background:var(--surface); color:var(--text); font:inherit; text-decoration:none; cursor:pointer; } .button.primary { border-color:var(--accent); color:var(--accent); } button:hover,.button:hover { border-color:var(--cyan); }
-    .layout { max-width:1220px; margin:auto; padding:48px 22px 70px; display:grid; grid-template-columns:205px minmax(0,1fr); gap:52px; } nav { align-self:start; position:sticky; top:96px; } nav strong { color:var(--accent); font:12px var(--mono); letter-spacing:.08em; } nav a { display:block; padding:5px 0 5px 12px; border-left:1px solid var(--border); color:var(--muted); text-decoration:none; font-size:13px; } nav a:hover { color:var(--text); border-color:var(--accent); } nav strong { display:block; margin-bottom:12px; } main { min-width:0; }
-    .eyebrow,.number,.badge { font:12px var(--mono); color:var(--accent); } .eyebrow { letter-spacing:.08em; text-transform:uppercase; } h1 { font-size:clamp(34px,5vw,60px); line-height:1.08; letter-spacing:-.045em; margin:14px 0 20px; } h2 { font-size:27px; line-height:1.25; margin:0 0 16px; letter-spacing:-.025em; } h3 { margin:0; font-size:21px; line-height:1.3; } p { margin:10px 0; } .lead { max-width:710px; font-size:18px; color:var(--muted); } .route { display:flex; flex-wrap:wrap; gap:10px; margin:25px 0 30px; color:var(--cyan); font:13px/1.7 var(--mono); } .intro-actions { margin:25px 0 35px; }
-    section { border-top:1px solid var(--border); padding:32px 0; } .note { background:var(--tint); border-left:3px solid var(--cyan); padding:14px 18px; margin:20px 0; } .note p { margin:0; } ol,ul { padding-left:23px; } li { padding-left:4px; margin:8px 0; } code { color:var(--cyan); font: .93em/1.6 var(--mono); overflow-wrap:anywhere; } .baseline { background:var(--surface); border:1px solid var(--border); padding:14px 18px; }
-    .experiment { scroll-margin-top:0; border-top:1px solid var(--border); padding:28px 0; } .experiment-head { display:flex; align-items:baseline; gap:15px; margin-bottom:13px; } .number { flex:0 0 27px; } .badge { display:inline-block; color:var(--muted); font-size:11px; margin:6px 0 0; } .experiment p { margin:9px 0; } .observe { color:var(--muted); } .question { padding-left:12px; border-left:2px solid var(--accent); }
-    .copybox { margin:14px 0; border:1px solid var(--border); background:var(--surface); } .copybar { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 10px 6px 15px; border-bottom:1px solid var(--border); color:var(--muted); font:11px var(--mono); } .copybar button { min-height:36px; padding:5px 9px; font:12px 'Segoe UI',sans-serif; } pre { margin:0; padding:15px; white-space:pre-wrap; overflow-wrap:anywhere; font:13px/1.7 var(--mono); } .prompt pre { font-family:'Segoe UI',sans-serif; font-size:15px; }
-    details { margin:14px 0; } summary { cursor:pointer; color:var(--accent); padding:8px 0; } footer { border-top:1px solid var(--border); padding-top:24px; color:var(--muted); font-size:13px; } .status { min-height:22px; color:var(--muted); font-size:13px; }
-    nav { max-height:calc(100dvh - 48px); overflow-y:auto; scrollbar-width:thin; }
-    nav a[aria-current="location"] { color:var(--accent); border-left:2px solid var(--accent); background:var(--tint); font-weight:600; }
-    @media(max-width:1000px) { .layout { grid-template-columns:128px minmax(0,1fr); gap:20px; padding:24px 14px 50px; } nav a { font-size:11px; padding:6px; } nav strong { font-size:10px; } h1 { font-size:36px; } }
-    @media(max-width:479px) { .layout { display:block; padding-top:0; } .layout > nav { position:sticky; top:0!important; z-index:3; display:flex; flex-wrap:nowrap; gap:6px; max-height:none; overflow-x:auto; padding:8px 0; margin-bottom:20px; background:var(--bg); } nav strong { display:none; } nav a { flex-shrink:0; white-space:nowrap; border:1px solid var(--border); padding:5px 8px; } }
-    @media(max-width:640px) { .header-inner { padding:10px 16px; gap:8px; } .brand { font-size:14px; } .brand span { display:none; } .actions { gap:5px; } .actions .button, .actions button { font-size:12px; padding:8px; } .layout { padding-inline:16px; } h1 { font-size:39px; } h2 { font-size:25px; } h3 { font-size:20px; } .lead { font-size:16px; } .experiment-head { gap:10px; } }
-    @media(max-width:400px) { h1 { font-size:34px; } .brand { max-width:58px; line-height:1.2; } .header-inner { padding-inline:12px; } pre { padding:12px; font-size:12px; } }
-  </style>
-<script src="app-content.js"></script>
+  <link rel="stylesheet" href="labs.css">
+  <script src="app-content.js"></script>
+  <script src="labs.js" defer></script>
 </head>
 <body>
-  <header><div class="header-inner"><a class="brand" href="index.html"><span>AI</span>Agent Chat</a><div class="actions"><a class="button" href="documentation.html">Документация</a><button id="theme" type="button" aria-label="Переключить на светлую тему">Светлая тема</button></div></div></header>
-  <div class="layout">
-    <nav aria-label="Содержание лабораторной"><strong>ЛАБОРАТОРНАЯ 01</strong><a href="#prepare">Подготовка</a><a href="#experiments">Эксперименты</a><a class="experiment-link" href="#lab1">01 · Первый запрос</a><a class="experiment-link" href="#lab2">02 · Модель</a><a class="experiment-link" href="#lab3">03 · Контекст</a><a class="experiment-link" href="#lab4">04 · Temperature</a><a class="experiment-link" href="#lab5">05 · Top p</a><a class="experiment-link" href="#lab6">06 · Лимит токенов</a><a class="experiment-link" href="#lab7">07 · Варианты</a><a class="experiment-link" href="#lab8">08 · Penalties</a><a class="experiment-link" href="#lab9">09 · Logprobs</a><a class="experiment-link" href="#lab10">10 · JSON Schema</a><a class="experiment-link" href="#lab11">11 · Reasoning</a><a class="experiment-link" href="#lab12">12 · Function calling</a><a href="#report">Что сдавать</a></nav>
-    <main>
-      <p class="eyebrow">Практикум · OpenAI-compatible API</p><h1>Лабораторные <br>работы</h1><p class="lead">Лаба №1 — Chat Completions. Измените параметр, отправьте запрос и найдите результат в JSON. Так вы поймёте, чем действительно управляет API.</p>
-      <div class="route"><span>Параметр запроса</span><span aria-hidden="true">→</span><span>Ответ модели</span><span aria-hidden="true">→</span><span>Наблюдение и вывод</span></div>
-      <div class="intro-actions"><a class="button primary" href="index.html">Открыть чат для практики →</a><p><a href="documentation.html#openai-api">Как устроен OpenAI API и что меняют параметры →</a></p></div>
-      <div class="note"><p><strong>12 экспериментов, один принцип:</strong> меняйте только один независимый параметр за раз. Задания 1–7 и 12 выполняются в чате; для 8–11 нужен API-клиент преподавателя — этих полей пока нет в форме сайта.</p></div>
-      <section id="prepare"><p class="eyebrow">Перед первым запросом</p><h2>Подготовьте рабочее место</h2>
-        <ol><li>Перейдите в чат по ссылке в хедере и примите соглашение. Выберите <strong>OpenAI API</strong> в хедере, затем нажмите значок шестерёнки для открытия настроек режима.</li><li>Выберите настроенный преподавателем профиль и нажмите <strong>Clone</strong>, чтобы проводить опыты в копии. Используйте предоставленные URL и модель.</li><li>Очистите <strong>«Системный промпт»</strong>, выключите <strong>«Отправлять предыдущие сообщения в OpenAI API»</strong> и <strong>Tools / function calling</strong>. Очистите чат.</li><li>Задайте параметры ниже. Включите режим <strong>«Дебаг раскрыт»</strong> кнопкой жука в хедере или в настройках.</li></ol>
-        <div class="baseline"><strong>Контрольные настройки</strong><br><code>temperature: 0.7 · top_p: 1 · n: 1 · max_completion_tokens: 512</code></div>
-        <p>Перед отправкой введите текст и проверьте <strong>«Предпросмотр запроса» → «Тело JSON»</strong>. После отправки раскройте <strong>Debug → «Запрос» / «Полный ответ»</strong>. Сохраняйте фактические JSON каждой попытки.</p>
-        <p class="observe">Поля <code>choices</code> и <code>usage</code> ищите в полном ответе провайдера. Время выполнения и другие служебные данные UI — отдельные измерения интерфейса. Предпросмотр показывает запрос, но не является JSON-редактором.</p>
-        <p>Между заданиями возвращайтесь к контрольным настройкам. В опытах со случайной генерацией сделайте по <strong>3 повторения для каждого значения</strong>. Если провайдер отклонил параметр или не вернул поле, запишите это в отчёт; отсутствие ошибки само по себе не доказывает поддержку.</p>
-      </section>
-      <section id="experiments"><p class="eyebrow">От текста к инструментам</p><h2>12 последовательных экспериментов</h2><p class="observe">Для каждого: контрольный запуск → изменение → сравнение JSON → короткий вывод.</p></section>
-      <article class="experiment" id="lab1"><div class="experiment-head"><span class="number">01</span><h3>Первый запрос</h3></div><p>Отправьте текст с контрольными настройками. Затем измените только просьбу: вместо «одним предложением» напишите «тремя предложениями».</p><div class="copybox prompt"><div class="copybar">ПРОМПТ<button type="button" data-copy>Копировать</button></div><pre>Объясни REST API одним предложением.</pre></div><p class="observe">Проверьте <code>messages[0].role: "user"</code> и текст запроса; сравните <code>choices[0].message.content</code> и <code>usage.prompt_tokens / completion_tokens / total_tokens</code>.</p><p class="question">Что изменилось в ответе и расходе токенов после изменения инструкции?</p></article>
-      <article class="experiment" id="lab2"><div class="experiment-head"><span class="number">02</span><h3>Выбор модели</h3></div><p>Повторите промпт «Объясни REST API одним предложением.» на текущей модели, затем измените только поле <strong>«Модель»</strong> на вторую, доступную по вашему подключению. Если преподаватель предоставил только одну модель, отметьте задание как недоступное.</p><p class="observe">Сравните <code>model</code>, <code>choices[0].message.content</code>, <code>usage</code> и время UI. Имя в ответе фиксируйте ровно так, как его вернул провайдер.</p><p class="question">Какие различия повторяются, а какие могут быть случайными?</p></article>
-      <article class="experiment" id="lab3"><div class="experiment-head"><span class="number">03</span><h3>Контекст — это сообщения</h3></div><ol><li>Очистите чат. При выключенном контексте отправьте «Меня зовут Алексей.», затем «Как меня зовут?».</li><li>Очистите чат ещё раз. Включите отправку предыдущих сообщений и повторите те же две реплики.</li><li>Сравните запросы ко второй реплике. После опыта выключите контекст.</li></ol><p class="observe">При включённом контексте в <code>messages[]</code> должны появиться предыдущие <code>user</code> и <code>assistant</code>. Сравните ответ и <code>usage.prompt_tokens</code>. Непустой системный промпт UI добавляет с ролью <code>system</code>.</p><p class="question">За счёт каких данных модель смогла восстановить имя?</p></article>
-      <article class="experiment" id="lab4"><div class="experiment-head"><span class="number">04</span><h3>Случайность · temperature</h3></div><p>Сравните <code>temperature: 0.2</code> и <code>1.2</code>: по 3 запуска при <code>top_p: 1</code> и выключенном контексте.</p><div class="copybox prompt"><div class="copybar">ПРОМПТ<button type="button" data-copy>Копировать</button></div><pre>Придумай название стартапа, который использует AI для обучения программистов.</pre></div><p class="observe">Считайте уникальные названия в <code>choices[0].message.content</code>. Проверяйте значение температуры в запросе: отдельного поля температуры в ответе может не быть.</p><p class="question">При каком значении ответы разнообразнее? Достаточно ли трёх попыток для уверенного вывода?</p></article>
-      <article class="experiment" id="lab5"><div class="experiment-head"><span class="number">05</span><h3>Выбор токенов · top_p</h3></div><p>С тем же промптом про название стартапа сравните <code>top_p: 0.2</code> и <code>1</code>, по 3 запуска. Зафиксируйте <code>temperature: 0.7</code> для обеих серий.</p><p class="observe">Сравните уникальные варианты и формулировки в <code>choices[0].message.content</code>; убедитесь по запросам, что температура не менялась.</p><p class="question">Как ограничение выборки повлияло на разнообразие?</p></article>
-      <article class="experiment" id="lab6"><div class="experiment-head"><span class="number">06</span><h3>Ограничение длины</h3></div><p>В поле <strong>«Максимум completion-токенов»</strong> сравните <code>32</code> и <code>256</code>.</p><div class="copybox prompt"><div class="copybar">ПРОМПТ<button type="button" data-copy>Копировать</button></div><pre>Подробно расскажи историю языка Python.</pre></div><p class="observe">Смотрите <code>choices[0].finish_reason</code>, <code>usage.completion_tokens</code> и обрыв текста. <code>length</code> указывает на достижение лимита, <code>stop</code> — на обычное завершение. У reasoning-модели часть лимита может уйти на внутреннее рассуждение.</p><p class="question">Почему лимит токенов не равен числу слов и не гарантирует завершённый ответ?</p></article>
-      <article class="experiment" id="lab7"><div class="experiment-head"><span class="number">07</span><h3>Несколько вариантов · n</h3></div><p>С промптом про название стартапа сравните <strong>«Варианты ответа · n»</strong>: <code>1</code> и <code>3</code>. Остальные параметры оставьте контрольными.</p><p class="observe">В <strong>полном ответе</strong> посчитайте элементы <code>choices[]</code>, проверьте их <code>index</code>, тексты и <code>usage</code>. Видимый ответ чата не заменяет проверку всего массива. Если сервер вернул один вариант или ошибку, зафиксируйте фактическое поведение.</p><p class="question">Сколько вариантов действительно получено и как изменилось число completion-токенов?</p></article>
-      <article class="experiment" id="lab8"><div class="experiment-head"><span class="number">08</span><div><h3>Повторяемость · penalties</h3><span class="badge">Расширение · API-клиент преподавателя</span></div></div><p>В форме сайта этих параметров нет. В отдельном клиенте сравните <code>frequency_penalty: 0 → 2</code> при <code>presence_penalty: 0</code>.</p><div class="copybox prompt"><div class="copybar">ПРОМПТ<button type="button" data-copy>Копировать</button></div><pre>Напиши длинный рекламный текст про кофе, много раз используя слова кофе, вкусный и ароматный.</pre></div><p>Затем проведите отдельную серию: <code>presence_penalty: 0 → 2</code>, <code>frequency_penalty: 0</code>, промпт: «Рассказывай о разработке программного обеспечения в свободной форме.»</p><p class="observe">По 3 повтора на значение. В <code>message.content</code> сравните повторы слов относительно длины текста; во второй серии — разнообразие тем. Поддержка зависит от модели и провайдера.</p><p class="question">Отличается ли влияние штрафа за частоту от штрафа за само появление токена?</p></article>
-      <article class="experiment" id="lab9"><div class="experiment-head"><span class="number">09</span><div><h3>Вероятности токенов</h3><span class="badge">Расширение · API-клиент преподавателя</span></div></div><p>Этих полей нет в форме сайта. В отдельном клиенте отправьте «Продолжи одним словом: Небо сегодня». Сравните <code>logprobs: false → true</code>, не добавляя <code>top_logprobs</code>. Затем при <code>logprobs: true</code> отдельно сравните <code>top_logprobs: 1 → 3</code>, если модель поддерживает эти значения.</p><p class="observe">Ищите <code>choices[0].logprobs.content[]</code>: <code>token</code>, <code>logprob</code>, <code>top_logprobs</code>. Не принимайте логарифм вероятности за процент.</p><p class="question">Какие альтернативы были у одного токена? Почему это не оценка достоверности всего ответа?</p></article>
-      <article class="experiment" id="lab10"><div class="experiment-head"><span class="number">10</span><div><h3>Структурированный ответ</h3><span class="badge">Расширение · API-клиент преподавателя</span></div></div><p><code>response_format</code> нельзя задать в форме сайта. В отдельном клиенте отправьте «Верни JSON с полями city и country для города Париж». Сравните запрос без <code>response_format</code> и запрос с фрагментом ниже, если модель поддерживает JSON Schema.</p><details><summary>Фрагмент запроса: response_format</summary><div class="copybox"><div class="copybar">ДОБАВИТЬ В ТЕЛО ЗАПРОСА<button type="button" data-copy>Копировать</button></div><pre>"response_format": {
-  "type": "json_schema",
-  "json_schema": {
-    "name": "city_info",
-    "strict": true,
-    "schema": {
-      "type": "object",
-      "properties": {
-        "city": { "type": "string" },
-        "country": { "type": "string" }
-      },
-      "required": ["city", "country"],
-      "additionalProperties": false
-    }
-  }
-}</pre></div></details><p class="observe">Разберите <code>choices[0].message.content</code> как JSON; проверьте обязательные поля, типы и отсутствие лишних полей. Учтите <code>finish_reason</code> и возможный отказ. Просьба «верни JSON» в промпте сама по себе не включает <code>response_format</code>.</p><p class="question">Чем синтаксически корректный JSON отличается от соответствия заданной схеме?</p></article>
-      <article class="experiment" id="lab11"><div class="experiment-head"><span class="number">11</span><div><h3>Reasoning и подробность</h3><span class="badge">Расширение · API-клиент преподавателя</span></div></div><p>Этих настроек нет в форме сайта. Для поддерживающей их модели в клиенте преподавателя сравните <code>reasoning_effort: low → high</code>, сохраняя одинаковый достаточный лимит токенов и остальные параметры.</p><div class="copybox prompt"><div class="copybar">ПРОМПТ<button type="button" data-copy>Копировать</button></div><pre>Три станка делают три детали за три минуты. За сколько минут шесть таких станков сделают двенадцать деталей? Дай ответ и краткое объяснение.</pre></div><p>Отдельно сравните <code>verbosity: low → high</code> при фиксированном <code>reasoning_effort</code>. Используйте только значения, разрешённые для выбранной модели.</p><p class="observe">Смотрите <code>usage.completion_tokens_details.reasoning_tokens</code>, <code>usage.completion_tokens</code>, длину и правильность ответа (проверка: 6 минут). Отсутствующее поле не считайте нулём.</p><p class="question">Стали ли ответы точнее или только длиннее? Что удалось измерить?</p></article>
-      <article class="experiment" id="lab12"><div class="experiment-head"><span class="number">12</span><h3>Function calling · полный цикл</h3></div><ol><li>Вернитесь в чат к контрольным настройкам. Включите <strong>Tools / function calling</strong>. Удалите лишние определения из копии профиля, нажмите <strong>«+ Добавить функцию»</strong>.</li><li>Имя: <code>get_weather</code>. Описание: «Получить учебные данные о погоде в городе». Вставьте схему ниже в <strong>«Параметры · JSON Schema»</strong>. Выключите «Параллельные tool calls»; HTTP-настройку оставьте пустой — результат введём вручную.</li><li>При <strong>«Выбор tool» = <code>none</code></strong> отправьте «Какая сейчас погода в Москве? Используй get_weather.» Затем повторите тот же промпт с <code>required</code>. Меняется только <code>tool_choice</code>.</li><li>Для полного цикла очистите чат, выберите <code>auto</code> и заново отправьте тот же промпт. Режим <code>required</code> сохраняется в продолжении и может потребовать ещё один вызов вместо текстового ответа.</li><li>Когда появится tool call, проверьте имя и аргументы. В поле <strong>«Результат»</strong> введите <code>{"city":"Москва","temperature_c":18,"condition":"облачно","source":"учебный пример"}</code>. Это вымышленные данные для опыта.</li><li>Нажмите <strong>«Продолжить с tool results»</strong>. Проверьте следующий запрос и итоговый ответ модели.</li></ol><details><summary>Схема аргументов get_weather</summary><div class="copybox"><div class="copybar">ПАРАМЕТРЫ · JSON SCHEMA<button type="button" data-copy>Копировать</button></div><pre>{
-  "type": "object",
-  "properties": {
-    "city": { "type": "string", "description": "Название города" }
-  },
-  "required": ["city"],
-  "additionalProperties": false
-}</pre></div></details><p class="observe">В ответе: <code>choices[0].message.tool_calls[]</code>, <code>function.name</code>, JSON-строка <code>function.arguments</code>, <code>finish_reason</code>. В продолжении: сообщение <code>assistant</code> с вызовом и сообщение <code>tool</code> с соответствующим <code>tool_call_id</code>. Если вызова нет, запишите результат провайдера.</p><p class="question">Кто выбрал функцию, кто предоставил данные и на каком шаге модель получила результат?</p></article>
-      <section id="report"><p class="eyebrow">Результат работы</p><h2>Сдайте наблюдения, а не только ответы</h2><p>Заполните шаблон для каждого опыта. При нескольких повторах приложите все пары запросов и ответов. Недоступный параметр отмечайте с причиной; ключи доступа в отчёт не включайте.</p><div class="copybox"><div class="copybar">ШАБЛОН ОТЧЁТА<button type="button" data-copy>Копировать</button></div><pre>Эксперимент № / название:
-Модель и провайдер:
-Изменяемый параметр:
-Контрольное значение:
-Экспериментальное значение:
-Остальные настройки:
-Что ожидали изменить:
-
-Попытка № / значение параметра:
-request JSON:
-response JSON:
-Фактический результат:
-Изменившиеся поля response:
-Метрики / наблюдения:
-Ошибка или отсутствующие поля (если есть):
-
-Вывод: что изменилось и чем это подтверждается?</pre></div><p class="status" id="copy-status" role="status" aria-live="polite"></p><details><summary>Дополнительно — по заданию преподавателя</summary><p>Streaming, cache, prediction, audio, moderation и web search изучаются отдельно с подходящим клиентом и моделью. Для каждого выберите один параметр и заранее определите наблюдаемое поле или метрику.</p></details></section>
-      <footer>По материалам OpenAI API Lab.md · Лабораторная работа №1<br><a href="documentation.html">Как работают запросы</a> · <a href="index.html">Продолжить в чате →</a></footer>
-    </main>
+  <header><div class="header-inner"><a class="brand" href="index.html"><span>AI</span>Agents Lab</a><div class="actions"><a class="button" href="documentation.html">Документация</a><button id="theme" type="button">Светлая тема</button></div></div></header>
+  <div class="lab-bar">
+    <strong>Лабы</strong>
+    <nav id="lab-links" aria-label="Лабораторные работы"></nav>
+    <button id="import-lab" type="button">Загрузить JSON</button>
+    <input id="lab-file" type="file" accept=".json,application/json" hidden>
+    <p id="storage-warning" class="storage-warning" role="alert" hidden></p>
   </div>
-  <script>
-    const themeButton = document.getElementById('theme');
-    function renderTheme() {
-      const light = document.documentElement.dataset.theme === 'light';
-      themeButton.textContent = light ? 'Тёмная тема' : 'Светлая тема';
-      themeButton.setAttribute('aria-label', light ? 'Переключить на тёмную тему' : 'Переключить на светлую тему');
-    }
-    themeButton.addEventListener('click', () => {
-      const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
-      document.documentElement.dataset.theme = next;
-      try { localStorage.setItem('n8n_theme', next); } catch (_) {}
-      renderTheme();
-    });
-    window.addEventListener('storage', event => {
-      if (event.key === 'n8n_theme') { document.documentElement.dataset.theme = event.newValue === 'light' ? 'light' : 'dark'; renderTheme(); }
-    });
-    document.querySelectorAll('[data-copy]').forEach(button => button.addEventListener('click', async () => {
-      const content = button.closest('.copybox').querySelector('pre').textContent;
-      try {
-        await navigator.clipboard.writeText(content);
-        button.textContent = 'Скопировано';
-        document.getElementById('copy-status').textContent = 'Текст скопирован.';
-        setTimeout(() => { button.textContent = 'Копировать'; }, 1800);
-      } catch (_) {
-        button.textContent = 'Выделено';
-        const selection = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(button.closest('.copybox').querySelector('pre'));
-        selection.removeAllRanges(); selection.addRange(range);
-        document.getElementById('copy-status').textContent = 'Копирование недоступно. Текст выделен: используйте команду «Копировать» браузера.';
-        setTimeout(() => { button.textContent = 'Копировать'; }, 2500);
-      }
-    }));
-    renderTheme();
-    const labLinks = [...document.querySelectorAll('nav a[href^="#"]')];
-    const labSections = labLinks.map(link => document.querySelector(link.hash));
-    let scrollScheduled = false;
-    function highlightLab() {
-      scrollScheduled = false;
-      let active = 0;
-      labSections.forEach((section, index) => { if (section.getBoundingClientRect().top <= 110) active = index; });
-      if (innerHeight + scrollY >= document.documentElement.scrollHeight - 3) active = labLinks.length - 1;
-      labLinks.forEach((link, index) => {
-        if (index === active) link.setAttribute('aria-current', 'location');
-        else link.removeAttribute('aria-current');
-      });
-      const link = labLinks[active], nav = link.parentElement;
-      if (innerWidth < 480) nav.scrollLeft = Math.max(0, link.offsetLeft - nav.clientWidth / 2 + link.offsetWidth / 2);
-      else if (link.offsetTop < nav.scrollTop || link.offsetTop + link.offsetHeight > nav.scrollTop + nav.clientHeight) nav.scrollTop = Math.max(0, link.offsetTop - nav.clientHeight / 2);
-    }
-    function scheduleHighlight() { if (!scrollScheduled) { scrollScheduled = true; requestAnimationFrame(highlightLab); } }
-    addEventListener('scroll', scheduleHighlight, { passive:true });
-    addEventListener('resize', scheduleHighlight);
-    document.querySelectorAll('.experiment').forEach(section => {
-      const paragraph = document.createElement('p');
-      const link = document.createElement('a'); link.href = 'documentation.html#openai-api'; link.textContent = 'Пояснения к OpenAI API →';
-      paragraph.append(link); section.append(paragraph);
-    });
-    highlightLab();
-  </script>
+  <p id="catalog-status" class="catalog-status" role="status">Загрузка лабораторных…</p>
+  <div class="layout" id="lab-layout" hidden>
+    <nav id="lab-toc" aria-label="Содержание лабораторной"></nav>
+    <main id="lab-main"></main>
+  </div>
+  <noscript><p class="catalog-status">Для загрузки лабораторных и сохранения результатов включите JavaScript.</p></noscript>
 </body>
 </html>

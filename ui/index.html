@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.2.3';
+const APP_VERSION = '1.3.0';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -1745,6 +1745,8 @@ const CFG_OPENAI_PRESETS = [{
   <span class="app-nav-divider" aria-hidden="true"></span>
   <a class="app-nav-link" id="tool-library-btn" href="?page=tools" data-app-page="tools" data-i18n-title="toolLibrary" title="Tool library"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m2 1 3 2 1 3 4.5 4.5-1 1L5 7 2 6 1 3Zm12 13 1.5-1.5 7 6.5a2.1 2.1 0 0 1-3 3L13 15.5Z"/><path fill-rule="evenodd" d="M22.5 2a6 6 0 0 0-8 7.5L2 19a2.4 2.4 0 0 0 3 3L16 11.5A6 6 0 0 0 23 4l-4 4-3-3 4-4a6 6 0 0 1 2.5 1ZM4.8 19.8a1 1 0 1 0-1.4 1.4 1 1 0 0 0 1.4-1.4Z"/></svg><span data-i18n="navTools">Инструменты</span></a>
   <span class="app-nav-divider" aria-hidden="true"></span>
+  <a class="app-nav-link" href="?page=mcp" data-app-page="mcp" title="Библиотека MCP"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="6" rx="1"/><rect x="2" y="16" width="7" height="6" rx="1"/><rect x="15" y="16" width="7" height="6" rx="1"/><path d="M12 8v4M5.5 16v-4h13v4"/></svg><span>MCP</span></a>
+  <span class="app-nav-divider" aria-hidden="true"></span>
   <a class="app-nav-link" href="?page=chat" data-app-page="chat" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-2 2V11.5a9.5 9.5 0 0 1 19 0Z"/><path d="M7 10h10M7 14h6"/></svg><span data-i18n="navChat">Чат</span></a>
   <span class="app-nav-divider" aria-hidden="true"></span>
   <div class="compact-select" id="transport-toggle" data-value="webhook">
@@ -3301,6 +3303,7 @@ function readOpenAIForm() {
     parseLegacyReplyHtml: openAIParseLegacyReplyHtml,
     tools: [...document.querySelectorAll('.tool-definition')].map(row => ({
       ...(row.libraryMetadata || {}),
+      ...(row.mcpMetadata ? {mcp:row.mcpMetadata} : {}),
       name: row.querySelector('[data-tool-field="name"]').value.trim(),
       description: row.querySelector('[data-tool-field="description"]').value.trim(),
       parameters: row.querySelector('[data-tool-field="parameters"]').value.trim(),
@@ -3395,6 +3398,7 @@ function buildToolHttpRequest(tool, call) {
 }
 function attachToolHttpRunner(row, input, call, turn) {
   const tool = turn.config.tools.find(item => item.name === call.function?.name);
+  if (tool?.mcp) { window.attachMcpRunner?.(row, input, call, turn, tool); return; }
   if (!tool?.http?.url) return;
   const box = document.createElement('div'); box.className = 'tool-http-runner';
   const preview = document.createElement('pre'); const status = document.createElement('div'); status.className = 'tool-http-status'; status.setAttribute('role', 'status');
@@ -3460,6 +3464,7 @@ function renderOpenAITools(tools = []) {
     row.open = expanded[index] ?? false;
     row.className = 'tool-definition';
     row.toolAuth = tool.http?.auth;
+    row.mcpMetadata = tool.mcp;
     if (tool.libraryId) row.libraryMetadata = {libraryId:tool.libraryId,libraryTitle:tool.libraryTitle,libraryBase:tool.libraryBase,libraryOverrides:tool.libraryOverrides || []};
     row.innerHTML = `<label class="api-field"><span>${t('openaiToolName')}</span><input class="api-input" data-tool-field="name" maxlength="64" autocomplete="off" spellcheck="false"></label><label class="api-field"><span>${t('openaiToolDescription')}</span><input class="api-input" data-tool-field="description" autocomplete="off"></label><button class="cfg-btn tool-remove" type="button" title="${t('openaiRemoveTool')}" aria-label="${t('openaiRemoveTool')}">×</button><label class="api-field tool-definition-schema"><span>${t('openaiToolParameters')}</span><textarea class="api-textarea" data-tool-field="parameters" autocomplete="off" spellcheck="false"></textarea></label><div class="api-toggle-row"><span><strong>${t('openaiToolStrict')}</strong></span><label class="switch"><input type="checkbox" data-tool-field="strict"><span class="slider"></span></label></div>`;
     row.querySelector('[data-tool-field="name"]').value = tool.name || '';
@@ -3482,6 +3487,7 @@ function renderOpenAITools(tools = []) {
     row.querySelector('[data-tool-field="name"]').addEventListener('input', updateName);
     container.appendChild(row);
     window.decorateLibraryTool?.(row, tool);
+    window.decorateMcpTool?.(row, tool);
   });
   syncOpenAIToolControls();
   syncToolFoldToggle();
@@ -3498,6 +3504,7 @@ function syncOpenAIToolControls() {
   document.querySelectorAll('.tool-options select, .tool-options input, .tool-definitions input, .tool-definitions select, .tool-definitions textarea, .tool-definitions button, #openai-tool-builder .tool-add').forEach(field => { field.disabled = !enabled; });
   document.getElementById('openai-forced-tool').disabled = !enabled || choice !== 'function';
   window.syncLibraryOverrides?.();
+  document.querySelectorAll('.tool-definition').forEach(row => { if (row.mcpMetadata) row.querySelector('[data-tool-field="strict"]').disabled = true; });
 }
 function addOpenAITool() {
   const tools = readOpenAIForm().tools;
@@ -5777,6 +5784,10 @@ function acceptConsent() {
 </script>
 <script src="tool-library.js"></script>
 <script src="tool-library-settings.js"></script>
+<script src="mcp-runtime.js"></script>
+<script src="mcp-library.js"></script>
+<script src="mcp-client.js"></script>
+<script src="mcp-settings.js"></script>
 <script src="app-navigation.js"></script>
 <script src="openai-field-help.js"></script>
 </body>

@@ -190,6 +190,8 @@
   <p>В личных профилях API-ключ OpenAI сохраняется в localStorage этого браузера между сессиями и отправляется на настроенный API-адрес при запросе. Чтобы удалить ключ, очистите поле API-ключа или данные сайта.</p>
   <p>В общих предзаполненных профилях ключ хранится только на сервере сайта и не передаётся в браузер. Сообщения и результаты инструментов отправляются через сервер сайта выбранному провайдеру модели. Прокси приложения не сохраняет содержимое запросов; журналы инфраструктуры и обработка данных провайдером зависят от настроек владельца сайта и условий провайдера.</p>
   <p>В браузере локально могут сохраняться:</p>
+  <p>Загруженные лабораторные, прогресс, результаты, выводы и указанные в отчёте автор и группа сохраняются в localStorage этого браузера. Экспорт создаёт файл на вашем устройстве; сервис не отправляет отчёт преподавателю автоматически. Поля отчёта скрыты от записи Вебвизором. Удаление данных сайта удаляет локальные отчёты; сохранить копию можно экспортом JSON.</p>
+  <p>Определения MCP и подключённые к агенту копии сохраняются в localStorage. Bearer-токены MCP хранятся в sessionStorage вкладки, привязаны к origin сервера и не включаются в экспорт JSON или server.mjs. При проверке удалённого MCP браузер отправляет запросы протокола и аргументы на указанный адрес. Учебный стенд обрабатывает шаблоны локально; добавленные HTTP-инструменты обращаются к настроенным сервисам. Результат передаётся модели отдельным действием пользователя. Поля конструктора и результаты скрыты от Вебвизора.</p>
   <ul>
     <li>Идентификатор сессии (sessionID) — генерируется автоматически, не привязан к личности пользователя.</li>
     <li>Введённые пользователем запросы и ответы AI-модели (история чата).</li>
@@ -258,6 +260,8 @@
   <p>For personal profiles, the OpenAI API key is saved in this browser's localStorage between sessions and sent to your configured API endpoint with requests. Clear the API key field or site data to remove it.</p>
   <p>Shared preset credentials are stored only on the website server and are never sent to the browser. Messages and tool results pass through the website server to the model provider. The application proxy does not persist request content; infrastructure logs and provider processing depend on the site owner's configuration and the provider's terms.</p>
   <p><strong>The service does not store personal data on its servers.</strong> All user information is stored exclusively in the browser's localStorage.</p>
+  <p>Imported labs, progress, results, conclusions, and the author and group entered in reports are saved in this browser's localStorage. Export creates a file on your device; the service does not automatically send reports to an instructor. Report fields are hidden from Session Replay. Clearing site data deletes local reports; export JSON to keep a copy.</p>
+  <p>MCP definitions and agent snapshots are stored in localStorage. MCP bearer tokens are stored in this tab's sessionStorage, bound to the server origin, and omitted from JSON and server.mjs exports. Remote MCP checks send protocol requests and arguments to the configured endpoint. The browser workshop handles templates locally; HTTP tools contact their configured services. Sending results to the model is a separate user action. Constructor fields and results are hidden from Session Replay.</p>
   <p>The following data may be stored locally in the browser:</p>
   <ul>
     <li>Session ID (sessionID) — generated automatically, not linked to the user's identity.</li>
