@@ -1,4 +1,7 @@
 /* Independent persistent panels share the available space below the header. */
+:root { --header-control-color: #29dfca; }
+html[data-theme="light"] { --header-control-color: #008575; }
+.workspace-panel { --panel-active-color: var(--accent2); }
 #workspace { flex: 1; min-height: 0; min-width: 0; display: grid; grid-template: 'first' minmax(0, 1fr) / minmax(0, 1fr); }
 #workspace[data-split="true"] { grid-template: 'first divider second' minmax(0, 1fr) / minmax(0, calc(var(--workspace-ratio) - 4px)) 8px minmax(0, 1fr); }
 .workspace-panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
@@ -9,6 +12,8 @@
 .workspace-panel-head svg { width: 16px; height: 16px; flex-shrink: 0; }
 .workspace-panel-head button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 22px; height: 22px; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text-muted); cursor: pointer; touch-action: manipulation; }
 .workspace-panel-head button:disabled { opacity: .35; cursor: default; }
+.workspace-panel-head strong { color: var(--panel-active-color); }
+.workspace-panel-head .workspace-switch[aria-current="page"] { color: var(--panel-active-color); border-color: color-mix(in srgb, var(--panel-active-color) 45%, transparent); background: color-mix(in srgb, var(--panel-active-color) 8%, transparent); opacity: 1; }
 .workspace-panel-head button:not(:disabled):hover, .workspace-panel-head button:not(:disabled):active { background: rgba(0,0,0,.18); }
 .workspace-panel-head button:focus-visible { outline: 1px solid var(--text-muted); outline-offset: -2px; background: rgba(0,0,0,.18); }
 #workspace-separator:focus-visible { outline: 2px solid var(--accent2); outline-offset: -2px; }
@@ -80,9 +85,31 @@ header > .lang-btn { display: inline-flex; align-items: center; justify-content:
 .app-nav-subpage[hidden] { display: none; }
 .app-nav-subpage [aria-current] { color: var(--text); font-weight: 700; }
 .app-nav-link svg { width: 17px; height: 17px; }
-.app-nav-link[aria-current="page"] { color: var(--text); font-weight: 700; }
+.app-nav-link[aria-current="page"] { color: var(--accent2); font-weight: 700; }
 .app-nav-link:hover { color: var(--accent2); }
 .app-nav-link:focus-visible { outline: 2px solid var(--accent2); outline-offset: 3px; border-radius: 3px; }
+body[data-transport] #transport-toggle .compact-select-trigger,
+body[data-transport] header #mode-settings-btn {
+  color: var(--header-control-color);
+  border-color: color-mix(in srgb, var(--header-control-color) 48%, transparent);
+  background: color-mix(in srgb, var(--header-control-color) 9%, var(--surface));
+  box-shadow: none;
+}
+body[data-transport] #transport-toggle .compact-select-trigger:hover,
+body[data-transport] header #mode-settings-btn:hover {
+  border-color: var(--header-control-color);
+  background: color-mix(in srgb, var(--header-control-color) 18%, var(--surface));
+}
+body[data-transport] #transport-toggle .compact-select-trigger[aria-expanded="true"],
+body[data-transport] header #mode-settings-btn[aria-expanded="true"] {
+  border-color: var(--header-control-color);
+  background: color-mix(in srgb, var(--header-control-color) 22%, var(--surface));
+}
+body[data-transport] #transport-toggle .compact-select-trigger:focus-visible,
+body[data-transport] header #mode-settings-btn:focus-visible {
+  outline: 2px solid var(--header-control-color);
+  outline-offset: 2px;
+}
 @media (max-width: 1000px) {
   header { flex-wrap: wrap; height: auto; min-height: 54px; padding: 4px 10px 24px; gap: 6px; }
   header .header-title { display: inline; font-size: 12px; }

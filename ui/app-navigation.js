@@ -90,7 +90,7 @@
       const caption = document.createElement('span'); caption.textContent = label(id);
       title.append(caption); title.title = label(id); head.append(title);
       panel.setAttribute('aria-label', label(id));
-      ['chat', 'settings', 'labs', 'tools', 'mcp'].filter(candidate => !slots.includes(candidate)).forEach(candidate => {
+      ['labs', 'tools', 'mcp', 'chat', 'settings'].forEach(candidate => {
         const split = slots.filter(Boolean).length > 1;
         const target = split ? slots.indexOf(id) : undefined;
         const targetStart = split ? target === 0 : side === 'start';
@@ -101,6 +101,13 @@
         const switcher = iconButton(panelIcons[candidate], hint, () => {
           open(candidate, target); panels[candidate].head.focus();
         }, 'workspace-switch');
+        switcher.dataset.page = candidate;
+        if (candidate === id) switcher.setAttribute('aria-current', 'page');
+        switcher.disabled = slots.includes(candidate);
+        if (switcher.disabled) {
+          switcher.title = text('Уже открыто: ', 'Already open: ') + label(candidate);
+          switcher.setAttribute('aria-label', switcher.title);
+        }
         head.append(switcher);
       });
       const split = slots.filter(Boolean).length > 1;
