@@ -5,7 +5,7 @@
     try {
       McpLibrary.validate(record);
       if(!definitions.length)throw new Error(text('Сервер не предоставил инструменты.','The server returned no tools.'));
-      appWorkspace.openSettings('openai');const tools=readOpenAIForm().tools;
+      appWorkspace.openSettings('openai');if(isReadonlyOpenAIPreset())cloneOpenAIProfile();const tools=readOpenAIForm().tools;
       definitions.forEach(definition=>{
         const base=('mcp_'+record.name+'_'+definition.name).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,58);let name=base,suffix=2;
         while(tools.some(tool=>tool.name===name))name=base+'_'+suffix++;

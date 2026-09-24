@@ -31,16 +31,26 @@ html[data-theme="light"] { --header-control-color: #008575; }
 #openai-settings .request-preview-line code { overflow-wrap: anywhere; }
 #openai-settings .tool-definition { display: block; min-width: 0; padding: 0; }
 #openai-settings .tool-definition::before { display: none; }
-.tool-definition > summary { padding: 10px; cursor: pointer; color: var(--accent2); font: 600 11px var(--font-mono); overflow-wrap: anywhere; }
+.tool-definition > summary { display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:pointer; color:var(--accent2); font:600 11px var(--font-mono); list-style:none; }
+.tool-definition > summary::-webkit-details-marker { display:none; }
+.tool-definition > summary::before { content:'▸'; flex-shrink:0; }
+.tool-definition[open] > summary::before { content:'▾'; }
+.tool-definition-title { min-width:0; overflow-wrap:anywhere; flex:1; }
+.tool-definition > summary .tool-remove { position:static; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; width:28px; height:28px; padding:4px; color:var(--text-muted); }
+.tool-definition > summary .tool-remove:hover:not(:disabled), .tool-mapping-remove:hover:not(:disabled) { color:#ff8199; border-color:currentColor; }
 .tool-definition-body { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr) auto; gap: 8px; padding: 9px; min-width: 0; }
 .tool-definition-body > * { min-width: 0; }
 .tool-fold-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .api-docs-link { grid-column: 1 / -1; color: var(--accent2); font-size: 11px; margin: 0 0 10px; }
 .api-help { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; width: 15px; height: 15px; margin-left: 5px; border: 1px solid var(--text-muted); border-radius: 50%; color: var(--text-muted); font: 10px/1 var(--font-ui); cursor: help; flex-shrink: 0; }
-.api-help:hover, .api-help:focus-visible { color: var(--accent2); border-color: currentColor; outline: 1px solid currentColor; outline-offset: 2px; }
-.profile-combo > .api-help { position: absolute; right: 35px; top: -8px; z-index: 2; background: var(--surface); }
-.profile-combo > .api-help[data-help-key="openai-profile-name"] { right: 55px; }
-#api-field-tooltip { position: fixed; z-index: 1500; width: max-content; max-width: min(330px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow-y: auto; white-space: pre-line; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: 12px/1.5 var(--font-ui); box-shadow: 0 5px 20px rgba(0,0,0,.25); pointer-events: none; }
+.api-help:hover, .api-help:focus-visible { color:var(--accent2); border-color:currentColor; background:color-mix(in srgb, var(--accent2) 12%, transparent); outline:none; }
+#openai-profile-help { display:inline-flex; align-items:center; flex-shrink:0; }
+#openai-profile-help .api-help { margin-left:0; }
+.api-toggle-row > span > strong { display:inline-flex; align-items:center; gap:5px; }
+.api-toggle-row > span > strong .api-help { margin-left:0; }
+#api-field-tooltip { position: fixed; z-index: 1500; width: max-content; max-width: min(330px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow-y: auto; white-space: pre-line; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: 12px/1.5 var(--font-ui); box-shadow: 0 5px 20px rgba(0,0,0,.25); pointer-events:auto; user-select:text; cursor:text; }
+#openai-settings input[readonly], #openai-settings textarea[readonly] { color:var(--text-muted); border-style:dashed; background:var(--bg); cursor:text; }
+#openai-preset-readonly { grid-column:1 / -1; padding:8px 10px; border-left:2px solid var(--text-muted); background:var(--surface2); margin:0 0 10px; }
 @media(max-width:640px) { .tool-definition-body { grid-template-columns: minmax(0, 1fr); } }
 #workspace .transport-settings-panel:not(.open) { display: none; }
 #workspace .transport-settings-panel > * { grid-column: 1 / -1; grid-row: auto; min-width: 0; }
@@ -49,6 +59,9 @@ html[data-theme="light"] { --header-control-color: #008575; }
 #workspace .profile-combo { flex: 1 1 150px; min-width: 90px; }
 #workspace .api-pin, #workspace .panel-collapse { display: none; }
 #workspace .tool-http-mapping { grid-template-columns: minmax(0, 1fr); }
+#openai-settings .tool-http-mapping { position:relative; margin:12px 0; padding:12px 46px 12px 12px; border:1px solid var(--border); border-radius:6px; background:var(--surface); }
+#openai-settings .tool-http-mapping > .api-field { margin:0; }
+#openai-settings .tool-http-mapping > .tool-mapping-remove { position:absolute; top:10px; right:10px; display:inline-flex; align-items:center; justify-content:center; width:26px; height:28px; padding:4px; margin:0; }
 #workspace-separator { grid-area: divider; background: var(--border); cursor: col-resize; touch-action: none; }
 #workspace-separator:hover { background: var(--accent2); }
 #workspace.resizing iframe { pointer-events: none; }

@@ -1,7 +1,7 @@
 // Field explanations follow the form's limits; provider/model support can differ.
 (() => {
   const help = {
-    'openai-profile-select': ['Набор настроек подключения и генерации. Выбор профиля подставляет его значения для следующих запросов.', 'A saved connection and generation setup. Selecting a profile loads its values for subsequent requests.'],
+    'openai-profile-select': ['Набор настроек подключения и генерации. Текстовые поля встроенного профиля доступны только для чтения, переключатели можно менять. Нажмите Clone для изменения текста; карандаш позволяет переименовать свой профиль.', 'A saved connection and generation setup. Built-in profile text fields are read-only; toggles remain available. Use Clone to edit text; use the pencil to rename your own profile.'],
     'openai-profile-name': ['Название профиля, до 32 символов. Нужно для выбора настроек; модели не отправляется.', 'Profile label, up to 32 characters. Helps identify settings; not sent to the model.'],
     'openai-base-url': ['Адрес OpenAI-совместимого сервера. Определяет, куда отправится запрос; должен поддерживать Chat Completions и CORS при прямом вызове из браузера.', 'OpenAI-compatible server address. Chooses the request destination; direct browser calls need Chat Completions and CORS support.'],
     'openai-api-key': ['Ключ доступа провайдера. Для серверного профиля ключ хранится на сервере; свой ключ сохраняется в этом браузере. Изменение меняет авторизацию запросов.', 'Provider credential. Server profiles use a server-held key; a custom key is saved in this browser. Changing it changes request authorization.'],
@@ -28,8 +28,13 @@
   };
   const panel = document.getElementById('openai-settings');
   const tooltip = document.createElement('div'); tooltip.id = 'api-field-tooltip'; tooltip.role = 'tooltip'; tooltip.hidden = true; document.body.append(tooltip);
-  let current;
-  const hide = () => { tooltip.hidden = true; current?.removeAttribute('aria-describedby'); current = null; };
+  let current, hideTimer;
+  const cancelHide = () => clearTimeout(hideTimer);
+  const hide = () => { cancelHide(); tooltip.hidden = true; current?.removeAttribute('aria-describedby'); current = null; };
+  const scheduleHide = () => { cancelHide(); hideTimer = setTimeout(() => { if (!tooltip.matches(':hover') && !current?.matches(':hover') && document.activeElement !== current) hide(); }, 250); };
+  tooltip.addEventListener('pointerenter', cancelHide);
+  tooltip.addEventListener('pointerleave', scheduleHide);
+  tooltip.addEventListener('pointerdown', cancelHide);
   const show = button => {
     hide(); current = button; tooltip.textContent = button.dataset.helpText; tooltip.hidden = false; button.setAttribute('aria-describedby', tooltip.id);
     const rect = button.getBoundingClientRect();
@@ -39,18 +44,22 @@
   function attach() {
     panel.querySelectorAll('input, select, textarea').forEach(field => {
       const key = field.dataset.toolField || field.dataset.httpField || field.id;
+      if (key === 'openai-profile-name') return;
       const copy = help[key]; if (!copy) return;
       let host = field.closest('.api-field')?.querySelector(':scope > span');
-      if (!host) host = field.closest('.api-toggle-row')?.querySelector(':scope > span');
+      if (!host) host = field.closest('.api-toggle-row')?.querySelector(':scope > span > strong') || field.closest('.api-toggle-row')?.querySelector(':scope > span');
       if (!host && field.id === 'openai-context') host = document.getElementById('client-history-label');
       if (!host && field.id === 'openai-tools-enabled') host = panel.querySelector('.tool-builder-summary > span');
-      if (!host && field.closest('.profile-combo')) host = field.closest('.profile-combo');
+      if (!host && field.closest('.profile-combo')) {
+        host = document.getElementById('openai-profile-help');
+        if (!host) { host = document.createElement('span'); host.id = 'openai-profile-help'; field.closest('.profile-combo').after(host); }
+      }
       if (!host) return;
       let button = [...host.querySelectorAll('.api-help')].find(el => el.dataset.helpKey === key);
       if (!button) {
         button = document.createElement('span'); button.className = 'api-help'; button.tabIndex = 0; button.role = 'button'; button.textContent = '?'; button.dataset.helpKey = key;
-        button.addEventListener('pointerenter', () => show(button)); button.addEventListener('pointerleave', hide);
-        button.addEventListener('focus', () => show(button)); button.addEventListener('blur', hide);
+        button.addEventListener('pointerenter', () => show(button)); button.addEventListener('pointerleave', scheduleHide);
+        button.addEventListener('focus', () => show(button)); button.addEventListener('blur', scheduleHide);
         button.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); show(button); });
         button.addEventListener('keydown', event => { if (['Enter', ' ', 'Escape'].includes(event.key)) { event.preventDefault(); event.stopPropagation(); if (event.key === 'Escape') hide(); else show(button); } });
         host.append(button);
@@ -67,6 +76,6 @@
   window.addEventListener('resize', hide);
   document.addEventListener('app:pagechange', hide);
   document.addEventListener('keydown', event => { if (event.key === 'Escape') hide(); });
-  document.addEventListener('pointerdown', event => { if (!event.target.closest('.api-help')) hide(); });
+  document.addEventListener('pointerdown', event => { if (!event.target.closest('.api-help, #api-field-tooltip')) hide(); });
   attach();
 })();

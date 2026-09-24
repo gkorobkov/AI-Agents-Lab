@@ -12,6 +12,7 @@
     if (localStorage.getItem('n8n_consent') !== '1') return false;
     try {
       appWorkspace.openSettings('openai');
+      if (isReadonlyOpenAIPreset()) cloneOpenAIProfile();
       const tool = ToolLibrary.snapshot(id), tools = readOpenAIForm().tools;
       // Keep existing definitions intact; a second copy gets a unique model name.
       const originalName = tool.name;
@@ -36,6 +37,7 @@
       toggle.controlField.disabled=!enabled || !toggle.checked;
     });
     document.querySelectorAll('.library-editor .tool-http-mapping > button, .library-editor .tool-http > .cfg-btn').forEach(button => {button.disabled=true;});
+    syncOpenAIPresetReadonly();
   };
   window.decorateLibraryTool = (row,tool) => {
     if (!tool.libraryId) return;
@@ -43,7 +45,6 @@
     row.libraryMetadata.libraryBase=base;
     const overrides=new Set(tool.libraryOverrides || []);
     const body=row.querySelector('.tool-definition-body');
-    const remove=body.querySelector('.tool-remove');
     const fields=[...body.querySelectorAll('[data-tool-field], [data-http-field]')];
     fields.forEach((field,index) => {
       const key=(field.dataset.toolField || field.dataset.httpField)+':'+index;
@@ -82,7 +83,7 @@
       for(const key of ['libraryId','libraryTitle','libraryBase','libraryOverrides']) delete tools[index][key];
       renderOpenAITools(tools); onOpenAIToolDraftChange(); commitOpenAISettings();
     };
-    intro.append(title,info,description,endpoint,detach,remove); editor.before(intro);
+    intro.append(title,info,description,endpoint,detach); editor.before(intro);
     if(tool.http?.auth && tool.http.auth.placement!=='none') {
       const label=document.createElement('label');label.className='api-field ym-hide-content';
       const caption=document.createElement('span');caption.textContent=text('API key инструмента · только в этой вкладке','Tool API key · this tab only');

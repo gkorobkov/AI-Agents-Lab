@@ -24,6 +24,7 @@
   const identifier = value => string(value, 64) && /^[a-z0-9][a-z0-9-]*$/.test(value);
   const reportKey = lab => CFG_LAB_REPORT_PREFIX + lab.id + ':' + lab.version;
   const statuses = { todo: 'Не начато', 'in-progress': 'В работе', completed: 'Выполнено', unavailable: 'Недоступно' };
+  const answerStatus = answer => answer.results.trim() && answer.conclusion.trim() ? 'completed' : answer.results.trim() || answer.conclusion.trim() ? 'in-progress' : 'todo';
   function validateBlocks(blocks, depth = 0) {
     if (!Array.isArray(blocks) || blocks.length > 100 || depth > 4) fail('Неверный список блоков задания.');
     blocks.forEach(block => {
@@ -66,10 +67,10 @@
     clean.updatedAt = value.updatedAt;
     lab.experiments.forEach(experiment => {
       const answer = value.answers[experiment.id];
-      if (!object(answer) || !Object.hasOwn(statuses, answer.status) || !['results', 'evidence', 'conclusion'].every(key => string(answer[key]))) fail('Неверные ответы задания: ' + experiment.id);
-      if (answer.status === 'completed' && (!answer.results.trim() || !answer.conclusion.trim())) fail('Для выполненного задания нужны результат и вывод.');
-      if (answer.status === 'unavailable' && !answer.results.trim()) fail('Укажите причину недоступности задания.');
-      clean.answers[experiment.id] = { results: answer.results, evidence: answer.evidence, conclusion: answer.conclusion, status: answer.status };
+      if (!object(answer) || !Object.hasOwn(statuses, answer.status) || !string(answer.results, 200002) || !['evidence', 'conclusion'].every(key => string(answer[key]))) fail('Неверные ответы задания: ' + experiment.id);
+      // Fold the old third field into results without losing existing reports.
+      const merged = { results: [answer.results, answer.evidence].filter(Boolean).join('\n\n'), evidence: '', conclusion: answer.conclusion };
+      clean.answers[experiment.id] = { ...merged, status: answerStatus(merged) };
     });
     return clean;
   }
@@ -97,20 +98,20 @@
   }
   function progress(lab, value) {
     const answers = lab.experiments.map(experiment => value.answers[experiment.id]);
-    return { completed: answers.filter(answer => answer.status === 'completed').length, unavailable: answers.filter(answer => answer.status === 'unavailable').length, total: answers.length };
+    return { completed: answers.filter(answer => answerStatus(answer) === 'completed').length, total: answers.length };
   }
   function updateProgress() {
     const count = progress(selected, report);
     $('lab-progress').value = count.completed; $('lab-progress').max = count.total;
-    $('progress-label').textContent = `Выполнено ${count.completed} из ${count.total}` + (count.unavailable ? ` · Недоступно: ${count.unavailable}` : '');
+    $('progress-label').textContent = `Выполнено ${count.completed} из ${count.total}`;
     $('save-status').textContent = storageError || (report.updatedAt ? 'Сохранено в этом браузере · ' + new Date(report.updatedAt).toLocaleTimeString('ru-RU') : 'Ответы сохраняются автоматически в этом браузере.');
     $('save-status').classList.toggle('save-error', Boolean(storageError));
     $('storage-warning').textContent = storageError; $('storage-warning').hidden = !storageError;
     selected.experiments.forEach(experiment => {
-      const status = report.answers[experiment.id].status;
+      const status = answerStatus(report.answers[experiment.id]);
       const link = $('lab-toc').querySelector(`[data-experiment="${experiment.id}"]`);
       link.querySelector('small').textContent = statuses[status]; link.dataset.status = status;
-      $('status-' + experiment.id).value = status;
+      $('answer-summary-' + experiment.id).textContent = 'Ответ · ' + statuses[status];
     });
     const link = $('lab-links').querySelector('[aria-current="page"]');
     if (link) link.querySelector('small').textContent = `${count.completed}/${count.total}`;
@@ -138,18 +139,42 @@
   function field(labelText, id, value, onInput, multiline = true, maxLength = 100000) {
     const label = node('label', labelText, 'answer-field');
     const input = node(multiline ? 'textarea' : 'input'); input.id = id; input.value = value; input.maxLength = maxLength; input.className = 'ym-disable-keys';
-    if (multiline) input.rows = 4; else input.type = 'text';
+    if (multiline) input.rows = 2; else input.type = 'text';
     input.addEventListener('input', () => { input.setCustomValidity(''); onInput(input.value); saveReport(); });
     label.append(input); return label;
   }
   function linkTo(text, href) { const a = node('a', text); a.href = href; return a; }
   function exportButtons() {
     const bar = node('div', undefined, 'report-toolbar');
-    for (const format of ['md', 'json']) {
-      const button = node('button', 'Скачать отчёт .' + format); button.type = 'button'; button.addEventListener('click', () => exportReport(format)); bar.append(button);
+    const picker = node('details', undefined, 'report-download');
+    const trigger = node('summary', 'Скачать отчёт');
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    arrow.setAttribute('viewBox', '0 0 10 6'); arrow.setAttribute('fill', 'none'); arrow.setAttribute('stroke', 'currentColor'); arrow.setAttribute('stroke-width', '1.5'); arrow.setAttribute('aria-hidden', 'true');
+    const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path'); arrowPath.setAttribute('d', 'm1 1 4 4 4-4'); arrow.append(arrowPath); trigger.append(arrow);
+    const panel = node('div', undefined, 'report-download-options');
+    panel.setAttribute('role', 'group'); panel.setAttribute('aria-label', 'Формат отчёта');
+    picker.append(trigger, panel); bar.append(picker);
+    picker.addEventListener('toggle', () => {
+      if (!picker.open) return;
+      const rect = picker.getBoundingClientRect();
+      panel.style.left = Math.max(8 - rect.left, Math.min(0, innerWidth - rect.left - panel.offsetWidth - 8)) + 'px';
+      const above = innerHeight - rect.bottom < panel.offsetHeight && rect.top > panel.offsetHeight;
+      panel.style.top = above ? 'auto' : '100%'; panel.style.bottom = above ? '100%' : 'auto';
+    });
+    picker.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') picker.open = true; });
+    picker.addEventListener('pointerleave', event => { if (event.pointerType === 'mouse' && !picker.contains(document.activeElement)) picker.open = false; });
+    picker.addEventListener('focusout', () => { setTimeout(() => { if (!picker.contains(document.activeElement) && !picker.matches(':hover')) picker.open = false; }, 0); });
+    picker.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); picker.open = false; trigger.focus(); } });
+    for (const format of ['md', 'json', 'html']) {
+      const button = node('button'); button.type = 'button';
+      const icon = node('span', undefined, 'report-file-icon'); icon.setAttribute('aria-hidden', 'true');
+      icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M14 2H5v20h14V7z M14 2v5h5"/><text x="12" y="16" text-anchor="middle" fill="currentColor" stroke="none" font-family="monospace" font-size="6">' + ({ md: 'MD', json: '{}', html: '&lt;/&gt;' })[format] + '</text></svg>';
+      button.append(icon, node('span', ({ md: 'Markdown', json: 'JSON', html: 'HTML' })[format]), node('small', '.' + format));
+      button.addEventListener('click', () => { exportReport(format); picker.open = false; trigger.focus(); }); panel.append(button);
     }
     return bar;
   }
+  document.addEventListener('pointerdown', event => { document.querySelectorAll('.report-download[open]').forEach(picker => { if (!picker.contains(event.target)) picker.open = false; }); });
   function renderLab() {
     const main = $('lab-main'); const toc = $('lab-toc'); main.replaceChildren(); toc.replaceChildren(node('strong', 'СОДЕРЖАНИЕ'));
     main.append(node('p', 'Практикум · версия ' + selected.version, 'eyebrow'), node('h1', selected.title), node('p', selected.description, 'lead'));
@@ -164,30 +189,31 @@
     identity.append(field('Автор отчёта', 'report-author', report.author, value => { report.author = value; }, false, 200), field('Группа / курс', 'report-group', report.group, value => { report.group = value; }, false, 200)); main.append(identity);
     renderBlocks(main, selected.introduction);
     const preparation = node('section'); preparation.id = 'prepare'; preparation.append(node('h2', 'Подготовка')); renderBlocks(preparation, selected.preparation); main.append(preparation); toc.append(linkTo('Подготовка', '#prepare'));
-    const experiments = node('section'); experiments.id = 'experiments'; experiments.append(node('h2', 'Эксперименты'), node('p', 'Зафиксируйте результат и вывод, затем отметьте задание выполненным. Если выполнить его невозможно, выберите «Недоступно» и укажите причину в результате.', 'observe')); main.append(experiments);
+    const experiments = node('section'); experiments.id = 'experiments'; experiments.append(node('h2', 'Эксперименты'), node('p', 'Заполните результат и ответ с выводами — задание автоматически засчитается в прогресс. Если опыт недоступен, опишите причину и сделайте вывод.', 'observe')); main.append(experiments);
     selected.experiments.forEach((experiment, index) => {
       const link = linkTo(`${String(index + 1).padStart(2, '0')} · ${experiment.title}`, '#task-' + experiment.id); link.dataset.experiment = experiment.id; link.append(node('small')); toc.append(link);
       const article = node('article', undefined, 'experiment'); article.id = 'task-' + experiment.id;
-      const head = node('div', undefined, 'experiment-head'); head.append(node('span', String(index + 1).padStart(2, '0'), 'number'), node('h3', experiment.title)); article.append(head); renderBlocks(article, experiment.blocks);
+      const head = node('div', undefined, 'experiment-head'); head.append(node('span', String(index + 1).padStart(2, '0'), 'number'), node('h3', experiment.title)); article.append(head);
+      const questions = [];
+      const withoutQuestions = blocks => blocks.flatMap(block => {
+        if (block.type === 'paragraph' && block.tone === 'question') { questions.push(block.text); return []; }
+        return [{ ...block, ...(block.type === 'details' ? { blocks: withoutQuestions(block.blocks) } : {}) }];
+      });
+      renderBlocks(article, withoutQuestions(experiment.blocks));
       const answer = report.answers[experiment.id]; const form = node('div', undefined, 'answer-form ym-hide-content');
       const changed = (key, value) => {
         answer[key] = value;
-        if ((answer.status === 'completed' && (!answer.results.trim() || !answer.conclusion.trim())) || (answer.status === 'unavailable' && !answer.results.trim())) answer.status = 'in-progress';
-        if (answer.status === 'todo' && value.trim()) answer.status = 'in-progress';
+        answer.status = answerStatus(answer);
       };
-      form.append(field('Результат / наблюдения', 'results-' + experiment.id, answer.results, value => changed('results', value)), field('Запросы, ответы JSON и параметры опыта', 'evidence-' + experiment.id, answer.evidence, value => changed('evidence', value)), field('Вывод', 'conclusion-' + experiment.id, answer.conclusion, value => changed('conclusion', value)));
-      const statusLabel = node('label', 'Статус задания', 'answer-field'); const status = node('select'); status.id = 'status-' + experiment.id;
-      Object.entries(statuses).forEach(([value, caption]) => { const option = node('option', caption); option.value = value; status.append(option); });
-      status.addEventListener('change', () => {
-        const required = status.value === 'completed' ? ['results', 'conclusion'] : status.value === 'unavailable' ? ['results'] : [];
-        for (const key of required) {
-          if (!answer[key].trim()) {
-            const input = $(key + '-' + experiment.id); input.setCustomValidity(key === 'conclusion' ? 'Добавьте вывод.' : 'Добавьте результат или причину недоступности.'); input.reportValidity(); status.value = answer.status; return;
-          }
-        }
-        answer.status = status.value; saveReport();
-      });
-      statusLabel.append(status); form.append(statusLabel); article.append(form); main.append(article);
+      form.append(field('Результат / JSON или текст', 'results-' + experiment.id, answer.results, value => changed('results', value), true, 200002));
+      const question = node('p', questions.length ? 'Ответьте на вопрос: ' : 'Объясните полученный результат.', 'question');
+      if (questions.length) question.append(node('span', questions.join(' '), 'question-text'));
+      question.append(node('br'), document.createTextNode('Запишите выводы.'));
+      form.append(question);
+      form.append(field('Ответ и выводы', 'conclusion-' + experiment.id, answer.conclusion, value => changed('conclusion', value)));
+      const answers = node('details', undefined, 'answer-details');
+      const answerSummary = node('summary'); answerSummary.id = 'answer-summary-' + experiment.id;
+      answers.append(answerSummary, form); article.append(answers); main.append(article);
     });
     const final = node('section'); final.id = 'report'; final.append(node('h2', 'Итоговый отчёт')); renderBlocks(final, selected.reportInstructions);
     const finalForm = node('div', undefined, 'ym-hide-content'); finalForm.append(field('Общий вывод по лабораторной', 'report-conclusion', report.conclusion, value => { report.conclusion = value; })); final.append(finalForm);
@@ -226,20 +252,37 @@
   function exportReport(format) {
     const count = progress(selected, report);
     const snapshot = { ...report, exportedAt: new Date().toISOString(), progress: count, lab: selected };
+    const describe = blocks => blocks.flatMap(block => block.type === 'details' ? [block.title, ...describe(block.blocks)] : block.type === 'list' ? block.items : [block.text]);
     let content;
     if (format === 'json') content = JSON.stringify(snapshot, null, 2);
+    else if (format === 'html') {
+      // Build text nodes so submitted HTML/JSON stays literal in the standalone file.
+      const doc = document.implementation.createHTMLDocument('Отчёт · ' + selected.title);
+      doc.documentElement.lang = 'ru';
+      const charset = doc.createElement('meta'); charset.setAttribute('charset', 'utf-8'); doc.head.prepend(charset);
+      const viewport = doc.createElement('meta'); viewport.name = 'viewport'; viewport.content = 'width=device-width, initial-scale=1'; doc.head.append(viewport);
+      doc.head.append(node('style', 'body{max-width:900px;margin:24px auto;padding:0 16px;font:14px/1.5 system-ui;color:#192036}h1{font-size:24px}h2{font-size:18px}h3{font-size:14px;margin-bottom:6px}section{border-top:1px solid #ccd3df;margin-top:18px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f6f9;padding:10px;font:13px/1.5 monospace}@media print{body{margin:0;max-width:none}pre{background:none}}'));
+      doc.body.append(node('h1', selected.title), node('p', `Версия: ${selected.version} · ID: ${selected.id}`), node('p', `Автор: ${report.author || 'Не указан'} · Группа / курс: ${report.group || 'Не указаны'}`), node('p', `Выгружено: ${snapshot.exportedAt} · Выполнено: ${count.completed}/${count.total}`));
+      selected.experiments.forEach((experiment, index) => {
+        const answer = report.answers[experiment.id], section = node('section');
+        section.append(node('h2', `${index + 1}. ${experiment.title}`), node('p', statuses[answerStatus(answer)]));
+        for (const [heading, value] of [['Условие', describe(experiment.blocks).join('\n\n')], ['Результат / JSON или текст', answer.results], ['Ответ и выводы', answer.conclusion]]) section.append(node('h3', heading), node('pre', value || 'Не заполнено'));
+        doc.body.append(section);
+      });
+      doc.body.append(node('h2', 'Общий вывод'), node('pre', report.conclusion || 'Не заполнено'));
+      content = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+    }
     else {
       // Keep arbitrary Markdown/HTML in submitted text literal in the report.
       const literal = value => { const runs = value.match(/`+/g) || []; const fence = '`'.repeat(Math.max(3, ...runs.map(run => run.length + 1))); return `${fence}\n${value || 'Не заполнено'}\n${fence}`; };
-      const lines = ['# Отчёт по лабораторной', literal(selected.title), `Версия: ${selected.version} · ID: ${selected.id}`, '## Автор', literal(report.author), '## Группа / курс', literal(report.group), `Выгружено: ${snapshot.exportedAt}`, `Выполнено: ${count.completed}/${count.total}. Недоступно: ${count.unavailable}.`];
-      const describe = blocks => blocks.flatMap(block => block.type === 'details' ? [block.title, ...describe(block.blocks)] : block.type === 'list' ? block.items : [block.text]);
+      const lines = ['# Отчёт по лабораторной', literal(selected.title), `Версия: ${selected.version} · ID: ${selected.id}`, '## Автор', literal(report.author), '## Группа / курс', literal(report.group), `Выгружено: ${snapshot.exportedAt}`, `Выполнено: ${count.completed}/${count.total}.`];
       selected.experiments.forEach((experiment, index) => {
         const answer = report.answers[experiment.id];
-        lines.push(`## Задание ${index + 1}`, literal(experiment.title), `Статус: ${statuses[answer.status]}`, '### Условие', literal(describe(experiment.blocks).join('\n\n')), '### Результат / наблюдения', literal(answer.results), '### Запросы, ответы и параметры', literal(answer.evidence), '### Вывод', literal(answer.conclusion));
+        lines.push(`## Задание ${index + 1}`, literal(experiment.title), `Статус: ${statuses[answerStatus(answer)]}`, '### Условие', literal(describe(experiment.blocks).join('\n\n')), '### Результат / JSON или текст', literal(answer.results), '### Ответ и выводы', literal(answer.conclusion));
       });
       lines.push('## Общий вывод', literal(report.conclusion)); content = lines.join('\n\n') + '\n';
     }
-    const url = URL.createObjectURL(new Blob([content], { type: format === 'json' ? 'application/json;charset=utf-8' : 'text/markdown;charset=utf-8' }));
+    const url = URL.createObjectURL(new Blob([content], { type: ({ json: 'application/json', html: 'text/html', md: 'text/markdown' })[format] + ';charset=utf-8' }));
     const link = node('a'); link.href = url; link.download = `${selected.id}-report-${snapshot.exportedAt.slice(0, 10)}.${format}`; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
     $('action-status').textContent = 'Отчёт подготовлен к скачиванию. Его можно отправить на проверку.';
   }
