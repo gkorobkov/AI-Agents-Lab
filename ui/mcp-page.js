@@ -1,7 +1,8 @@
-(() => {
+(async () => {
   'use strict';
   const lib = McpLibrary, $ = id => document.getElementById(id), clone = value => JSON.parse(JSON.stringify(value));
   const el = (tag,text) => { const item=document.createElement(tag); if(text!==undefined)item.textContent=text; return item; };
+  await Promise.all([lib.ready, ToolLibrary.ready]);
   let draft, original = '', client = null, controller = null, trace = [];
   const status = (text,error=false) => { $('mcp-status').textContent=text; $('mcp-status').classList.toggle('error',error); };
   function download(name,text,type='application/json') {
@@ -10,6 +11,7 @@
   function input(label,value,tag='input',className='') {
     const host=el('label',label), control=el(tag);control.value=value;control.className=className;host.append(control);return {host,control};
   }
+  function deleteAction(label, fn) { const button = action('', fn); button.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>'; button.title = label; button.setAttribute('aria-label', label); return button; }
   function action(text,fn) { const button=el('button',text);button.type='button';button.onclick=fn;return button; }
   function invalidate() {
     if(client)client.close().catch(()=>{});client=null;
@@ -70,7 +72,7 @@
       if(Array.isArray(spec.type))types.push(JSON.stringify(spec.type));
       types.forEach(value=>{const option=el('option',value);option.value=value;type.append(option);});type.value=Array.isArray(spec.type)?JSON.stringify(spec.type):spec.type;
       const check=el('label');check.className='check';const checkbox=el('input');checkbox.type='checkbox';checkbox.checked=required;check.append(checkbox,el('span','Обязат.'));
-      arg.append(keyInput,type,check,action('×',()=>{arg.remove();syncSchema();}));arg.lastChild.setAttribute('aria-label','Удалить аргумент');
+      arg.append(keyInput,type,check,deleteAction('Удалить аргумент',()=>{arg.remove();syncSchema();}));arg.lastChild.setAttribute('aria-label','Удалить аргумент');
       arg.addEventListener('change',syncSchema);args.append(arg);
     }
     function renderArguments() {
@@ -89,7 +91,7 @@
       }
       row.append(el('p','Копия HTTP-настроек из библиотеки Tools. Для изменения запроса отредактируйте инструмент в Tools и добавьте его заново.'));
     }
-    row.append(action('Удалить инструмент',()=>{row.remove();invalidate();dirty();}));
+    row.append(deleteAction('Удалить инструмент',()=>{row.remove();invalidate();dirty();}));
     name.control.addEventListener('input',()=>{summary.textContent=name.control.value||'Инструмент';});$('mcp-tools').append(row);
   }
   function select(record,force=false) {
@@ -139,7 +141,7 @@
   }
   $('mcp-editor').addEventListener('input',()=>{invalidate();dirty();});$('mcp-editor').addEventListener('change',dirty);
   $('mcp-form').onsubmit=event=>{event.preventDefault();try{save();}catch(error){status(lib.redact(error.message),true);}};
-  $('create-mcp').onclick=()=>select({...lib.builtin(),id:lib.newId(),builtin:false,title:'Мой MCP',name:'my-mcp',description:'Мой учебный MCP-сервер.'});
+  $('create-mcp').onclick=()=>select({...lib.empty(),id:lib.newId(),builtin:false,title:'Мой MCP',name:'my-mcp',description:'Мой учебный MCP-сервер.'});
   $('create-remote').onclick=()=>select({schemaVersion:1,id:lib.newId(),builtin:false,title:'Мой сервер',name:'remote-server',description:'',mode:'remote',url:'http://127.0.0.1:3100/mcp',tools:[]});
   $('add-mcp-tool').onclick=()=>{toolEditor({name:'my_tool_'+($('mcp-tools').children.length+1),description:'Опишите, когда агенту нужен этот инструмент.',inputSchema:{type:'object',properties:{name:{type:'string'}},required:['name'],additionalProperties:false},execution:{type:'template',template:'{"message":"Привет, {{name}}!"}'}});invalidate();dirty();};
   $('add-http-tool').onclick=()=>{try{const tool=ToolLibrary.snapshot($('mcp-tool-source').value);const schema=JSON.parse(tool.parameters);lib.runtime.schemaCheck(schema);toolEditor({name:tool.name,description:tool.description,inputSchema:schema,execution:{type:'http',http:tool.http}});invalidate();dirty();}catch(error){status(error.message,true);}};
@@ -153,7 +155,14 @@
   $('export-mcp').onclick=()=>{try{const record=read();lib.validate(record);download(record.name+'.json',JSON.stringify(lib.clean(record),null,2));status('Определение MCP скачано. Токен в файл не включён.');}catch(error){status(error.message,true);}};
   $('download-server').onclick=()=>operation(async()=>{const record=read();lib.validate(record);download('server.mjs',await McpExport.server(record),'text/javascript');status('Сервер скачан. Команды запуска — ниже.');});
   $('import-mcp').onclick=()=>$('mcp-file').click();
-  $('mcp-file').onchange=async()=>{try{const file=$('mcp-file').files[0];if(!file)return;if(file.size>2000000)throw new Error('Максимальный размер JSON — 2 МБ.');const record=JSON.parse(await file.text());record.id=lib.newId();record.builtin=false;lib.validate(record);select(record);}catch(error){status(error.message,true);}finally{$('mcp-file').value='';}};
+  $('mcp-file').onchange=async()=>{
+    try {
+      const file=$('mcp-file').files[0]; if(!file || controller)return;
+      if(JSON.stringify(read())!==original && !confirm('Загрузить MCP и потерять несохранённые изменения?'))return;
+      const record=lib.importRecord(await MaterialCatalog.readFile(file)); select(record,true);
+      status('MCP подключён и сохранён в этом браузере.');
+    }catch(error){status(error.message,true);}finally{$('mcp-file').value='';}
+  };
   window.addEventListener('storage',event=>{if(['ai_tool_library_v1','ai_mcp_library_v1'].includes(event.key))try{renderPicker();}catch(error){status(error.message,true);}});
-  try{select(lib.builtin(),true);}catch(error){status(error.message,true);}
+  try{select(lib.list()[0] || lib.empty(),true);if(lib.errors.length)status(lib.errors.join(' · '),true);}catch(error){status(error.message,true);}
 })();

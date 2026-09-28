@@ -35,7 +35,7 @@
             <label>Описание<textarea id="mcp-description" rows="2" maxlength="5000"></textarea></label>
             <div id="remote-fields" hidden>
               <label>Адрес MCP · Streamable HTTP<input id="mcp-url" type="url" placeholder="http://127.0.0.1:3100/mcp"></label>
-              <label>Bearer token · если требуется<input id="mcp-token" type="password" autocomplete="off" class="ym-disable-keys ym-hide-content"></label><button id="clear-mcp-token" type="button" class="small">Удалить токен из сессии</button>
+              <label>Bearer token · если требуется<input id="mcp-token" type="password" autocomplete="off" class="ym-disable-keys ym-hide-content"></label><button id="clear-mcp-token" type="button" class="small"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg><span>Удалить токен из сессии</span></button>
               <p class="hint">Токен остаётся в этой вкладке и привязан к серверу. Сервер должен разрешать CORS для адреса лаборатории и открывать заголовок Mcp-Session-Id. OAuth и старый HTTP+SSE здесь не поддерживаются.</p>
             </div>
           </section>
@@ -57,7 +57,7 @@
           <div class="result ym-hide-content"><div class="result-label">Результат tools/call</div><pre id="mcp-result">—</pre></div>
           <details><summary>Как это работает · обмен MCP</summary><pre id="mcp-trace" class="ym-hide-content">—</pre></details>
         </section>
-        <div class="savebar"><div class="actions"><button type="submit" id="save-mcp">Сохранить копию</button><button type="button" id="mcp-add-agent" class="primary">Подключить к агенту →</button><button type="button" id="export-mcp">Скачать JSON</button><button type="button" id="delete-mcp" class="danger" hidden>Удалить</button></div><p id="mcp-status" role="status"></p></div>
+        <div class="savebar"><div class="actions"><button type="submit" id="save-mcp">Сохранить копию</button><button type="button" id="mcp-add-agent" class="primary">Подключить к агенту →</button><button type="button" id="export-mcp">Скачать JSON</button><button type="button" id="delete-mcp" class="danger" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg><span>Удалить</span></button></div><p id="mcp-status" role="status"></p></div>
         <section id="server-export">
           <h3><span>04</span> Запустите настоящий сервер</h3>
           <p class="hint">Скачайте файл в отдельную папку. Установите Node.js 20+ и выполните команды в этой папке. Сервер работает на вашем компьютере, пока запущена команда node.</p>
@@ -69,6 +69,7 @@ node server.mjs</pre>
       </form>
     </main>
   </div>
-  <script src="tool-library.js"></script><script src="mcp-runtime.js"></script><script src="mcp-library.js"></script><script src="mcp-client.js"></script><script src="mcp-export.js"></script><script src="mcp-page.js"></script>
+  <script src="material-catalog.js"></script>
+<script src="tool-library.js"></script><script src="mcp-runtime.js"></script><script src="mcp-library.js"></script><script src="mcp-client.js"></script><script src="mcp-export.js"></script><script src="mcp-page.js"></script>
 </body>
 </html>

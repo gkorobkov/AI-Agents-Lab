@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.3.2';
+const APP_VERSION = '1.3.3';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -35,7 +35,7 @@ const CFG_TRANSPORT_DEFAULT = 'openai';
 
 // Public presets contain configuration only. Credentials exist exclusively on the server.
 const CFG_OPENAI_PRESETS = [{
-  id: 'preset_neuraldeep', name: 'neuraldeep', serverProfile: 'neuraldeep',
+  id: 'preset_default', name: 'Default LLM Provider', serverProfile: 'Default',
   baseUrl: 'https://ai-agents-lab.gkorobkov.ru/api/neuraldeep', model: 'qwen3.6-unlim',
   systemPrompt: 'Ты — ИИ-агент для чата. Отвечай только в понятном Markdown/HTML-совместимом стиле, как в Telegram: короткие абзацы, ясные заголовки, списки и факты. Используй H2 для заголовков, короткие списки через "-" или "1.". Выделяй важное жирным **текстом**. Не используй JSON, таблицы и длинные блоки кода. Не пиши служебные комментарии и не повторяй шаблоны. Отвечай на русском языке, если не попросили иначе. Делай ответ компактным, читабельным и красиво оформленным для чата.',
   temperature: 0.7, topP: 1, maxCompletionTokens: 10000, n: 1,
@@ -1727,6 +1727,7 @@ const CFG_OPENAI_PRESETS = [{
 
 </style>
 <link rel="stylesheet" href="app-navigation.css">
+<link rel="stylesheet" href="field-help.css">
 <!-- Yandex.Metrika 112561962: consent-aware loader -->
 <script src="metrika.js" defer></script>
 </head>
@@ -3496,7 +3497,7 @@ function renderOpenAITools(tools = []) {
     row.toolAuth = tool.http?.auth;
     row.mcpMetadata = tool.mcp;
     if (tool.libraryId) row.libraryMetadata = {libraryId:tool.libraryId,libraryTitle:tool.libraryTitle,libraryBase:tool.libraryBase,libraryOverrides:tool.libraryOverrides || []};
-    row.innerHTML = `<label class="api-field"><span>${t('openaiToolName')}</span><input class="api-input" data-tool-field="name" maxlength="64" autocomplete="off" spellcheck="false"></label><label class="api-field"><span>${t('openaiToolDescription')}</span><input class="api-input" data-tool-field="description" autocomplete="off"></label><button class="cfg-btn tool-remove" type="button" title="${t('openaiRemoveTool')}" aria-label="${t('openaiRemoveTool')}">×</button><label class="api-field tool-definition-schema"><span>${t('openaiToolParameters')}</span><textarea class="api-textarea" data-tool-field="parameters" autocomplete="off" spellcheck="false"></textarea></label><div class="api-toggle-row"><span><strong>${t('openaiToolStrict')}</strong></span><label class="switch"><input type="checkbox" data-tool-field="strict"><span class="slider"></span></label></div>`;
+    row.innerHTML = `<label class="api-field"><span>${t('openaiToolName')}</span><input class="api-input" data-tool-field="name" maxlength="64" autocomplete="off" spellcheck="false"></label><label class="api-field"><span>${t('openaiToolDescription')}</span><input class="api-input" data-tool-field="description" autocomplete="off"></label><button class="cfg-btn tool-remove" type="button" title="${t('openaiRemoveTool')}" aria-label="${t('openaiRemoveTool')}">${toolTrashIcon()}</button><label class="api-field tool-definition-schema"><span>${t('openaiToolParameters')}</span><textarea class="api-textarea" data-tool-field="parameters" autocomplete="off" spellcheck="false"></textarea></label><div class="api-toggle-row"><span><strong>${t('openaiToolStrict')}</strong></span><label class="switch"><input type="checkbox" data-tool-field="strict"><span class="slider"></span></label></div>`;
     row.querySelector('[data-tool-field="name"]').value = tool.name || '';
     row.querySelector('[data-tool-field="description"]').value = tool.description || '';
     row.querySelector('[data-tool-field="parameters"]').value = tool.parameters || CFG_OPENAI_EMPTY_TOOL.parameters;
@@ -5815,6 +5816,7 @@ function acceptConsent() {
   }
 })();
 </script>
+<script src="material-catalog.js"></script>
 <script src="tool-library.js"></script>
 <script src="tool-library-settings.js"></script>
 <script src="mcp-runtime.js"></script>
@@ -5822,6 +5824,7 @@ function acceptConsent() {
 <script src="mcp-client.js"></script>
 <script src="mcp-settings.js"></script>
 <script src="app-navigation.js"></script>
+<script src="field-help.js"></script>
 <script src="openai-field-help.js"></script>
 </body>
 </html>

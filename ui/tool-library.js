@@ -3,28 +3,18 @@
   const storageKey = 'ai_tool_library_v1';
   const secretPrefix = 'ai_tool_secret:';
   const clone = value => JSON.parse(JSON.stringify(value));
-  const builtin = {
-    id: 'open_meteo_geocoding', builtin: true, title: 'Open-Meteo · Geocoding',
-    summary: 'Поиск города по названию: координаты, страна и регион. Сначала определите местоположение, затем используйте координаты в другом инструменте — например, для погоды. Данные: GeoNames.',
-    docsUrl: 'https://open-meteo.com/en/docs/geocoding-api', providerUrl: 'https://open-meteo.com/',
-    tool: {
-      name: 'geocode_city',
-      description: 'Available tool: geocode_city. Find a city or place by its name (Russian or English) and return matching places with name, country, region, latitude and longitude from Open-Meteo/GeoNames. Use when coordinates are needed, before requesting weather, or to disambiguate a place. Input: name, the place to search. Output: results[] with candidate locations. If several places match, ask the user to clarify. If results are empty or the request fails, explain this and ask for a more specific place; never invent coordinates. When asked about your available tools, describe this city-search capability. This tool does not fetch weather.',
-      parameters: JSON.stringify({ type:'object', properties:{ name:{ type:'string', description:'City or place name, optionally followed by country or region, e.g. Moscow or Paris, France.' } }, required:['name'], additionalProperties:false }, null, 2),
-      strict: true,
-      http: { url:'https://geocoding-api.open-meteo.com/v1/search', method:'GET', mappings:[{key:'name',value:'{{name}}'},{key:'count',value:'5'},{key:'language',value:'ru'},{key:'format',value:'json'}], body:'', auth:{placement:'none',name:'apikey',prefix:'',secretId:''} }
-    }
-  };
+  let presets = [];
+  const errors = [];
   function list() {
     let saved = [];
-    try { const value = JSON.parse(localStorage.getItem(storageKey) || '[]'); if (Array.isArray(value)) saved = value.filter(item => item?.id && item.tool && item.id !== builtin.id).slice(0, 100); } catch (_) {}
-    return [clone(builtin), ...saved.map(item => ({ ...item, builtin:false }))];
+    try { const value = JSON.parse(localStorage.getItem(storageKey) || '[]'); if (Array.isArray(value)) saved = value.filter(item => item?.id && item.tool && !presets.some(preset => preset.id === item.id)).slice(0, 100); } catch (_) {}
+    return [...clone(presets), ...saved.map(item => ({ ...item, builtin:false }))];
   }
   const get = id => list().find(item => item.id === id);
   const newId = () => 'tool_' + crypto.randomUUID();
-  function validate(tool) {
-    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(tool.name || '')) throw new Error('Function name: 1–64 letters, digits, _ or -.');
-    if (!tool.description?.trim()) throw new Error('Describe what the function does for the model.');
+  function validate(tool, httpOnly = false) {
+    if (!httpOnly && !/^[a-zA-Z0-9_-]{1,64}$/.test(tool.name || '')) throw new Error('Function name: 1–64 letters, digits, _ or -.');
+    if (!httpOnly && !tool.description?.trim()) throw new Error('Describe what the function does for the model.');
     const schema = JSON.parse(tool.parameters);
     if (!schema || schema.type !== 'object' || !schema.properties || typeof schema.properties !== 'object' || Array.isArray(schema.properties)) throw new Error('Parameters must be an object JSON Schema with properties.');
     const url = new URL(tool.http?.url);
@@ -44,8 +34,8 @@
   function save(record) {
     validate(record.tool);
     const item = clone(record);
-    if (!item.id || item.builtin || item.id === builtin.id) item.id = newId();
-    item.builtin = false;
+    if (!item.id || item.builtin || presets.some(preset => preset.id === item.id)) item.id = newId();
+    item.builtin = false; item.schemaVersion = 1;
     item.title = String(item.title || item.tool.name).slice(0, 120);
     const saved = list().filter(entry => !entry.builtin && entry.id !== item.id);
     if (saved.length >= 100) throw new Error('Library limit: 100 tools.');
@@ -54,7 +44,7 @@
     return clone(item);
   }
   function remove(id) {
-    if (id === builtin.id) throw new Error('Built-in presets cannot be deleted.');
+    if (presets.some(preset => preset.id === id)) throw new Error('Built-in presets cannot be deleted.');
     localStorage.setItem(storageKey, JSON.stringify(list().filter(item => !item.builtin && item.id !== id)));
     window.dispatchEvent(new Event('tool-library:change'));
   }
@@ -81,7 +71,7 @@
   }
   function buildRequest(tool, args) {
     if (!tool?.http?.url) return null;
-    const schema = validate(tool);
+    const schema = validate(tool, true);
     if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error('Arguments must be a JSON object.');
     for (const key of schema.required || []) if (!Object.prototype.hasOwnProperty.call(args,key)) throw new Error('Missing argument: ' + key);
     for (const [key, spec] of Object.entries(schema.properties)) {
@@ -135,5 +125,23 @@
     }
     return text;
   }
-  window.ToolLibrary = {list,get,newId,validate,save,remove,snapshot,buildRequest,authorizeRequest,setSecret,getSecret,clearSecret,redact};
+  function validateRecord(record) {
+    if (record?.schemaVersion !== 1 || !/^[a-zA-Z0-9_-]{1,100}$/.test(record.id || '') || typeof record.title !== 'string' || !record.title.trim() || record.title.length > 120) throw new Error('Нужны schemaVersion: 1, уникальный id и название инструмента.');
+    const schema = validate(record.tool);
+    if (typeof record.tool.parameters !== 'string' || Object.values(schema.properties).some(spec => !spec || typeof spec !== 'object' || Array.isArray(spec))) throw new Error('parameters: свойства должны содержать объекты JSON Schema.');
+    if (schema.required !== undefined && (!Array.isArray(schema.required) || !schema.required.every(key => typeof key === 'string' && Object.hasOwn(schema.properties, key)))) throw new Error('parameters.required: нужны имена существующих аргументов.');
+    if (!Array.isArray(record.tool.http.mappings || []) || (record.tool.http.mappings || []).some(item => typeof item.key !== 'string' || typeof item.value !== 'string')) throw new Error('HTTP mappings: нужны строковые key и value.');
+    return clone(record);
+  }
+  function importRecord(value) {
+    const record = validateRecord(value);
+    if (get(record.id)) throw new Error('Инструмент с таким id уже подключён. Используйте новый id для другого материала.');
+    record.builtin = false;
+    return save(record);
+  }
+  const ready = MaterialCatalog.load('tools-manifest.json', 'tools', validateRecord).then(result => {
+    presets = result.records.map(record => ({...record, builtin:true})); errors.push(...result.errors);
+    window.dispatchEvent(new Event('tool-library:change'));
+  });
+  window.ToolLibrary = {ready,errors,validateRecord,importRecord,list,get,newId,validate,save,remove,snapshot,buildRequest,authorizeRequest,setSecret,getSecret,clearSecret,redact};
 })();

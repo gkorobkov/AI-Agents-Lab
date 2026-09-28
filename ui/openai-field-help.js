@@ -27,20 +27,7 @@
     body: ['Необязательный шаблон JSON-тела POST с {{аргументами}}. Заменяет тело из списка полей. Пустое поле оставляет автоматическую сборку JSON.', 'Optional POST JSON body template with {{arguments}}. Overrides the mapped fields. Leave empty to build JSON automatically.']
   };
   const panel = document.getElementById('openai-settings');
-  const tooltip = document.createElement('div'); tooltip.id = 'api-field-tooltip'; tooltip.role = 'tooltip'; tooltip.hidden = true; document.body.append(tooltip);
-  let current, hideTimer;
-  const cancelHide = () => clearTimeout(hideTimer);
-  const hide = () => { cancelHide(); tooltip.hidden = true; current?.removeAttribute('aria-describedby'); current = null; };
-  const scheduleHide = () => { cancelHide(); hideTimer = setTimeout(() => { if (!tooltip.matches(':hover') && !current?.matches(':hover') && document.activeElement !== current) hide(); }, 250); };
-  tooltip.addEventListener('pointerenter', cancelHide);
-  tooltip.addEventListener('pointerleave', scheduleHide);
-  tooltip.addEventListener('pointerdown', cancelHide);
-  const show = button => {
-    hide(); current = button; tooltip.textContent = button.dataset.helpText; tooltip.hidden = false; button.setAttribute('aria-describedby', tooltip.id);
-    const rect = button.getBoundingClientRect();
-    tooltip.style.left = Math.max(8, Math.min(rect.left, innerWidth - tooltip.offsetWidth - 8)) + 'px';
-    tooltip.style.top = Math.max(8, Math.min(rect.bottom + 6, innerHeight - tooltip.offsetHeight - 8)) + 'px';
-  };
+  const { hide } = window.FieldHelp;
   function attach() {
     panel.querySelectorAll('input, select, textarea').forEach(field => {
       const key = field.dataset.toolField || field.dataset.httpField || field.id;
@@ -58,10 +45,7 @@
       let button = [...host.querySelectorAll('.api-help')].find(el => el.dataset.helpKey === key);
       if (!button) {
         button = document.createElement('span'); button.className = 'api-help'; button.tabIndex = 0; button.role = 'button'; button.textContent = '?'; button.dataset.helpKey = key;
-        button.addEventListener('pointerenter', () => show(button)); button.addEventListener('pointerleave', scheduleHide);
-        button.addEventListener('focus', () => show(button)); button.addEventListener('blur', scheduleHide);
-        button.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); show(button); });
-        button.addEventListener('keydown', event => { if (['Enter', ' ', 'Escape'].includes(event.key)) { event.preventDefault(); event.stopPropagation(); if (event.key === 'Escape') hide(); else show(button); } });
+        FieldHelp.attach(button);
         host.append(button);
       }
       const ru = document.documentElement.lang !== 'en';
@@ -72,10 +56,5 @@
   }
   new MutationObserver(attach).observe(panel, { childList:true, subtree:true });
   new MutationObserver(() => { hide(); attach(); }).observe(document.documentElement, { attributes:true, attributeFilter:['lang'] });
-  panel.addEventListener('scroll', () => { if (current && document.activeElement === current) show(current); else hide(); });
-  window.addEventListener('resize', hide);
-  document.addEventListener('app:pagechange', hide);
-  document.addEventListener('keydown', event => { if (event.key === 'Escape') hide(); });
-  document.addEventListener('pointerdown', event => { if (!event.target.closest('.api-help, #api-field-tooltip')) hide(); });
   attach();
 })();

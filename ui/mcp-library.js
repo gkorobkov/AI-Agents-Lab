@@ -3,7 +3,8 @@
   const CFG_MCP_STORAGE = 'ai_mcp_library_v1';
   const CFG_MCP_SECRET = 'ai_mcp_secret:';
   const clone = value => JSON.parse(JSON.stringify(value));
-  const builtin = { schemaVersion:1, id:'mcp_student_example', builtin:true, title:'Учебный помощник', name:'student-helper', description:'Первый MCP: инструмент приветствует студента. Измените аргументы и ответ, затем добавьте свои инструменты.', mode:'workshop', url:'', tools:[{ name:'greet_student', description:'Поприветствовать студента по имени и подсказать первый шаг в лаборатории.', inputSchema:{type:'object',properties:{name:{type:'string',description:'Имя студента',minLength:1}},required:['name'],additionalProperties:false}, execution:{type:'template',template:JSON.stringify({message:'Привет, {{name}}!',next_step:'Откройте Лабы и начните первый эксперимент.'},null,2)} }] };
+  let presets = [];
+  const errors = [];
   const runtime = createMcpRuntime((request,http) => window.ToolLibrary.authorizeRequest(request,http));
   const newId = () => 'mcp_' + crypto.randomUUID();
   function endpoint(value) {
@@ -34,7 +35,7 @@
   function list() {
     const raw = JSON.parse(localStorage.getItem(CFG_MCP_STORAGE) || '[]');
     if (!Array.isArray(raw)) throw new Error('Не удалось прочитать библиотеку MCP.');
-    return [clone(builtin), ...raw.filter(item => item.id !== builtin.id).map(item => ({...item,builtin:false}))];
+    return [...clone(presets), ...raw.filter(item => !presets.some(preset => preset.id === item.id)).map(item => ({...item,builtin:false}))];
   }
   function clean(record) {
     const value = clone(record);
@@ -42,13 +43,13 @@
   }
   function save(record) {
     validate(record); const value = clean(record);
-    if (record.builtin || record.id === builtin.id) value.id = newId();
+    if (record.builtin || presets.some(preset => preset.id === record.id)) value.id = newId();
     const saved = list().filter(item => !item.builtin && item.id !== value.id);
     if (saved.length >= 100) throw new Error('В библиотеке уже 100 MCP.');
     saved.push(value); localStorage.setItem(CFG_MCP_STORAGE,JSON.stringify(saved)); window.dispatchEvent(new Event('mcp-library:change')); return clone(value);
   }
   function remove(id) {
-    if (id === builtin.id) throw new Error('Учебный пример удалить нельзя.');
+    if (presets.some(preset => preset.id === id)) throw new Error('Учебный пример удалить нельзя.');
     localStorage.setItem(CFG_MCP_STORAGE,JSON.stringify(list().filter(item => !item.builtin && item.id !== id))); clearToken(id);
   }
   function setToken(record, token) {
@@ -69,5 +70,15 @@
     }
     return window.ToolLibrary.redact(text);
   }
-  window.McpLibrary = { builtin:()=>clone(builtin), list, save, remove, validate, clean, newId, endpoint, setToken, clearToken, getToken, redact, runtime };
+  function importRecord(value) {
+    validate(value);
+    if (list().some(record => record.id === value.id)) throw new Error('MCP с таким id уже подключён. Используйте новый id для другого материала.');
+    return save({...value, builtin:false});
+  }
+  const ready = MaterialCatalog.load('mcp-manifest.json', 'mcp', validate).then(result => {
+    presets = result.records.map(record => ({...clean(record), builtin:true})); errors.push(...result.errors);
+    window.dispatchEvent(new Event('mcp-library:change'));
+  });
+  function empty() { return {schemaVersion:1,id:newId(),builtin:false,title:'Мой MCP',name:'my-mcp',description:'',mode:'workshop',url:'',tools:[]}; }
+  window.McpLibrary = { ready, errors, empty, importRecord, builtin:()=>clone(presets[0] || empty()), list, save, remove, validate, clean, newId, endpoint, setToken, clearToken, getToken, redact, runtime };
 })();

@@ -42,13 +42,10 @@ html[data-theme="light"] { --header-control-color: #008575; }
 .tool-definition-body > * { min-width: 0; }
 .tool-fold-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .api-docs-link { grid-column: 1 / -1; color: var(--accent2); font-size: 11px; margin: 0 0 10px; }
-.api-help { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; width: 15px; height: 15px; margin-left: 5px; border: 1px solid var(--text-muted); border-radius: 50%; color: var(--text-muted); font: 10px/1 var(--font-ui); cursor: help; flex-shrink: 0; }
-.api-help:hover, .api-help:focus-visible { color:var(--accent2); border-color:currentColor; background:color-mix(in srgb, var(--accent2) 12%, transparent); outline:none; }
 #openai-profile-help { display:inline-flex; align-items:center; flex-shrink:0; }
 #openai-profile-help .api-help { margin-left:0; }
 .api-toggle-row > span > strong { display:inline-flex; align-items:center; gap:5px; }
 .api-toggle-row > span > strong .api-help { margin-left:0; }
-#api-field-tooltip { position: fixed; z-index: 1500; width: max-content; max-width: min(330px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow-y: auto; white-space: pre-line; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: 12px/1.5 var(--font-ui); box-shadow: 0 5px 20px rgba(0,0,0,.25); pointer-events:auto; user-select:text; cursor:text; }
 #openai-settings input[readonly], #openai-settings textarea[readonly] { color:var(--text-muted); border-style:dashed; background:var(--bg); cursor:text; }
 #openai-preset-readonly { grid-column:1 / -1; padding:8px 10px; border-left:2px solid var(--text-muted); background:var(--surface2); margin:0 0 10px; }
 @media(max-width:640px) { .tool-definition-body { grid-template-columns: minmax(0, 1fr); } }

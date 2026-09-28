@@ -309,27 +309,11 @@
     } catch (error) { $('catalog-status').textContent = 'Не удалось загрузить JSON: ' + error.message; }
     finally { $('lab-file').value = ''; }
   }
-  async function fetchJSON(url) {
-    const response = await fetch(url);
-    if (!response.ok) fail('HTTP ' + response.status);
-    const value = await response.text(); if (value.length > CFG_LAB_MAX_FILE) fail('Файл слишком большой.');
-    return JSON.parse(value.replace(/^\uFEFF/, ''));
-  }
   async function start() {
     const errors = [];
-    try {
-      const manifest = await fetchJSON(CFG_LAB_MANIFEST);
-      if (!object(manifest) || manifest.schemaVersion !== 1 || !Array.isArray(manifest.labs) || manifest.labs.length > 100) fail('Неверный каталог лабораторных.');
-      const loaded = await Promise.allSettled(manifest.labs.map(async path => {
-        if (!string(path, 200) || !/^[a-z0-9][a-z0-9-]*\.json$/.test(path)) fail('Используйте имя локального JSON-файла.');
-        return validateLab(await fetchJSON(path));
-      }));
-      loaded.forEach((result, index) => {
-        if (result.status === 'rejected') errors.push(`${manifest.labs[index]}: ${result.reason.message}`);
-        else if (labs.has(result.value.id)) errors.push('Повторяющийся id: ' + result.value.id);
-        else labs.set(result.value.id, result.value);
-      });
-    } catch (error) { errors.push('Каталог: ' + error.message); }
+    const catalog = await MaterialCatalog.load(CFG_LAB_MANIFEST, 'labs', validateLab);
+    errors.push(...catalog.errors);
+    catalog.records.forEach(lab => labs.set(lab.id, lab));
     try {
       const saved = JSON.parse(localStorage.getItem(CFG_LAB_CATALOG_KEY) || '[]');
       if (!Array.isArray(saved) || saved.length > 100) fail('Неверный локальный каталог.');

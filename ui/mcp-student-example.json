@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "mcp_student_example",
+  "title": "Учебный помощник",
+  "name": "student-helper",
+  "description": "Первый MCP: инструмент приветствует студента. Измените аргументы и ответ, затем добавьте свои инструменты.",
+  "mode": "workshop",
+  "url": "",
+  "tools": [
+    {
+      "name": "greet_student",
+      "description": "Поприветствовать студента по имени и подсказать первый шаг в лаборатории.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Имя студента",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "execution": {
+        "type": "template",
+        "template": "{\n  \"message\": \"Привет, {{name}}!\",\n  \"next_step\": \"Откройте Лабы и начните первый эксперимент.\"\n}"
+      }
+    }
+  ]
+}
