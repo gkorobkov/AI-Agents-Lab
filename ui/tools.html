@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="field-help.css">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
   <script src="app-content.js"></script>
+  <link rel="stylesheet" href="scrollbars.css">
+  <link rel="stylesheet" href="credential-fields.css">
 </head>
 <body>
   <header><a href="./?page=tools">AI Agents Lab · Открыть библиотеку в приложении / Open in app →</a></header>
@@ -28,12 +30,13 @@
       <section class="tool-intro">
         <div class="intro-line"><span id="tool-kind" class="eyebrow"></span><span id="dirty-state" class="state"></span></div>
         <h2 id="tool-title"></h2>
-        <div id="official-links" class="official-links"></div>
+        <button id="copy-tool" type="button" class="small">Создать копию</button>
+        <div class="fields two"><label><span data-i18n="docs">Официальная документация</span><div class="link-field"><input id="edit-docs" form="tool-form" type="url"><a id="open-docs" target="_blank" rel="noopener noreferrer" aria-label="Открыть документацию">↗</a></div></label><label><span data-i18n="provider">Сайт провайдера</span><div class="link-field"><input id="edit-provider" form="tool-form" type="url"><a id="open-provider" target="_blank" rel="noopener noreferrer" aria-label="Открыть сайт провайдера">↗</a></div></label></div>
       </section>
-      <form id="tool-form">
+      <form id="tool-form" autocomplete="off">
         <section>
           <h3><span>1</span> <span data-i18n="definition">Описание</span></h3>
-            <label><span data-i18n="summary">Пояснение в библиотеке</span><textarea id="edit-summary" rows="3"></textarea></label>
+            <label><textarea id="edit-summary" aria-label="Описание инструмента" rows="3"></textarea></label>
           <div class="fields two"><label><span data-i18n="title">Название в библиотеке</span><input id="edit-title" required maxlength="120"></label><label><span data-i18n="name">Имя функции для модели</span><input id="edit-name" required pattern="[a-zA-Z0-9_-]{1,64}" spellcheck="false"></label></div>
           <label><span data-i18n="description">Описание для модели</span><textarea id="edit-description" rows="5" required></textarea></label>
         </section>
@@ -41,29 +44,35 @@
           <h3><span>2</span> <span data-i18n="http">Параметры запроса</span></h3>
           <div class="fields endpoint"><label><span data-i18n="method">Метод</span><select id="edit-method"><option>GET</option><option>POST</option></select></label><label><span>URL</span><input id="edit-url" type="url" required spellcheck="false"></label></div>
           <div class="subhead"><strong data-i18n="query">Параметры URL</strong><button id="add-mapping" type="button" class="small" data-i18n="addParameter">+ Параметр</button></div>
-          <p class="hint" data-i18n="mappingHint">Значение {{name}} берётся из аргумента модели. Обычный текст — постоянное значение, например language = ru.</p>
+          <p class="hint" data-i18n="mappingHint">Сначала проверьте запрос с постоянным значением. Затем выберите аргумент модели или создайте его прямо из параметра.</p>
           <div id="mappings"></div>
           <div class="tool-request-details"><h4 data-i18n="advanced">Авторизация и тело запроса</h4>
             <label><span data-i18n="body">Тело запроса (POST, шаблон JSON)</span><textarea id="edit-body" class="code" rows="3" spellcheck="false"></textarea></label>
             <label><span data-i18n="auth">Авторизация</span><select id="edit-auth"><option value="none" data-i18n="authNone">Не требуется</option><option value="query" data-i18n="authQuery">API key в параметре URL</option><option value="header" data-i18n="authHeader">API key в заголовке</option></select></label>
-            <div id="auth-fields" hidden><div class="fields two"><label><span data-i18n="authName">Имя параметра / заголовка</span><input id="edit-auth-name" placeholder="apikey / Authorization"></label><label><span data-i18n="authPrefix">Префикс (если нужен)</span><input id="edit-auth-prefix" placeholder="Bearer "></label></div><label><span>API key</span><input id="edit-key" class="ym-hide-content" type="password" autocomplete="off"></label><p id="key-state" class="hint"></p><button id="clear-key" type="button" class="small"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg><span data-i18n="clearKey">Удалить ключ из сессии</span></button><p class="hint" data-i18n="keyHint">Ключ хранится только в текущей сессии браузера и привязан к серверу. Определение функции для модели его не содержит.</p></div>
-            <div class="fields two"><label><span data-i18n="docs">Официальная документация</span><input id="edit-docs" type="url"></label><label><span data-i18n="provider">Сайт провайдера</span><input id="edit-provider" type="url"></label></div>
+            <div id="auth-fields" hidden><div class="fields two"><label><span data-i18n="authName">Имя параметра / заголовка</span><input id="edit-auth-name" placeholder="apikey / Authorization"></label><label><span data-i18n="authPrefix">Префикс (если нужен)</span><input id="edit-auth-prefix" placeholder="Bearer "></label></div><label><span>API key</span><input id="edit-key" class="ym-hide-content credential-input" type="text" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label><p id="key-state" class="hint"></p><button id="clear-key" type="button" class="small"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg><span data-i18n="clearKey">Удалить ключ из сессии</span></button><p class="hint" data-i18n="keyHint">Ключ хранится только в текущей сессии браузера и привязан к серверу. Определение функции для модели его не содержит.</p></div>
           </div>
         </section>
-        <section id="schema-details">
-          <h3><span>3</span> <span data-i18n="schema">Аргументы модели · JSON Schema</span></h3>
-        <p class="note" data-i18n="modelNote">Модель видит имя, описание и схему аргументов. Она решает, когда запросить вызов функции. Сам HTTP-запрос будет выполнен в приложение: наличие инструмента не гарантирует его вызов.</p>
-          <div id="schema-builder"></div><button id="add-argument" type="button" class="small">+ Аргумент</button><label><span>parameters · JSON (readonly)</span><textarea readonly id="edit-schema" class="code" rows="12" spellcheck="false" required></textarea></label><label class="check"><input id="edit-strict" type="checkbox"><span data-i18n="strict">Строгое соответствие схеме (strict)</span></label>
-        </section>
-        <section>
-          <h3><span>4</span> <span data-i18n="test">Проверить реальный вызов</span></h3>
-          <div id="argument-values"></div><label><span data-i18n="arguments">Аргументы функции · JSON</span><textarea readonly id="test-args" class="code" rows="4" spellcheck="false">{"name":"Москва"}</textarea></label>
-          <div class="actions"><button id="run-test" type="button" class="primary" data-i18n="run">Выполнить HTTP-запрос</button><button id="abort-test" type="button" hidden data-i18n="abort">Остановить</button></div>
+        <section id="http-test-section">
+          <h3><span>3</span> <span data-i18n="test">Проверка HTTP-запроса</span></h3>
+          <textarea id="test-args" hidden>{"name":"Москва"}</textarea>
+          <div class="actions"><button id="run-test" type="button" class="primary" data-i18n="run">Выполнить HTTP-запрос к Инструменту</button><button id="abort-test" type="button" hidden data-i18n="abort">Остановить</button></div>
           <p class="hint" data-i18n="cors">Запрос выполняется из браузера. Сервер инструмента должен разрешать CORS.</p>
           <div class="result"><div class="result-label" data-i18n="request">Запрос · без секретов</div><pre id="request-preview">—</pre></div>
           <div class="result"><div id="test-status" class="result-label" role="status" data-i18n="response">Ответ сервера появится здесь</div><pre id="response-output" class="ym-hide-content">—</pre></div>
         </section>
-        <div class="savebar"><div class="actions"><button id="copy-tool" type="button">Создать копию</button><button id="save-tool" type="submit" data-i18n="saveCopy">Сохранить копию</button><button id="add-agent" type="button" class="primary" data-i18n="addAgent">Подключить к агенту →</button><button id="delete-tool" type="button" class="danger" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg><span data-i18n="delete">Удалить</span></button></div><p id="page-status" role="status"></p></div>
+        <section id="schema-details">
+          <h3><span>4</span> <span data-i18n="schema">Аргументы модели · JSON Schema</span></h3>
+        <p class="note" data-i18n="modelNote">Модель видит имя, описание и схему аргументов. Она решает, когда запросить вызов функции. Сам HTTP-запрос будет выполнен в приложение: наличие инструмента не гарантирует его вызов.</p>
+          <div id="schema-builder"></div><button id="add-argument" type="button" class="small">+ Аргумент</button><textarea readonly id="edit-schema" hidden></textarea><label><span>Tool · JSON (readonly)</span><textarea id="tool-definition-json" class="code" rows="12" readonly></textarea></label><label class="check"><input id="edit-strict" type="checkbox"><span data-i18n="strict">Строгое соответствие схеме (strict)</span></label>
+        </section>
+        <section id="llm-test-section">
+          <h3><span>5</span> <span data-i18n="llmTest">Проверка инструмента через LLM</span></h3>
+          <p class="hint" data-i18n="llmHint">Измените значения аргументов — задача для модели сформируется автоматически. Имена аргументов и текст задачи недоступны для редактирования. Нажмите «Вызвать LLM» и сравните аргументы в ответе с заданными значениями: так можно проверить, как модель заполняет вызов инструмента. Модель получает задачу и описание только этого инструмента, без системного промпта и истории чата. Вызов инструмента задан принудительно; HTTP-запрос запускается отдельно кнопкой в разделе 3.</p>
+          <div id="llm-values"></div><label><span data-i18n="llmPrompt">Задача для модели</span><textarea id="llm-prompt" rows="4" readonly></textarea></label>
+          <button id="test-llm" type="button" class="primary" data-i18n="llmRun">Вызвать LLM</button>
+          <p id="llm-status" role="status" class="hint"></p><div id="llm-request-box" class="result" hidden><div class="result-label">Запрос LLM / LLM request</div><pre id="llm-request"></pre></div><div id="llm-response-box" class="result" hidden><div class="result-label">Ответ LLM / LLM response</div><pre id="llm-response"></pre></div>
+        </section>
+        <div class="savebar"><div class="actions"><button id="add-agent" type="button" class="primary" data-i18n="addAgent">Подключить к агенту →</button><button id="delete-tool" type="button" class="danger" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg><span data-i18n="delete">Удалить</span></button></div><p id="page-status" role="status"></p></div>
       </form>
     </main>
   </div>

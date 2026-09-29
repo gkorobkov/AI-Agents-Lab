@@ -30,6 +30,18 @@
       return true;
     } catch(error) { toast(ToolLibrary.redact(error.message)); return false; }
   };
+  window.testLibraryTool = async (id, prompt, onRequest) => {
+    const tool = ToolLibrary.snapshot(id), config = {...clone(openAIConfig), apiKey:openAIApiKey};
+    if (!config.baseUrl || !config.model || (!isServerOpenAIProfile(config) && !config.apiKey)) throw new Error(text('Заполните настройки LLM: адрес, модель и ключ доступа.', 'Set the LLM endpoint, model and API key.'));
+    const requestConfig = {...config, systemPrompt:'', toolsEnabled:true, tools:[tool], toolChoice:'function', forcedTool:tool.name, parallelToolCalls:false, n:1};
+    const payload = buildOpenAIRequest(requestConfig, [], prompt);
+    const headers = isServerOpenAIProfile(config) ? {'Content-Type':'application/json'} : {'Content-Type':'application/json',Authorization:'Bearer ' + config.apiKey};
+    onRequest?.({method:'POST',url:openAIRequestEndpoint(requestConfig),headers:isServerOpenAIProfile(config) ? {'Content-Type':'application/json'} : {'Content-Type':'application/json',Authorization:'Bearer [REDACTED]'},body:clone(payload)});
+    const response = await fetch(openAIRequestEndpoint(requestConfig), {method:'POST',headers,body:JSON.stringify(payload),signal:AbortSignal.timeout(60000)});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || 'HTTP ' + response.status);
+    return data;
+  };
   window.syncLibraryOverrides = () => {
     const enabled=document.getElementById('openai-tools-enabled').checked;
     document.querySelectorAll('.library-override').forEach(toggle => {
@@ -87,7 +99,7 @@
     if(tool.http?.auth && tool.http.auth.placement!=='none') {
       const label=document.createElement('label');label.className='api-field ym-hide-content';
       const caption=document.createElement('span');caption.textContent=text('API key инструмента · только в этой вкладке','Tool API key · this tab only');
-      const input=document.createElement('input');input.type='password';input.autocomplete='off';input.className='api-input';
+      const input=document.createElement('input');input.type='text';input.autocomplete='off';input.spellcheck=false;input.setAttribute('data-lpignore','true');input.setAttribute('data-1p-ignore','');input.className='api-input credential-input';
       input.placeholder=ToolLibrary.getSecret(tool.http.auth.secretId)?text('Ключ задан','Key is set'):text('Введите ключ','Enter key');
       input.addEventListener('change',()=>{try{ToolLibrary.setSecret(tool.http.auth.secretId,input.value,new URL(readToolHttpEditor(row).url).origin);input.value='';input.placeholder=text('Ключ задан','Key is set');}catch(error){toast(ToolLibrary.redact(error.message));}});
       label.append(caption,input); intro.append(label);

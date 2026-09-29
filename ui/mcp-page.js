@@ -86,7 +86,7 @@
     } else {
       row.append(el('p','HTTP: '+tool.execution.http.method+' '+tool.execution.http.url));
       if(tool.execution.http.auth?.placement!=='none' && tool.execution.http.auth?.placement) {
-        const key=input('Ключ HTTP-инструмента · только в этой вкладке','');key.control.type='password';key.control.autocomplete='off';key.host.classList.add('ym-hide-content');
+        const key=input('Ключ HTTP-инструмента · только в этой вкладке','');key.control.type='text';key.control.classList.add('credential-input');key.control.spellcheck=false;key.control.autocomplete='off';key.host.classList.add('ym-hide-content');
         key.control.addEventListener('change',()=>{try{ToolLibrary.setSecret(row.execution.http.auth.secretId,key.control.value,new URL(row.execution.http.url).origin);key.control.value='';key.control.placeholder='Ключ задан';}catch(error){status(error.message,true);}});row.append(key.host);
       }
       row.append(el('p','Копия HTTP-настроек из библиотеки Tools. Для изменения запроса отредактируйте инструмент в Tools и добавьте его заново.'));

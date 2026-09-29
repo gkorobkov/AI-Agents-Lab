@@ -1,0 +1,6 @@
+/* Shared compact scrollbars for documents, panels and editable fields. */
+* { scrollbar-width:thin; scrollbar-color:var(--border, #303754) transparent; }
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-thumb { background:var(--border, #303754); border-radius:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-corner { background:transparent; }

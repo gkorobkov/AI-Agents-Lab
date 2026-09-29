@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="tools-page.css">
   <link rel="stylesheet" href="mcp-page.css">
   <script src="app-content.js"></script>
+  <link rel="stylesheet" href="scrollbars.css">
+  <link rel="stylesheet" href="credential-fields.css">
 </head>
 <body>
   <header><a href="./?page=mcp">AI Agents Lab · Открыть библиотеку в приложении →</a></header>
@@ -27,7 +29,7 @@
         <p id="mcp-mode-note" class="note"></p>
         <details><summary>Первый раз с MCP? Три шага</summary><ol><li>Оставьте учебный пример или добавьте свои инструменты.</li><li>Нажмите «Проверить MCP», выберите инструмент и передайте аргументы.</li><li>Подключите инструменты к агенту или скачайте сервер для запуска на Node.js.</li></ol><a href="https://modelcontextprotocol.io/specification/2025-11-25/server/tools" target="_blank" rel="noopener noreferrer">Официальная спецификация MCP →</a></details>
       </section>
-      <form id="mcp-form">
+      <form id="mcp-form" autocomplete="off">
         <fieldset id="mcp-editor" class="ym-hide-content">
           <section>
             <h3><span>01</span> Ваш сервер</h3>
@@ -35,7 +37,7 @@
             <label>Описание<textarea id="mcp-description" rows="2" maxlength="5000"></textarea></label>
             <div id="remote-fields" hidden>
               <label>Адрес MCP · Streamable HTTP<input id="mcp-url" type="url" placeholder="http://127.0.0.1:3100/mcp"></label>
-              <label>Bearer token · если требуется<input id="mcp-token" type="password" autocomplete="off" class="ym-disable-keys ym-hide-content"></label><button id="clear-mcp-token" type="button" class="small"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg><span>Удалить токен из сессии</span></button>
+              <label>Bearer token · если требуется<input id="mcp-token" type="text" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore class="ym-disable-keys ym-hide-content credential-input"></label><button id="clear-mcp-token" type="button" class="small"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg><span>Удалить токен из сессии</span></button>
               <p class="hint">Токен остаётся в этой вкладке и привязан к серверу. Сервер должен разрешать CORS для адреса лаборатории и открывать заголовок Mcp-Session-Id. OAuth и старый HTTP+SSE здесь не поддерживаются.</p>
             </div>
           </section>

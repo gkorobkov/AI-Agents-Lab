@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.3.3';
+const APP_VERSION = '1.3.5';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -1730,6 +1730,8 @@ const CFG_OPENAI_PRESETS = [{
 <link rel="stylesheet" href="field-help.css">
 <!-- Yandex.Metrika 112561962: consent-aware loader -->
 <script src="metrika.js" defer></script>
+  <link rel="stylesheet" href="scrollbars.css">
+  <link rel="stylesheet" href="credential-fields.css">
 </head>
 <body>
 
@@ -1899,7 +1901,7 @@ const CFG_OPENAI_PRESETS = [{
   <div class="openai-section-label" data-i18n="openaiApiSection">OpenAI API request</div>
   <a class="api-docs-link" href="documentation.html#openai-api" data-i18n="openaiDocsLink">OpenAI API: пояснения и справочник →</a>
   <label class="api-field"><span data-i18n="openaiBaseUrl">Base URL</span><input class="api-input" id="openai-base-url" type="text" inputmode="url" value="" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"></label>
-  <label class="api-field"><span data-i18n="openaiApiKey">API key · saved in this browser</span><div class="api-secret-wrap"><input class="api-input" id="openai-api-key" type="password" autocomplete="new-password" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="api-eye" id="openai-eye-btn" type="button" onclick="toggleApiKeyVisibility()" data-i18n-title="openaiShowKey" data-i18n-aria-label="openaiShowKey" title="Show key" aria-label="Show key"><svg id="openai-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></label>
+  <label class="api-field"><span data-i18n="openaiApiKey">API key · saved in this browser</span><div class="api-secret-wrap"><input class="api-input credential-input" id="openai-api-key" type="text" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="api-eye" id="openai-eye-btn" type="button" onclick="toggleApiKeyVisibility()" data-i18n-title="openaiShowKey" data-i18n-aria-label="openaiShowKey" title="Show key" aria-label="Show key"><svg id="openai-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></label>
   <label class="api-field"><span data-i18n="openaiModel">Model</span><input class="api-input" id="openai-model" type="text" value="qwen3.8-27b" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true"></label>
   <label class="api-field"><span data-i18n="openaiSystem">System prompt</span><textarea class="api-textarea" id="openai-system-prompt" autocomplete="off" spellcheck="true" data-1p-ignore data-lpignore="true"></textarea></label>
   <div class="api-grid lab-parameters">
@@ -2900,7 +2902,7 @@ function syncOpenAIKeyAccess() {
   field.disabled = false;
   field.readOnly = shared;
   field.setAttribute('aria-readonly', String(shared));
-  field.type = 'password';
+  field.type = 'text'; field.classList.remove('credential-visible');
   field.value = shared ? '' : openAIApiKey;
   field.placeholder = shared ? (lang === 'ru' ? 'Ключ хранится на сервере' : 'Key is stored on the server') : '';
   const label = field.closest('label').querySelector('span');
@@ -3294,8 +3296,8 @@ function updateOpenAISettingsPinUI() {
 function toggleApiKeyVisibility() {
   if (isServerOpenAIProfile()) return;
   const field = document.getElementById('openai-api-key');
-  const visible = field.type === 'password';
-  field.type = visible ? 'text' : 'password';
+  const visible = !field.classList.contains('credential-visible');
+  field.classList.toggle('credential-visible', visible);
   const button = document.getElementById('openai-eye-btn');
   const key = visible ? 'openaiHideKey' : 'openaiShowKey';
   button.title = t(key);
@@ -3433,7 +3435,7 @@ function attachToolHttpRunner(row, input, call, turn) {
   if (!tool?.http?.url) return;
   const box = document.createElement('div'); box.className = 'tool-http-runner';
   const preview = document.createElement('pre'); const status = document.createElement('div'); status.className = 'tool-http-status'; status.setAttribute('role', 'status');
-  const run = document.createElement('button'); run.type = 'button'; run.className = 'cfg-btn'; run.textContent = toolHttpText('Выполнить HTTP-запрос', 'Run HTTP request');
+  const run = document.createElement('button'); run.type = 'button'; run.className = 'cfg-btn'; run.textContent = toolHttpText('Выполнить HTTP-запрос к Инструменту', 'Run HTTP request to Tool');
   let request;
   try { request = buildToolHttpRequest(tool, call); preview.textContent = `${request.method} ${request.url}${request.body ? '\n' + request.body : ''}`; }
   catch (error) { status.textContent = error.message; run.disabled = true; }
@@ -3771,13 +3773,7 @@ function buildOpenAIRequest(config, context, currentText) {
 }
 function getOpenAIRequestPreviewData() {
   const config = readOpenAIForm();
-  if (pendingOpenAIToolTurn) {
-    const toolMessages = [...document.querySelectorAll('#openai-tool-results [data-tool-call-id]')].map(input => ({ role: 'tool', tool_call_id: input.dataset.toolCallId, content: input.value.trim() }));
-    if (toolMessages.length) return { endpoint: openAIRequestEndpoint(config), body: { ...pendingOpenAIToolTurn.payload, messages: [...pendingOpenAIToolTurn.payload.messages, pendingOpenAIToolTurn.assistantMessage, ...toolMessages] }, currentText: 'tool-results' };
-  }
-  const currentText = document.getElementById('msg-input').value.trim();
-  const context = getOpenAIContext(currentText, config.includeContext);
-  return { endpoint: openAIRequestEndpoint(config), body: buildOpenAIRequest(config, context, currentText), currentText };
+  return { endpoint: openAIRequestEndpoint(config), body: buildOpenAIRequest(config, [], ''), currentText: '' };
 }
 function updateOpenAIRequestPreview() {
   const json = document.getElementById('openai-preview-json');

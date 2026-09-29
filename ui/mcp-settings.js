@@ -25,7 +25,7 @@
     row.querySelector('[data-tool-field="strict"]').disabled=true;
     if(tool.mcp.server.mode==='remote') {
       const label=document.createElement('label');label.className='api-field ym-hide-content';const span=document.createElement('span');span.textContent=text('MCP Bearer token · только в этой вкладке','MCP Bearer token · this tab only');
-      const input=document.createElement('input');input.type='password';input.className='api-input';input.autocomplete='off';
+      const input=document.createElement('input');input.type='text';input.className='api-input credential-input';input.autocomplete='off';input.spellcheck=false;input.setAttribute('data-lpignore','true');input.setAttribute('data-1p-ignore','');
       input.addEventListener('change',()=>{try{McpLibrary.setToken(tool.mcp.server,input.value);input.value='';input.placeholder=text('Токен задан','Token is set');}catch(error){toast(error.message);}});label.append(span,input);note.after(label);
     }
   };

@@ -25,7 +25,7 @@
       if (!mapping.key || ['__proto__','prototype','constructor'].includes(mapping.key) || keys.has(mapping.key)) throw new Error('Invalid or duplicate parameter: ' + mapping.key);
       keys.add(mapping.key);
     }
-    if (tool.http.body?.trim()) JSON.parse(tool.http.body);
+    if (tool.http.method === 'POST' && tool.http.body?.trim()) JSON.parse(tool.http.body);
     const auth = tool.http.auth;
     if (auth && !['none','query','header'].includes(auth.placement)) throw new Error('Invalid authentication placement.');
     if (auth && auth.placement !== 'none' && (!auth.name?.trim() || !auth.secretId)) throw new Error('Set the API-key field name and credential slot.');
@@ -89,7 +89,7 @@
     if (!['http:','https:'].includes(url.protocol) || url.username || url.password) throw new Error('Invalid HTTP URL.');
     const method = tool.http.method || 'GET';
     if (method === 'GET') {
-      Object.entries(mapped).forEach(([key,value]) => { if (value !== '') url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : String(value)); });
+      Object.entries(mapped).forEach(([key,value]) => { if (value !== '' || (tool.http.mappings || []).some(mapping => mapping.key === key && mapping.value.includes('{{'))) url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : String(value)); });
       return {url:url.href,method};
     }
     const substitute = value => typeof value === 'string' ? template(value,context) : Array.isArray(value) ? value.map(substitute) : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).map(([key,item]) => [key,substitute(item)])) : value;
