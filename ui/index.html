@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.3.5';
+const APP_VERSION = '1.3.6';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -15,7 +15,7 @@ const APP_VERSION = '1.3.5';
 const CFG_DEBUG_DEFAULT_MODE = 'collapsed';
 
 // Initial suggestion chips shown before first message
-const CFG_INITIAL_SUGGESTIONS = ['Что ты умеешь?', 'Расскажи о себе', 'Расскажи про Москву'];
+const CFG_INITIAL_SUGGESTIONS = ['Вызови geocode_city инструмент с любым параметром', 'Что ты умеешь?', 'Расскажи о себе', 'Расскажи про Москву'];
 
 // Max webhook URL entries kept in history dropdown
 const CFG_WEBHOOK_HISTORY_MAX = 20;
@@ -634,6 +634,31 @@ const CFG_OPENAI_PRESETS = [{
   .tool-http-status { margin-top: 5px; color: var(--text-muted); font: 10px/1.5 var(--font-mono); }
   .bubble-wrap > .tool-results { padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
   .tool-results[hidden], .tool-http [hidden] { display: none; }
+.tool-call-response { margin:0; padding:0; border:0; }
+.tool-response-type { display:inline-flex; align-items:center; gap:6px; max-width:100%; box-sizing:border-box; padding:4px 8px; border-radius:5px; background:color-mix(in srgb, var(--accent2) 12%, var(--surface)); color:var(--accent2); font:600 12px/1.4 var(--font-ui); }
+.tool-response-type svg { width:16px; height:16px; flex:none; }
+.tool-call-card { margin-top:6px; min-width:0; }
+.tool-call-summary { font:11px/1.5 var(--font-mono); color:var(--text); overflow-wrap:anywhere; margin:4px 0; }
+.bubble .tool-http-runner pre.tool-request-preview { background:none; border:0; border-radius:0; box-shadow:none; padding:0; margin:6px 0; color:var(--text-muted); font:11px/1.5 var(--font-mono); white-space:pre-wrap; word-break:normal; overflow-wrap:anywhere; max-width:none; }
+.msg-row.site { justify-content:flex-end; }
+.msg-row.site .avatar { order:2; background:none; border:0; border-radius:0; color:var(--accent2); }
+.msg-row.site .bubble { border-color:color-mix(in srgb, var(--accent2) 30%, var(--border)); background:color-mix(in srgb, var(--accent2) 5%, var(--surface)); font-size:12px; }
+.tool-model-request { margin-top:6px; }
+.tool-model-request > summary { cursor:pointer; padding:5px 8px; border:1px solid var(--border); border-radius:5px; font:600 11px/1.4 var(--font-ui); }
+.tool-model-request pre { max-height:240px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font:11px/1.5 var(--font-mono); }
+.tool-result-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.bubble-wrap:has(.tool-call-response) { width:min(100%, 900px); }
+.bubble:has(.tool-call-response) { max-width:none; }
+.tool-call-parameters { display:grid; grid-template-columns:minmax(70px,auto) minmax(0,1fr); gap:4px 12px; margin:6px 0; font:12px/1.5 var(--font-mono); }
+.tool-call-parameters dt { color:var(--accent2); overflow-wrap:anywhere; }
+.tool-call-parameters dd { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.tool-call-card .cfg-btn { white-space:normal; text-align:left; max-width:100%; }
+.bubble .tool-action-button { min-height:32px; margin:4px 0; padding:6px 12px; border:1px solid var(--accent2); border-radius:6px; background:color-mix(in srgb, var(--accent2) 14%, var(--surface)); color:var(--accent2); font:600 12px/1.4 var(--font-ui); cursor:pointer; white-space:normal; text-align:left; max-width:100%; }
+.bubble .tool-action-button:hover:not(:disabled) { background:color-mix(in srgb, var(--accent2) 24%, var(--surface)); }
+.bubble .tool-action-button:focus-visible { outline:2px solid var(--accent2); outline-offset:2px; }
+.bubble .tool-action-button:disabled { opacity:1; cursor:default; color:var(--text-muted); border-color:var(--border); background:var(--surface2); box-shadow:none; }
+.tool-output-message .bubble pre { background:none; border:0; border-radius:0; padding:0; max-height:320px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.5 var(--font-mono); }
+.tool-output-message summary { cursor:pointer; margin-top:8px; font-size:12px; }
   /* Segmented control (lang / theme) */
   .seg-ctrl {
     display: flex;
@@ -749,6 +774,8 @@ const CFG_OPENAI_PRESETS = [{
   }
   .avatar svg { width: 100%; height: 100%; }
   .avatar.agent { background:var(--surface2); border:1px solid var(--border); }
+.avatar.agent.http-avatar { background:transparent; border:0; border-radius:0; box-shadow:none; color:color-mix(in srgb, var(--text) 85%, var(--text-muted)); }
+.tool-output-message .bubble > strong { color:color-mix(in srgb, var(--text) 85%, var(--text-muted)); }
   .msg-row[data-request-debug="true"] > .avatar { visibility: hidden; }
   .debug-code-icon { flex-shrink: 0; color: var(--accent2); font-family: var(--font-mono); }
   .avatar.user  { background:var(--user-bubble); border:1px solid var(--border); color: color-mix(in srgb, var(--text-muted) 75%, #a594dc); }
@@ -1149,6 +1176,25 @@ const CFG_OPENAI_PRESETS = [{
   #send-btn svg { width:18px; height:18px; }
   #msg-input { min-width: 0; }
   #composer-suggestions { flex-shrink: 0; }
+  #input-area { flex-wrap:nowrap; gap:7px; }
+  #composer-destination { order:0; }
+  #msg-input { order:2; }
+  #send-btn { order:3; }
+  #composer-suggestions { order:4; }
+  #tool-chain-controls { order:1; flex:0 0 auto; display:flex; align-items:center; align-self:center; gap:3px; color:var(--text-muted); font:10px/1.4 var(--font-ui); }
+  #tool-chain-mode { display:flex; align-items:center; gap:4px; height:32px; }
+  #tool-chain-mode svg { width:16px; height:16px; }
+  #tool-chain-mode[aria-checked="true"] { border-color:var(--accent2); color:var(--accent2); background:color-mix(in srgb, var(--accent2) 12%, var(--surface)); }
+  #tool-chain-mode .chain-auto-icon, #tool-chain-mode[aria-checked="true"] .chain-hand-icon { display:none; }
+  #tool-chain-mode[aria-checked="true"] .chain-auto-icon { display:block; }
+  #tool-chain-controls[hidden], #tool-chain-controls [hidden] { display:none; }
+  #tool-chain-controls select, #tool-chain-controls button { min-height:26px; padding:3px 6px; border:1px solid var(--border); border-radius:5px; background:var(--surface2); color:var(--text); font:inherit; cursor:pointer; }
+  #tool-chain-controls select:focus-visible, #tool-chain-controls button:focus-visible { outline:1px solid var(--accent2); outline-offset:2px; }
+  #tool-chain-controls button:hover:not(:disabled) { border-color:var(--accent2); }
+  #tool-chain-controls button:disabled { color:var(--text-muted); background:var(--surface2); border-color:var(--border); opacity:.55; cursor:default; }
+  #tool-chain-status { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+  .tool-chain-next-action { outline:2px solid var(--accent2); outline-offset:2px; box-shadow:0 0 9px color-mix(in srgb, var(--accent2) 20%, transparent); }
+
   #suggestions-btn { width: 38px; height: 44px; color: var(--text-muted); }
   #suggestions-btn svg { width: 19px; height: 19px; }
   #suggestions-menu { position: fixed; z-index: 1100; width: min(390px, calc(100vw - 16px)); padding: 8px; overflow-y: auto; overscroll-behavior: contain; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.3); }
@@ -1725,6 +1771,32 @@ const CFG_OPENAI_PRESETS = [{
     #theme-btn, #lang-btn { display: none; }
   }
 
+/* Disclosure controls are quieter than action buttons, with a shared triangle. */
+details > summary { cursor:pointer; transition:background-color .15s ease; }
+details > summary:hover { background-color:color-mix(in srgb, var(--accent2) 9%, transparent) !important; }
+details > summary:focus-visible { outline:1px solid var(--accent2); outline-offset:2px; }
+details > summary::marker { color:var(--accent2); }
+details > summary::-webkit-details-marker { color:var(--accent2); }
+.debug-block details > summary, .debug-block > summary, .tool-builder > summary, .tool-output-message details > summary { list-style:none; }
+.debug-block summary::-webkit-details-marker, .tool-output-message summary::-webkit-details-marker { display:none; }
+.debug-block summary .dbg-chevron { display:none; }
+.debug-block details > summary::before, .debug-block > summary::before, .tool-builder > summary::before, .tool-output-message details > summary::before { content:'▸'; display:inline-block; color:var(--accent2); margin-right:6px; flex:none; transform:none; }
+.debug-block details[open] > summary::before, .debug-block[open] > summary::before, .tool-builder[open] > summary::before, .tool-output-message details[open] > summary::before { content:'▾'; transform:none; }
+.debug-block .debug-reasoning > summary, .tool-output-message details > summary { padding:5px 8px; border:1px solid var(--border); border-radius:5px; background:color-mix(in srgb, var(--accent2) 4%, transparent); color:var(--text); font:600 11px/1.4 var(--font-ui); }
+.tool-result-request { margin:6px 0; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--text-muted); font:11px/1.5 var(--font-mono); }
+/* Shared chat disclosure and data presentation, including Debug. */
+#messages details > summary { list-style:none; padding:5px 8px; border:1px solid var(--border); border-radius:5px; background:color-mix(in srgb, var(--accent2) 4%, transparent); color:var(--text-muted); font:600 10px/1.5 var(--font-mono); cursor:pointer; white-space:normal; }
+#messages details > summary::-webkit-details-marker { display:none; }
+#messages details > summary::before { content:'▸'; display:inline-block; width:auto; margin-right:6px; flex:none; transform:none; color:var(--accent2); }
+#messages details[open] > summary::before { content:'▾'; transform:none; }
+#messages details > summary:hover { background:color-mix(in srgb, var(--accent2) 9%, transparent); color:var(--accent2); }
+#messages details > summary:focus-visible { outline:1px solid var(--accent2); outline-offset:2px; }
+#messages .debug-json-node > summary { padding:1px 0; border:0; background:transparent; }
+#messages .chat-data, #messages .debug-block pre, #messages .tool-model-request pre { color:var(--text-muted); font:11px/1.6 var(--font-mono); white-space:pre-wrap; overflow-wrap:anywhere; word-break:normal; }
+#messages .chat-data .json-key { color:#89b6cb; }
+#messages .chat-data .json-string { color:#b8e7b3; }
+#messages .chat-data .json-number { color:#c5af91; }
+#messages .chat-data .json-literal { color:#b4a3c7; }
 </style>
 <link rel="stylesheet" href="app-navigation.css">
 <link rel="stylesheet" href="field-help.css">
@@ -2127,6 +2199,16 @@ const CFG_OPENAI_PRESETS = [{
     <button class="icon-btn" id="suggestions-btn" type="button" aria-expanded="false" aria-controls="suggestions-menu" aria-label="Suggestions" title="Suggestions">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v13H9l-5 4V4Z"/><path d="M8 8h8M8 12h5"/></svg>
     </button>
+  </div>
+  <div id="tool-chain-controls" hidden>
+    <button type="button" id="tool-chain-mode" role="switch" aria-checked="false" aria-label="Автоматическое выполнение инструментов">
+      <span id="tool-chain-icon" aria-hidden="true"></span>
+      <svg class="chain-hand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6-8a1.5 1.5 0 0 1 3 0v8-6a1.5 1.5 0 0 1 3 0v7-4a1.5 1.5 0 0 1 3 0v7c0 4-2 7-6 7h-1c-2 0-4-1-5-3l-4-6a1.5 1.5 0 0 1 2-2Z"/></svg>
+      <svg class="chain-auto-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m13 2-9 12h7l-1 8 10-13h-7Z"/></svg>
+    </button>
+    <span id="tool-chain-status" role="status" aria-live="polite"></span>
+    <button type="button" id="tool-chain-pause" hidden>Пауза</button>
+    <button type="button" id="tool-chain-next" hidden>Следующий шаг</button>
   </div>
 </div>
 <div id="suggestions-menu" role="region" aria-label="Suggestions" hidden></div>
@@ -2973,6 +3055,7 @@ function setTransport(mode, openSettings = false) {
     if (openSettings) toggleActiveSettings();
     return;
   }
+  stopToolChain('', true);
   cancelDemoRequest();
   const panels = [document.getElementById('openai-settings'), document.getElementById('webhook-settings'), document.getElementById('demo-settings')];
   panels.forEach(panel => { panel.style.transition = 'none'; });
@@ -2985,6 +3068,7 @@ function setTransport(mode, openSettings = false) {
   transportMode = CFG_TRANSPORT_ORDER.includes(mode) ? mode : CFG_TRANSPORT_DEFAULT;
   localStorage.setItem('ai_transport', transportMode);
   updateTransportUI();
+  renderToolChainControls();
   window.appWorkspace?.refreshSettings();
   if (transportMode === 'demo') loadStubFile(demoConfig.filename);
   closeCompactSelects();
@@ -3435,14 +3519,24 @@ function attachToolHttpRunner(row, input, call, turn) {
   if (!tool?.http?.url) return;
   const box = document.createElement('div'); box.className = 'tool-http-runner';
   const preview = document.createElement('pre'); const status = document.createElement('div'); status.className = 'tool-http-status'; status.setAttribute('role', 'status');
-  const run = document.createElement('button'); run.type = 'button'; run.className = 'cfg-btn'; run.textContent = toolHttpText('Выполнить HTTP-запрос к Инструменту', 'Run HTTP request to Tool');
+  const run = document.createElement('button'); run.type = 'button'; run.className = 'cfg-btn tool-action-button tool-run-button'; run.textContent = toolHttpText('Вызвать инструмент с параметром от модели', 'Call tool with model arguments');
   let request;
-  try { request = buildToolHttpRequest(tool, call); preview.textContent = `${request.method} ${request.url}${request.body ? '\n' + request.body : ''}`; }
+  try {
+    request = buildToolHttpRequest(tool, call);
+    preview.className = 'tool-request-preview';
+    const args = JSON.parse(call.function?.arguments || '{}');
+    const substitutions = (tool.http.mappings || []).map(mapping => mapping.key + ' = ' + JSON.stringify(resolveToolTemplate(mapping.value, args)));
+    const supplied = Object.entries(args).map(([key,value]) => key + ' = ' + JSON.stringify(value)).join(' · ');
+    preview.textContent = ToolLibrary.redact(toolHttpText('От модели: ', 'From model: ') + supplied + (substitutions.length ? '\n' + toolHttpText('В HTTP: ', 'In HTTP: ') + substitutions.join(' · ') : '') + '\n' + request.method + ' ' + request.url + (request.body ? '\n' + request.body : ''));
+    input.httpPreview = preview.textContent;
+    renderChatData(preview,input.httpPreview);
+  }
   catch (error) { status.textContent = error.message; run.disabled = true; }
   run.onclick = async () => {
     if (pendingOpenAIToolTurn !== turn || isThinking) return;
     const controller = new AbortController(); turn.controllers.add(controller);
     run.disabled = true; input.disabled = true; input.value = '';
+    turn.results.delete(call.id); syncToolReturnButtons(turn);
     updateOpenAIRequestPreview();
     status.textContent = toolHttpText('Выполняется…', 'Running…');
     const timer = setTimeout(() => controller.abort(), 30000);
@@ -3453,12 +3547,13 @@ function attachToolHttpRunner(row, input, call, turn) {
       if (!response.ok) throw new Error(`HTTP ${response.status}: ${body.slice(0, 300)}`);
       if (pendingOpenAIToolTurn !== turn) return;
       input.value = body || 'null'; input.dispatchEvent(new Event('input', { bubbles: true }));
-      status.textContent = toolHttpText('Результат получен. Можно отправить модели.', 'Result received. Ready to send to the model.');
+      status.textContent = toolHttpText('Результат инструмента добавлен в чат.', 'Tool result added to chat.');
     } catch (error) {
+      if (toolChain.active) stopToolChain(toolHttpText('Ошибка инструмента. Повторите шаг вручную.', 'Tool error. Retry the step manually.'));
       if (pendingOpenAIToolTurn === turn) status.textContent = error.name === 'AbortError' ? toolHttpText('Запрос отменён или превышено время ожидания.', 'Request cancelled or timed out.') : (window.ToolLibrary?.redact(error.message) || error.message);
-    } finally { clearTimeout(timer); turn.controllers.delete(controller); run.disabled = false; input.disabled = false; }
+    } finally { clearTimeout(timer); turn.controllers.delete(controller); run.disabled = pendingOpenAIToolTurn !== turn; input.disabled = pendingOpenAIToolTurn !== turn; syncToolReturnButtons(turn); }
   };
-  box.append(preview, run, status); row.appendChild(box);
+  box.append(run, preview, status); row.appendChild(box);
 }
 function getToolResultsPanel() {
   let panel = document.getElementById('openai-tool-results');
@@ -3466,11 +3561,14 @@ function getToolResultsPanel() {
   return panel;
 }
 function resetOpenAIToolTurn() {
+  pendingOpenAIToolTurn?.returnButtons?.forEach(button => { button.disabled = true; });
   pendingOpenAIToolTurn?.controllers?.forEach(controller => controller.abort());
   pendingOpenAIToolTurn = null;
   const panel = getToolResultsPanel();
-  panel.closest('.msg-row')?.querySelector('.tool-call-cta')?.remove();
-  panel.hidden = true; panel.replaceChildren(); document.body.appendChild(panel);
+  if (panel.closest('.msg-row')) {
+    panel.removeAttribute('id');
+    panel.querySelectorAll('button, textarea').forEach(control => { control.disabled = true; });
+  } else { panel.hidden = true; panel.replaceChildren(); }
 }
 
 function syncToolFoldToggle() {
@@ -3711,6 +3809,7 @@ function createOpenAIProfile(clone = false) {
 }
 function cloneOpenAIProfile() { createOpenAIProfile(true); }
 function loadOpenAIProfile(id) {
+  stopToolChain('', true);
   resetOpenAIToolTurn();
   clearTimeout(openAIAutosaveTimer);
   const profile = allOpenAIProfiles().find(item => item.id === id);
@@ -3829,6 +3928,7 @@ function generateSessionId() {
   return id;
 }
 function resetSession() {
+  stopToolChain('', true);
   resetOpenAIToolTurn();
   cancelDemoRequest();
   sessionId = generateSessionId();
@@ -4346,6 +4446,10 @@ function extractLegacyReplyPayload(content, enabled = true) {
 function renderAgentText(raw, allowHtml = true) {
   if (!raw) return '';
   const withHtml = typeof raw === 'string' ? raw : String(raw);
+  const jsonText = withHtml.trim().replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i, '$1');
+  if (/^[\[{]/.test(jsonText)) {
+    try { JSON.parse(jsonText); const pre = document.createElement('pre'); pre.className = 'chat-data'; renderDebugJson(pre,jsonText); return pre.outerHTML; } catch (_) {}
+  }
   if (allowHtml && /<[a-z]/i.test(withHtml)) {
     const clean = withHtml.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)[^>]*>/g, (match, tag) => {
       if (tag.toLowerCase() === 'a') {
@@ -4730,12 +4834,13 @@ function debugContractSections(contract, responseBadge = 'debugServerProvided') 
   }
   return sections;
 }
-function renderDebugJson(container, content) {
+function renderDebugJson(container, content, format = true) {
+  container.replaceChildren();
   try { JSON.parse(content); } catch (_) { container.textContent = content; return; }
   // Format whitespace only: preserve number precision, duplicate keys and string escapes.
   const parts = content.match(/"(?:\\.|[^"\\])*"|[{}\[\],:]|[^\s{}\[\],:]+/g) || [];
   let depth = 0;
-  content = parts.map((part, index) => {
+  if (format) content = parts.map((part, index) => {
     if (part === '{' || part === '[') {
       depth++;
       return part + (/^[}\]]$/.test(parts[index + 1] || '') ? '' : '\n' + '  '.repeat(depth));
@@ -4757,6 +4862,29 @@ function renderDebugJson(container, content) {
     offset = match.index + match[0].length;
   }
   container.appendChild(document.createTextNode(content.slice(offset)));
+}
+function renderChatData(container, text) {
+  container.replaceChildren();
+  container.classList.add('chat-data');
+  const start = container.classList.contains('tool-call-summary') ? text.indexOf(' · ') + 3 : text.search(/[\[{]/);
+  if (start >= 0) {
+    try {
+      JSON.parse(text.slice(start));
+      container.append(document.createTextNode(text.slice(0,start)));
+      const json = document.createElement('span');
+      renderDebugJson(json,text.slice(start), !container.classList.contains('tool-call-summary'));
+      container.append(json); return;
+    } catch (_) {}
+  }
+  const pattern = /([\w.-]+)( = )("(?:\\.|[^"\\])*"|-?\d+(?:\.\d+)?|true|false|null)/g;
+  let offset = 0;
+  for (const match of text.matchAll(pattern)) {
+    container.append(document.createTextNode(text.slice(offset,match.index)));
+    const key = document.createElement('span'); key.className = 'json-key'; key.textContent = match[1];
+    const value = document.createElement('span'); value.className = match[3].startsWith('"') ? 'json-string' : /^(true|false|null)$/.test(match[3]) ? 'json-literal' : 'json-number'; value.textContent = match[3];
+    container.append(key,document.createTextNode(match[2]),value); offset = match.index + match[0].length;
+  }
+  container.append(document.createTextNode(text.slice(offset)));
 }
 function renderDebugTree(container, content) {
   // Keep literal tokens intact, including large numbers and duplicate object keys.
@@ -4947,7 +5075,7 @@ function appendDebug(row, debugData) {
     if (safeSection.id === 'summary') {
       const reasoning = openAIReasoning(safeContract.raw_response?.choices?.[0]?.message);
       if (reasoning) {
-        const block = document.createElement('details'); block.className = 'debug-reasoning'; block.open = true;
+        const block = document.createElement('details'); block.className = 'debug-reasoning';
         const label = document.createElement('summary'); label.className = 'debug-reasoning-label';
         label.textContent = lang === 'ru' ? 'Рассуждение провайдера · не финальный ответ' : 'Provider reasoning · not a final answer';
         const body = document.createElement('div'); body.className = 'debug-reasoning-content';
@@ -5128,65 +5256,201 @@ function getOpenAIContext(currentText, includeContext = openAIConfig.includeCont
   if (last?.role === 'user' && last.content === currentText) context.pop();
   return context;
 }
+function cleanToolConversationMessage(message) {
+  const clean = { role:message.role };
+  if (Object.hasOwn(message, 'content')) clean.content = message.content;
+  if (message.name) clean.name = message.name;
+  if (message.tool_call_id) clean.tool_call_id = message.tool_call_id;
+  if (message.tool_calls) clean.tool_calls = message.tool_calls.map(call => ({
+    id:call.id, type:call.type, function:{ name:call.function.name, arguments:call.function.arguments }
+  }));
+  return clean;
+}
+function buildToolContinuationPayload(turn) {
+  const results = turn.toolCalls.filter(call => turn.results.has(call.id)).map(call => ({
+    role:'tool', tool_call_id:call.id, content:turn.results.get(call.id).content.trim()
+  }));
+  return { ...turn.payload, tool_choice:'auto', messages:[...turn.payload.messages, turn.assistantMessage, ...results].map(cleanToolConversationMessage) };
+}
+function toolModelRequestPreview(turn) {
+  const missing = turn.toolCalls.filter(call => !turn.results.has(call.id));
+  return (missing.length ? toolHttpText('Ожидаются результаты: ', 'Waiting for results: ') + missing.map(call => call.function.name).join(', ') + '\n\n' : '') +
+    'POST ' + openAIRequestEndpoint(turn.config) + '\n' + ToolLibrary.redact(JSON.stringify(buildToolContinuationPayload(turn), null, 2));
+}
 let pendingOpenAIToolTurn = null;
+const CFG_TOOL_CHAIN_MAX_CYCLES = 5;
+const CFG_TOOL_CHAIN_AUTO_DELAY = 350;
+const toolChain = { mode:'manual', active:false, paused:false, next:false, cycles:0, turn:null, scheduled:null, controller:null, message:'' };
+try { const saved = localStorage.getItem('ai_tool_chain_mode'); if (['manual','auto'].includes(saved)) toolChain.mode = saved; } catch (_) {}
+function clearToolChainAction() {
+  toolChain.scheduled?.button.classList.remove('tool-chain-next-action');
+  toolChain.scheduled = null;
+}
+function stopToolChain(message = '', abort = false) {
+  toolChain.active = false; toolChain.paused = false; toolChain.next = false; toolChain.message = message;
+  clearToolChainAction();
+  if (abort) { toolChain.controller?.abort(); pendingOpenAIToolTurn?.controllers.forEach(controller => controller.abort()); }
+  renderToolChainControls();
+}
+function startToolChain() {
+  clearToolChainAction();
+  toolChain.active = toolChain.mode !== 'manual'; toolChain.paused = false; toolChain.next = false;
+  if (toolChain.active) closeSuggestionMenu();
+  toolChain.cycles = 0; toolChain.turn = null; toolChain.message = '';
+  renderToolChainControls();
+}
+function renderToolChainControls() {
+  const uiKey = JSON.stringify([transportMode,lang,toolChain.mode,toolChain.active,toolChain.paused,toolChain.cycles,toolChain.message,isThinking,pendingOpenAIToolTurn?.controllers.size]);
+  if (toolChain.uiKey === uiKey) return;
+  toolChain.uiKey = uiKey;
+  const controls = document.getElementById('tool-chain-controls');
+  controls.hidden = transportMode !== 'openai';
+  const toggle = document.getElementById('tool-chain-mode');
+  toggle.setAttribute('aria-checked', String(toolChain.mode === 'auto'));
+  toggle.setAttribute('aria-label', toolHttpText('Автоматическое выполнение инструментов', 'Automatic tool execution'));
+  toggle.title = toolChain.mode === 'auto' ? toolHttpText('Инструменты: автоматически. Переключить на ручной режим.', 'Tools: automatic. Switch to manual.') : toolHttpText('Инструменты: вручную. Переключить на автоматический режим.', 'Tools: manual. Switch to automatic.');
+  const icon = document.getElementById('tool-chain-icon');
+  if (!icon.firstChild) icon.append(document.querySelector('#tool-library-btn svg').cloneNode(true));
+  const pause = document.getElementById('tool-chain-pause'), next = document.getElementById('tool-chain-next');
+  pause.hidden = false;
+  pause.disabled = !toolChain.active;
+  next.hidden = true;
+  next.disabled = isThinking || !!pendingOpenAIToolTurn?.controllers.size;
+  const resumable = toolChain.paused || !toolChain.active;
+  pause.textContent = resumable ? '▶' : 'Ⅱ';
+  pause.title = resumable ? toolHttpText('Продолжить','Resume') : toolHttpText('Пауза','Pause');
+  pause.setAttribute('aria-label',pause.title);
+  const status = document.getElementById('tool-chain-status');
+  const text = toolChain.active ? toolHttpText('Цикл ','Cycle ') + toolChain.cycles + '/' + CFG_TOOL_CHAIN_MAX_CYCLES + ' · ' + (toolChain.paused ? toolHttpText('Пауза','Paused') : toolChain.message || toolHttpText('Ожидание модели','Waiting for model')) : toolChain.message;
+  if (status.textContent !== text) status.textContent = text;
+  controls.title = text;
+  document.body.dataset.toolChainActive = String(toolChain.active);
+}
+function advanceToolChain() {
+  if (!toolChain.active) return;
+  if (transportMode !== 'openai' || localStorage.getItem('n8n_consent') !== '1') { stopToolChain('',true); return; }
+  if (isThinking || pendingOpenAIToolTurn?.controllers.size) { renderToolChainControls(); return; }
+  const turn = pendingOpenAIToolTurn;
+  if (!turn) { stopToolChain(toolHttpText('Цепочка завершена','Chain complete')); return; }
+  if (turn !== toolChain.turn) {
+    toolChain.turn = turn; toolChain.cycles++;
+    if (toolChain.cycles > CFG_TOOL_CHAIN_MAX_CYCLES) { stopToolChain(toolHttpText('Лимит: 5 циклов. Дальше — вручную.','Limit: 5 cycles. Continue manually.')); return; }
+  }
+  if (toolChain.paused && !toolChain.next) { renderToolChainControls(); return; }
+  const missing = turn.toolCalls.find(call => !turn.results.has(call.id));
+  let button, label;
+  if (missing) {
+    const input = [...document.querySelectorAll('#openai-tool-results [data-tool-call-id]')].find(input => input.dataset.toolCallId === missing.id);
+    button = input?.closest('.tool-call-card')?.querySelector('.tool-http-runner button');
+    label = toolHttpText('Вызов ', 'Calling ') + missing.function.name;
+  } else {
+    button = [...turn.returnButtons].find(button => button.isConnected && !button.disabled);
+    label = toolHttpText('Вызов модели с результатами','Calling model with results');
+  }
+  if (!button || button.disabled) { stopToolChain(toolHttpText('Шаг недоступен. Проверьте настройки инструмента.','Step unavailable. Check tool settings.')); return; }
+  if (toolChain.scheduled?.button !== button) {
+    clearToolChainAction();
+    toolChain.scheduled = {button, due:Date.now() + CFG_TOOL_CHAIN_AUTO_DELAY};
+    button.classList.add('tool-chain-next-action');
+    button.scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+  toolChain.message = label;
+  renderToolChainControls();
+  if (!toolChain.next && Date.now() < toolChain.scheduled.due) return;
+  toolChain.next = false; clearToolChainAction(); button.click();
+}
+document.getElementById('tool-chain-mode').onclick = () => {
+  toolChain.mode = toolChain.mode === 'manual' ? 'auto' : 'manual';
+  try { localStorage.setItem('ai_tool_chain_mode', toolChain.mode); } catch (_) {}
+  if (toolChain.mode !== 'manual' && (pendingOpenAIToolTurn || isThinking)) startToolChain();
+  else stopToolChain();
+};
+document.getElementById('tool-chain-pause').onclick = () => { toolChain.paused = !toolChain.paused; clearToolChainAction(); renderToolChainControls(); };
+document.getElementById('tool-chain-next').onclick = () => { toolChain.next = true; advanceToolChain(); };
+setInterval(() => { advanceToolChain(); renderToolChainControls(); }, 200);
+renderToolChainControls();
+
+function syncToolReturnButtons(turn) {
+  const ready = pendingOpenAIToolTurn === turn && !isThinking && !turn.controllers.size && turn.toolCalls.every(call => turn.results.has(call.id));
+  turn.returnButtons.forEach(button => {
+    button.disabled = !ready;
+    const preview = button.closest('.bubble')?.querySelector('.tool-model-request pre');
+    if (preview) renderChatData(preview,toolModelRequestPreview(turn));
+    button.textContent = turn.toolCalls.length > 1 ? toolHttpText('Вызвать модель с результатами функций', 'Call model with function results') : toolHttpText('Вызвать модель с результатом функции', 'Call model with function result');
+    button.title = ready ? toolHttpText('Модель получит результат инструмента и продолжит ответ на исходный вопрос.', 'The model will receive the tool result and continue answering the original question.') : toolHttpText('Дождитесь результатов всех вызовов инструмента.', 'Wait for all tool call results.');
+  });
+}
 function showOpenAIToolResults(toolCalls, payload, assistantMessage, chatRow, config = openAIConfig) {
   resetOpenAIToolTurn();
-  pendingOpenAIToolTurn = { toolCalls, payload, assistantMessage, config: JSON.parse(JSON.stringify(config)), controllers: new Set() };
+  pendingOpenAIToolTurn = { toolCalls, payload, assistantMessage, config: JSON.parse(JSON.stringify(config)), controllers: new Set(), results: new Map(), returnButtons: new Set() };
   const turn = pendingOpenAIToolTurn;
   const panel = getToolResultsPanel();
-  panel.hidden = false;
-  panel.innerHTML = `<strong>${t('openaiToolResults')}</strong>`;
-  toolCalls.forEach(call => {
-    const row = document.createElement('div');
-    row.className = 'tool-result-row';
-    const meta = document.createElement('div');
-    meta.className = 'tool-arguments';
-    const rawArguments = call.function?.arguments || '';
-    const heading = document.createElement('strong');
-    const formatted = document.createElement('pre');
+  panel.hidden = false; panel.classList.add('tool-call-response');
+  const title = document.createElement('strong'); title.className = 'tool-response-type';
+  const icon = document.querySelector('#tool-library-btn svg').cloneNode(true);
+  title.append(icon, document.createTextNode(toolHttpText('Агент запросил вызвать инструмент.', 'Agent requested a tool call.')));
+  panel.append(title);
+  toolCalls.forEach((call, index) => {
+    const row = document.createElement('div'); row.className = 'tool-call-card';
+    const args = document.createElement('div'); args.className = 'tool-call-summary';
+    let valid = true;
     try {
-      formatted.textContent = JSON.stringify(JSON.parse(rawArguments || '{}'), null, 2);
-      heading.textContent = `${call.function?.name || 'function'} · ${t('openaiParsedArguments')}`;
-      const raw = document.createElement('details');
-      const rawSummary = document.createElement('summary');
-      rawSummary.textContent = t('openaiRawArguments');
-      const rawCode = document.createElement('pre');
-      rawCode.textContent = rawArguments;
-      raw.append(rawSummary, rawCode);
-      meta.append(heading, formatted, raw);
-    } catch (_) {
-      heading.textContent = `${call.function?.name || 'function'} · ${t('openaiInvalidArguments')}`;
-      formatted.textContent = rawArguments;
-      meta.append(heading, formatted);
+      const values = JSON.parse(call.function?.arguments || '{}');
+      if (!values || typeof values !== 'object' || Array.isArray(values)) throw new Error('Arguments must be an object');
+      renderChatData(args,`tool_calls[${index}]: ${call.function?.name || 'function'} (${call.id}) · ${JSON.stringify(values)}`);
+    } catch (_) { valid = false; args.textContent = toolHttpText('Некорректные аргументы. Исходный ответ доступен в Debug.', 'Invalid arguments. See the original response in Debug.'); }
+    const input = document.createElement('textarea'); input.hidden = true; input.dataset.toolCallId = call.id;
+    input.addEventListener('input', () => {
+      updateOpenAIRequestPreview();
+      if (!input.value || pendingOpenAIToolTurn !== turn) return;
+      const resultRow = appendMessage('agent', '', 'Tool · ' + (call.function?.name || 'function'));
+      resultRow.classList.add('tool-output-message');
+      resultRow.dataset.openaiMessages = '[]';
+      const bubble = resultRow.querySelector('.bubble'), copy = bubble.querySelector('.bubble-copy-btn');
+      const heading = document.createElement('strong'); heading.textContent = (input.httpPreview ? toolHttpText('Результат HTTP вызова инструмента · ', 'HTTP tool call result · ') : toolHttpText('Результат инструмента · ', 'Tool result · ')) + (call.function?.name || 'function');
+      if (input.httpPreview) {
+        const avatar = resultRow.querySelector('.avatar');
+        avatar.innerHTML = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="26" height="22" rx="4"/><path d="M3 11h26M19 8h2m2 0h2M7 17h16m-4-4 4 4-4 4M25 23H9m4-4-4 4 4 4"/></svg>';
+        avatar.classList.add('http-avatar');
+        avatar.setAttribute('aria-label', 'HTTP');
+      }
+      const requestInfo = document.createElement('div'); requestInfo.className = 'tool-result-request'; renderChatData(requestInfo,input.httpPreview || ''); requestInfo.hidden = !input.httpPreview;
+      const details = document.createElement('details'); details.open = true;
+      const summary = document.createElement('summary'); summary.textContent = toolHttpText('Ответ сервера', 'Server response');
+      const code = document.createElement('pre'); code.textContent = input.value;
+      renderChatData(code,input.value);
+      details.append(summary,code);
+      const note = document.createElement('div'); note.className = 'tool-http-status'; note.textContent = toolHttpText('Результат получен от инструмента. Обратно модели пока не отправлен.', 'Received from the tool. Not sent back to the model.');
+      const send = document.createElement('button'); send.type = 'button'; send.className = 'cfg-btn tool-action-button tool-return-button';
+      send.textContent = toolHttpText('Вызвать модель с результатом функции', 'Call model with function result');
+      send.onclick = () => { if (pendingOpenAIToolTurn === turn) continueOpenAIWithToolResults(); };
+      turn.results.set(call.id, { row:resultRow, note, content:input.value }); turn.returnButtons.add(send);
+      const actions = document.createElement('div'); actions.className = 'tool-result-actions'; actions.append(send);
+      const modelRequest = document.createElement('details'); modelRequest.className = 'tool-model-request';
+      const requestLabel = document.createElement('summary'); requestLabel.textContent = toolHttpText('Показать запрос модели', 'Show model request');
+      const requestCode = document.createElement('pre'); modelRequest.append(requestLabel,requestCode);
+      bubble.replaceChildren(heading,requestInfo,details,note,modelRequest,actions); if (copy) bubble.append(copy);
+      syncToolReturnButtons(turn);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    });
+    row.append(args,input);
+    if (valid) {
+      attachToolHttpRunner(row,input,call,turn);
+      if (!row.querySelector('.tool-http-runner')) {
+        const note = document.createElement('div'); note.className = 'tool-http-status';
+        note.textContent = toolHttpText('Для этого инструмента не настроен HTTP URL. Подключите инструмент из библиотеки или задайте URL и параметры в настройках.', 'No HTTP URL is configured. Connect a library tool or configure its URL and parameters.');
+        row.append(note);
+      }
     }
-    const id = document.createElement('code');
-    id.textContent = call.id;
-    meta.appendChild(id);
-    const input = document.createElement('textarea');
-    input.className = 'api-textarea';
-    input.dataset.toolCallId = call.id;
-    input.placeholder = t('openaiToolResult');
-    input.setAttribute('aria-label', `${call.function?.name || 'tool'} · ${t('openaiToolResult')}`);
-    input.addEventListener('input', updateOpenAIRequestPreview);
-    row.append(meta, input);
-    attachToolHttpRunner(row, input, call, turn);
-    panel.appendChild(row);
+    panel.append(row);
   });
-  const button = document.createElement('button');
-  button.className = 'cfg-btn primary tool-add';
-  button.type = 'button';
-  button.textContent = t('openaiContinueTools');
-  button.onclick = continueOpenAIWithToolResults;
-  panel.appendChild(button);
   if (chatRow) {
-    const wrap = chatRow.querySelector('.bubble-wrap');
-    wrap.insertBefore(panel, wrap.querySelector('.debug-block-wrap') || wrap.querySelector('.bubble-meta'));
-    const cta = document.createElement('button');
-    cta.className = 'tool-call-cta';
-    cta.type = 'button';
-    cta.textContent = t('openaiToolCallsCta').replace('{count}', toolCalls.length);
-    cta.onclick = focusOpenAIToolResults;
-    chatRow.querySelector('.bubble')?.appendChild(cta);
+    const bubble = chatRow.querySelector('.bubble'), copy = bubble.querySelector('.bubble-copy-btn');
+    chatRow.querySelector('.response-view')?.remove();
+    bubble.replaceChildren();
+    const content = openAIMessageText(assistantMessage);
+    if (content) { const text = document.createElement('div'); text.textContent = content; bubble.append(text); }
+    bubble.append(panel); if (copy) bubble.append(copy);
   }
 }
 function focusOpenAIToolResults() {
@@ -5200,15 +5464,25 @@ async function continueOpenAIWithToolResults() {
   const inputs = [...document.querySelectorAll('#openai-tool-results [data-tool-call-id]')];
   if (pendingOpenAIToolTurn.controllers.size) return toast(toolHttpText('Дождитесь HTTP-запросов.', 'Wait for HTTP requests.'));
   if (inputs.some(input => !input.value.trim())) return toast(t('openaiMissingToolResults'));
-  const requestConfig = pendingOpenAIToolTurn.config;
+  const turn = pendingOpenAIToolTurn;
+  const requestConfig = turn.config;
   const toolMessages = inputs.map(input => ({ role: 'tool', tool_call_id: input.dataset.toolCallId, content: input.value.trim() }));
-  const payload = { ...pendingOpenAIToolTurn.payload, messages: [...pendingOpenAIToolTurn.payload.messages, pendingOpenAIToolTurn.assistantMessage, ...toolMessages] };
-  const panel = getToolResultsPanel();
-  const summary = inputs.map(input => `${input.dataset.toolCallId}: ${input.value.trim()}`).join('\n');
-  const toolRow = appendMessage('user', summary, 'Tool results');
-  toolRow.dataset.openaiMessages = JSON.stringify(toolMessages);
-  isThinking = true; updateSendState(); showTyping();
+  const payload = buildToolContinuationPayload(turn);
+  const siteRow = appendMessage('site', '', 'Site · OpenAI');
+  siteRow.dataset.openaiMessages = '[]';
+  const siteBubble = siteRow.querySelector('.bubble');
+  const siteTitle = document.createElement('strong'); siteTitle.textContent = toolHttpText('Сайт → модель', 'Site → model');
+  const siteText = document.createElement('div'); siteText.textContent = toolHttpText('Продолжить ответ с результатами функций: ', 'Continue the answer with function results: ') + turn.toolCalls.map(call => call.function.name).join(' · ');
+  const siteStatus = document.createElement('div'); siteStatus.className = 'tool-http-status'; siteStatus.setAttribute('role','status'); siteStatus.textContent = toolHttpText('Запрос отправляется…', 'Sending request…');
+  const siteDetails = document.createElement('details'); siteDetails.className = 'tool-model-request';
+  const siteSummary = document.createElement('summary'); siteSummary.textContent = toolHttpText('Показать запрос модели', 'Show model request');
+  const siteCode = document.createElement('pre'); renderChatData(siteCode,toolModelRequestPreview(turn)); siteDetails.append(siteSummary,siteCode);
+  siteBubble.replaceChildren(siteTitle,siteText,siteDetails,siteStatus);
+  const siteAvatar = siteRow.querySelector('.avatar'); siteAvatar.classList.add('http-avatar'); siteAvatar.setAttribute('aria-label',toolHttpText('Запрос сайта', 'Site request'));
+  siteAvatar.innerHTML = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="26" height="22" rx="3"/><path d="M3 11h26M19 8h2m2 0h2M9 19h14m-4-4 4 4-4 4"/></svg>';
+  isThinking = true; syncToolReturnButtons(turn); updateSendState(); showTyping();
   const abortCtrl = new AbortController();
+  toolChain.controller = abortCtrl;
   const timeoutId = setTimeout(() => abortCtrl.abort(), CFG_REQUEST_TIMEOUT_MS);
   const started = performance.now();
   try {
@@ -5221,7 +5495,14 @@ async function continueOpenAIWithToolResults() {
     const calls = choice?.message?.tool_calls || [];
     const reasoning = openAIReasoning(choice?.message);
     const rawReply = openAIMessageText(choice?.message) || (calls.length ? calls.map(call => `${call.function?.name || 'function'} · ${call.id}`).join('\n') : reasoning ? openAIReasoningNotice() : '');
-    if (!rawReply) { appendError(t('errEmptyMsg'), 'errEmpty'); return; }
+    if (!rawReply) { stopToolChain(toolHttpText('Пустой ответ модели','Empty model response')); appendError(t('errEmptyMsg'), 'errEmpty'); return; }
+    siteStatus.textContent = toolHttpText('Ответ модели получен.', 'Model response received.');
+    toolMessages.forEach(message => {
+      const result = turn.results.get(message.tool_call_id);
+      if (!result) return;
+      result.row.dataset.openaiMessages = JSON.stringify([message]);
+      result.note.textContent = toolHttpText('Результат передан модели. Ответ показан ниже.', 'Result sent to the model. Its response is shown below.');
+    });
     const legacyPayload = extractLegacyReplyPayload(rawReply, true);
     const reply = legacyPayload?.reply_html || rawReply;
     const elapsed = Math.round(performance.now() - started);
@@ -5231,9 +5512,10 @@ async function continueOpenAIWithToolResults() {
     appendDebug(row, adaptOpenAIDebug(data, { endpoint: openAIRequestEndpoint(requestConfig), payload, status: res.status, statusText: res.statusText, elapsed }));
     if (calls.length) showOpenAIToolResults(calls, payload, choice.message, row, requestConfig); else resetOpenAIToolTurn();
   } catch (err) {
+    if (toolChain.active) stopToolChain(toolHttpText('Ошибка модели. Повторите шаг вручную.', 'Model error. Retry the step manually.'));
     clearTimeout(timeoutId); hideTyping();
     appendError(err.name === 'AbortError' ? t('errTimeoutMsg') : err.message, err.name === 'AbortError' ? 'errTimeout' : 'errNetwork');
-  } finally { isThinking = false; updateSendState(); }
+  } finally { toolChain.controller = null; clearTimeout(timeoutId); if (siteStatus.textContent === toolHttpText('Запрос отправляется…', 'Sending request…')) siteStatus.textContent = toolHttpText('Ответ не получен. Можно повторить вызов.', 'No response received. You can retry the call.'); isThinking = false; syncToolReturnButtons(turn); updateSendState(); }
 }
 
 async function sendOpenAIMessage(text) {
@@ -5244,6 +5526,7 @@ async function sendOpenAIMessage(text) {
     return;
   }
   resetOpenAIToolTurn();
+  startToolChain();
   const requestConfig = { ...openAIConfig };
   const payload = buildOpenAIRequest(requestConfig, getOpenAIContext(text), text);
   const input = document.getElementById('msg-input');
@@ -5255,6 +5538,7 @@ async function sendOpenAIMessage(text) {
   document.getElementById('connection-summary-dot').className = 'status-dot thinking';
   showTyping();
   const abortCtrl = new AbortController();
+  toolChain.controller = abortCtrl;
   const timeoutId = setTimeout(() => abortCtrl.abort(), CFG_REQUEST_TIMEOUT_MS);
   const started = performance.now();
   try {
@@ -5276,7 +5560,7 @@ async function sendOpenAIMessage(text) {
     const rawReply = openAIMessageText(choice?.message) || (toolCalls?.length ? toolCalls.map(call => `${call.function?.name || 'function'} · ${call.id}`).join('\n') : reasoning ? openAIReasoningNotice() : '');
     const legacyPayload = extractLegacyReplyPayload(rawReply, true);
     const reply = legacyPayload ? legacyPayload.reply_html || legacyPayload.text || rawReply : rawReply;
-    if (!reply && !legacyPayload) { appendError(t('errEmptyMsg'), 'errEmpty'); return; }
+    if (!reply && !legacyPayload) { stopToolChain(toolHttpText('Пустой ответ модели','Empty model response')); appendError(t('errEmptyMsg'), 'errEmpty'); return; }
     const elapsed = Math.round(performance.now() - started);
     const row = appendMessage('agent', reply, `OpenAI · ${requestConfig.model}`);
     row.dataset.openaiMessage = JSON.stringify(choice.message);
@@ -5290,12 +5574,14 @@ async function sendOpenAIMessage(text) {
     document.getElementById('openai-status-dot').className = 'status-dot online';
     document.getElementById('connection-summary-dot').className = 'status-dot online';
   } catch (err) {
+    if (toolChain.active) stopToolChain(toolHttpText('Ошибка модели. Повторите шаг вручную.', 'Model error. Retry the step manually.'));
     clearTimeout(timeoutId); hideTyping();
     const isTimeout = err.name === 'AbortError';
     appendError(isTimeout ? t('errTimeoutMsg') : err.message, isTimeout ? 'errTimeout' : 'errNetwork');
     document.getElementById('openai-status-dot').className = 'status-dot error';
     document.getElementById('connection-summary-dot').className = 'status-dot error';
   } finally {
+    toolChain.controller = null; clearTimeout(timeoutId);
     isThinking = false;
     updateSendState();
   }
@@ -5454,6 +5740,7 @@ async function sendMessage() {
 }
 
 function clearChat(anchor) {
+  stopToolChain('', true);
   resetOpenAIToolTurn();
   cancelDemoRequest();
   openAIContextStart = 0;
@@ -5714,7 +6001,7 @@ function hidePopup() {
 
 function deleteMessage(row) {
   if (!row || !row.parentNode) return;
-  if (row.querySelector('#openai-tool-results')) resetOpenAIToolTurn();
+  if (row.querySelector('#openai-tool-results')) { stopToolChain('', true); resetOpenAIToolTurn(); }
   if (pendingDeletion && pendingDeletion.timeoutId) {
     clearTimeout(pendingDeletion.timeoutId);
     pendingDeletion = null;

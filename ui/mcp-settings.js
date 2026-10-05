@@ -32,19 +32,19 @@
   window.attachMcpRunner = (row,input,call,turn,tool) => {
     const box=document.createElement('div');box.className='tool-http-runner';
     const status=document.createElement('div');status.setAttribute('role','status');
-    const run=document.createElement('button');run.type='button';run.className='cfg-btn';run.textContent=text('Выполнить MCP-вызов','Run MCP call');
+    const run=document.createElement('button');run.type='button';run.className='cfg-btn tool-action-button';run.textContent=text('Выполнить MCP-вызов','Run MCP call');
     const description=document.createElement('p');description.textContent=tool.mcp.server.title+' · '+tool.mcp.toolName+' · '+(tool.mcp.server.mode==='workshop'?text('учебный стенд','browser workshop'):tool.mcp.server.url);
     run.onclick=async()=>{
       if(pendingOpenAIToolTurn!==turn||isThinking)return;
-      const controller=new AbortController();turn.controllers.add(controller);run.disabled=true;input.disabled=true;input.value='';updateOpenAIRequestPreview();
+      const controller=new AbortController();turn.controllers.add(controller);run.disabled=true;input.disabled=true;input.value='';turn.results.delete(call.id);syncToolReturnButtons(turn);updateOpenAIRequestPreview();
       const client=new McpClient(tool.mcp.server);status.textContent=text('Выполняется…','Running…');
       try {
         const result=await client.call(tool.mcp.toolName,JSON.parse(call.function.arguments||'{}'),controller.signal);
         if(pendingOpenAIToolTurn!==turn)return;
         input.value=McpLibrary.redact(result);input.dispatchEvent(new Event('input',{bubbles:true}));
-        status.textContent=result.isError?text('Инструмент вернул ошибку. Проверьте результат перед отправкой модели.','The tool returned an error. Review it before sending.'):text('Результат получен. Можно отправить модели.','Result received. Ready to send to the model.');
-      }catch(error){if(pendingOpenAIToolTurn===turn)status.textContent=McpLibrary.redact(error.name==='AbortError'?text('Вызов отменён или истекло время ожидания.','Call cancelled or timed out.'):error.message);}
-      finally{await client.close().catch(()=>{});turn.controllers.delete(controller);run.disabled=false;input.disabled=false;}
+        if(result.isError&&toolChain.active)stopToolChain(text('Инструмент вернул ошибку.','The tool returned an error.'));status.textContent=result.isError?text('Инструмент вернул ошибку. Проверьте результат перед отправкой модели.','The tool returned an error. Review it before sending.'):text('Результат получен. Можно отправить модели.','Result received. Ready to send to the model.');
+      }catch(error){if(toolChain.active)stopToolChain(text('Ошибка инструмента. Повторите шаг вручную.','Tool error. Retry the step manually.'));if(pendingOpenAIToolTurn===turn)status.textContent=McpLibrary.redact(error.name==='AbortError'?text('Вызов отменён или истекло время ожидания.','Call cancelled or timed out.'):error.message);}
+      finally{await client.close().catch(()=>{});turn.controllers.delete(controller);run.disabled=pendingOpenAIToolTurn!==turn;input.disabled=pendingOpenAIToolTurn!==turn;syncToolReturnButtons(turn);}
     };
     box.append(description,run,status);row.append(box);
   };
