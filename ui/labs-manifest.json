@@ -1,4 +1,4 @@
 {
   "schemaVersion": 1,
-  "labs": ["lab-chat-completions.json"]
+  "labs": ["lab-chat-completions.json", "lab-tool-calling.json", "lab-tool-agents.json"]
 }

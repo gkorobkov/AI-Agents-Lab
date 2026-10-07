@@ -5,7 +5,7 @@
   document.querySelector('body > header').after(workspace);
   const definitions = {
     chat: ['Чат', 'Chat'], settings: ['Настройки API', 'API settings'],
-    labs: ['Лабы', 'Labs', 'labs.html'], tools: ['Библиотека Tools', 'Tool library', 'tools.html'], mcp: ['Библиотека MCP', 'MCP library', 'mcp.html'], documentation: ['Документация', 'Documentation', 'documentation.html']
+    labs: ['Лабы', 'Labs', 'labs.html'], tools: ['Библиотека Tools', 'Tool library', 'tools.html'], mcp: ['Библиотека MCP', 'MCP library', 'mcp.html'], help: ['Помощь', 'Help', 'help.html'], documentation: ['Документация', 'Documentation', 'documentation.html']
   };
   const panels = {};
   let slots = ['chat', null];
@@ -28,6 +28,7 @@
     settings: document.querySelector('#mode-settings-btn svg').outerHTML,
     tools: document.querySelector('[data-app-page="tools"] svg').outerHTML,
     mcp: document.querySelector('[data-app-page="mcp"] svg').outerHTML,
+    help: document.querySelector('[data-app-page="help"] svg').outerHTML,
     documentation: icon('<path d="M4 3h11l5 5v13H4zM14 3v6h6M8 13h8M8 17h6"/>')
   };
   const actionIcons = {
@@ -238,7 +239,7 @@
     if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button) return;
     const url = new URL(link.href, location.href); if (url.origin !== location.origin) return;
     const file = url.pathname.split('/').pop().replace(/\.html$/, '');
-    const page = link.dataset.appPage || (['labs', 'documentation', 'tools', 'mcp'].includes(file) ? file : null);
+    const page = link.dataset.appPage || (['labs', 'documentation', 'tools', 'mcp', 'help'].includes(file) ? file : null);
     if (!page) return;
     event.preventDefault(); navigateApp(page, url.hash, true, url.searchParams.get('lab'));
   });

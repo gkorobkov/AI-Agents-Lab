@@ -45,12 +45,12 @@
     if (!object(lab) || lab.schemaVersion !== 1 || !identifier(lab.id) || !string(lab.version, 32) || !/^[a-z0-9][a-z0-9.-]*$/.test(lab.version)) fail('Нужны schemaVersion: 1, id и version лабораторной.');
     if (!string(lab.title, 200) || !lab.title.trim() || !string(lab.description, 3000)) fail('Нужны название и описание лабораторной.');
     if (!Array.isArray(lab.experiments) || !lab.experiments.length || lab.experiments.length > 100) fail('В лабораторной должно быть от 1 до 100 заданий.');
-    const ids = new Set(['prepare', 'report', 'experiments']);
+    const ids = new Set(['prepare', 'report', 'experiments', 'objective']);
     lab.experiments.forEach(experiment => {
       if (!object(experiment) || !identifier(experiment.id) || ids.has(experiment.id) || !string(experiment.title, 200) || !experiment.title.trim()) fail('У заданий должны быть уникальные id и названия.');
       ids.add(experiment.id); validateBlocks(experiment.blocks);
     });
-    ['introduction', 'preparation', 'reportInstructions'].forEach(key => { if (lab[key] !== undefined) validateBlocks(lab[key]); });
+    ['objective', 'introduction', 'preparation', 'reportInstructions'].forEach(key => { if (lab[key] !== undefined) validateBlocks(lab[key]); });
     return lab;
   }
   function emptyReport(lab) {
@@ -67,6 +67,7 @@
     clean.updatedAt = value.updatedAt;
     lab.experiments.forEach(experiment => {
       const answer = value.answers[experiment.id];
+      if (answer === undefined) return; // Newly added tasks start empty in existing reports.
       if (!object(answer) || !Object.hasOwn(statuses, answer.status) || !string(answer.results, 200002) || !['evidence', 'conclusion'].every(key => string(answer[key]))) fail('Неверные ответы задания: ' + experiment.id);
       // Fold the old third field into results without losing existing reports.
       const merged = { results: [answer.results, answer.evidence].filter(Boolean).join('\n\n'), evidence: '', conclusion: answer.conclusion };
@@ -80,6 +81,23 @@
     if (cached) { storageError = cached.error; return cached.report; }
     try {
       const raw = localStorage.getItem(reportKey(lab));
+      if (!raw && lab.id === 'tool-calling') {
+        const priorToolReport = localStorage.getItem(CFG_LAB_REPORT_PREFIX + 'tool-calling:1.0');
+        if (priorToolReport) {
+          const previousVersion = JSON.parse(priorToolReport);
+          if (previousVersion.labVersion === '1.0') {
+            previousVersion.labVersion = lab.version;
+            return validateReport(previousVersion, lab);
+          }
+        }
+        const previous = JSON.parse(localStorage.getItem(CFG_LAB_REPORT_PREFIX + 'chat-completions:1.0') || 'null');
+        if (previous?.answers?.lab12) {
+          const migrated = emptyReport(lab);
+          migrated.author = previous.author; migrated.group = previous.group;
+          migrated.answers.lab12 = previous.answers.lab12;
+          return validateReport(migrated, lab);
+        }
+      }
       return raw ? validateReport(JSON.parse(raw), lab) : emptyReport(lab);
     } catch (_) {
       storageError = 'Не удалось прочитать сохранённый отчёт. Исходные данные оставлены в браузере; новые ответы можно экспортировать.';
@@ -187,7 +205,9 @@
     summary.append(label, meter, saveStatus, actionStatus); main.append(summary);
     const identity = node('div', undefined, 'report-identity ym-hide-content');
     identity.append(field('Автор отчёта', 'report-author', report.author, value => { report.author = value; }, false, 200), field('Группа / курс', 'report-group', report.group, value => { report.group = value; }, false, 200)); main.append(identity);
+    const objective = node('section'); objective.id = 'objective'; objective.append(node('h2', 'Цель лабораторной')); renderBlocks(objective, selected.objective || [{ type: 'paragraph', text: selected.description }]); main.append(objective); toc.append(linkTo('Цель лабораторной', '#objective'));
     renderBlocks(main, selected.introduction);
+    main.append(linkTo('Подключение NeuralDeep — инструкция →', 'help.html#neuraldeep'));
     const preparation = node('section'); preparation.id = 'prepare'; preparation.append(node('h2', 'Подготовка')); renderBlocks(preparation, selected.preparation); main.append(preparation); toc.append(linkTo('Подготовка', '#prepare'));
     const experiments = node('section'); experiments.id = 'experiments'; experiments.append(node('h2', 'Эксперименты'), node('p', 'Заполните результат и ответ с выводами — задание автоматически засчитается в прогресс. Если опыт недоступен, опишите причину и сделайте вывод.', 'observe')); main.append(experiments);
     selected.experiments.forEach((experiment, index) => {

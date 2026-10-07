@@ -16,7 +16,7 @@
     const url = new URL(link.href, location.href);
     if (url.origin !== location.origin) return;
     const file = url.pathname.split('/').pop().replace(/\.html$/, '');
-    if (!['index', 'labs', 'documentation', 'tools', 'mcp', ''].includes(file) || url.pathname === location.pathname && url.hash) return;
+    if (!['index', 'labs', 'documentation', 'tools', 'mcp', 'help', ''].includes(file) || url.pathname === location.pathname && url.hash) return;
     event.preventDefault();
     parent.navigateApp(file === 'index' || file === '' ? 'chat' : file, url.hash, true, url.searchParams.get('lab'));
   });
