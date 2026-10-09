@@ -111,7 +111,7 @@
       const caption = document.createElement('span'); caption.textContent = label(id);
       title.append(caption); title.title = label(id); head.append(title);
       panel.setAttribute('aria-label', label(id));
-      ['labs', 'tools', 'mcp', 'chat', 'settings'].forEach(candidate => {
+      ['help', 'labs', 'tools', 'mcp', 'chat', 'settings'].forEach(candidate => {
         const split = slots.filter(Boolean).length > 1;
         const target = split ? slots.indexOf(id) : undefined;
         const targetStart = split ? target === 0 : side === 'start';
@@ -224,7 +224,7 @@
     preparing: false, open, refreshLabels,
     openBeside(id, sourceWindow) {
       if (!definitions[id]) return;
-      const sourceId = Object.keys(panels).find(key => panels[key].frame?.contentWindow === sourceWindow);
+      const sourceId = typeof sourceWindow === 'string' ? sourceWindow : Object.keys(panels).find(key => panels[key].frame?.contentWindow === sourceWindow);
       if (!sourceId || sourceId === id) return;
       const sourceIndex = slots.indexOf(sourceId);
       if (sourceIndex < 0) return;
@@ -306,17 +306,17 @@
     if (!keys.includes(event.key)) return;
     event.preventDefault(); resize(ratio + (event.key === keys[0] ? -5 : 5));
   });
-  window.navigateApp = (page, hash = '', push = true, labId = null) => {
+  window.navigateApp = (page, hash = '', push = true, labId = null, beside = null) => {
     if (page === 'help') hash = ({ '#neuraldeep': '#connect-neuraldeep', '#setup': '#connect-settings' })[hash] || hash;
     if (page === 'documentation') page = 'help';
     const id = definitions[page] ? page : 'chat'; closeDrawer();
     const params = new URL(location.href).searchParams;
     if (id === 'settings') api.openSettings('openai', { profile: params.get('profile'), field: params.get('field'), beside: params.get('beside') });
     else {
-      const source = params.get('beside');
-      if (source && source !== id && panels[source]?.frame) {
+      const source = beside || params.get('beside');
+      if (source && source !== id && panels[source]) {
         if (!slots.includes(source)) open(source);
-        api.openBeside(id, panels[source].frame.contentWindow);
+        api.openBeside(id, source);
       } else open(id);
       if (id === 'chat' && hash) api.highlightField(hash.slice(1));
     }
@@ -348,7 +348,7 @@
       return;
     }
     if (!page) return;
-    event.preventDefault(); navigateApp(page, url.hash, true, url.searchParams.get('lab'));
+    event.preventDefault(); navigateApp(page, url.hash, true, url.searchParams.get('lab'), link.dataset.appBeside);
   });
   new MutationObserver(() => { syncTheme(); refreshLabels(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'lang'] });
   mobile.addEventListener('change', refreshLabels);

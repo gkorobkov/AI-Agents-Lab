@@ -1,7 +1,7 @@
 // Field explanations follow the form's limits; provider/model support can differ.
 (() => {
   const help = {
-    'openai-profile-select': ['Набор настроек подключения и генерации. Текстовые поля встроенного профиля доступны только для чтения, переключатели можно менять. Нажмите Clone для изменения текста; карандаш позволяет переименовать свой профиль.', 'A saved connection and generation setup. Built-in profile text fields are read-only; toggles remain available. Use Clone to edit text; use the pencil to rename your own profile.'],
+    'openai-profile-select': ['Набор настроек подключения и генерации. Default / Custom сравнивает исходное значение с вашим и отправляет выбранное. Пока значения совпадают, переключатель неактивен. Clone создаёт копию профиля; карандаш переименовывает свой профиль.', 'A saved connection and generation setup. Default / Custom compares the original value with yours and sends the selected value. The toggle is disabled while values match. Clone copies a profile; the pencil renames your own profile.'],
     'openai-profile-name': ['Название профиля, до 32 символов. Нужно для выбора настроек; модели не отправляется.', 'Profile label, up to 32 characters. Helps identify settings; not sent to the model.'],
     'openai-base-url': ['Адрес OpenAI-совместимого сервера. Определяет, куда отправится запрос; должен поддерживать Chat Completions и CORS при прямом вызове из браузера.', 'OpenAI-compatible server address. Chooses the request destination; direct browser calls need Chat Completions and CORS support.'],
     'openai-api-key': ['Ключ доступа провайдера. Для серверного профиля ключ хранится на сервере; свой ключ сохраняется в этом браузере. Изменение меняет авторизацию запросов.', 'Provider credential. Server profiles use a server-held key; a custom key is saved in this browser. Changing it changes request authorization.'],
@@ -9,7 +9,7 @@
     'openai-system-prompt': ['Инструкция модели: роль, стиль и правила ответа. Любой текст или пустое поле. Добавляется к запросу и занимает контекст; изменение влияет на следующие ответы.', 'Model instructions: role, style and response rules. Free text or empty. Adds to request context and affects subsequent answers.'],
     'openai-temperature': ['Случайность выбора токенов. Меньше — обычно стабильнее, больше — разнообразнее. Меняйте отдельно от top_p. Некоторые модели не поддерживают настройку.', 'Sampling randomness. Lower is usually more consistent, higher more varied. Adjust separately from top_p. Some models do not support it.'],
     'openai-top-p': ['Доля вероятностной массы кандидатов на следующий токен. Ниже — уже выбор, 1 — без этого ограничения. Меняйте отдельно от temperature.', 'Probability mass retained for candidate tokens. Lower narrows the selection; 1 removes this restriction. Adjust separately from temperature.'],
-    'openai-max-completion-tokens': ['Верхний предел токенов ответа, включая внутреннее рассуждение у reasoning-моделей. Целое от 1; верхняя граница зависит от модели. Малое значение может оборвать ответ.', 'Output token ceiling, including internal reasoning tokens where applicable. Integer from 1; maximum depends on the model. A small budget can truncate output.'],
+    'openai-max-completion-tokens': ['Верхний предел токенов ответа, включая внутреннее рассуждение у reasoning-моделей. По умолчанию 10000. Целое от 1; верхняя граница зависит от модели. Малое значение может оборвать ответ.', 'Output token ceiling, including internal reasoning tokens where applicable. Default: 10000. Integer from 1; maximum depends on the model. A small budget can truncate output.'],
     'openai-n': ['Число вариантов ответа на один запрос. Больше вариантов — больше генерируемых токенов. Провайдер может ограничить поддержку; полный набор смотрите в choices[].', 'Number of alternatives per request. More alternatives generate more tokens. Provider support may be limited; inspect choices[] for all results.'],
     'openai-context': ['Включено: предыдущие сообщения текущего OpenAI-диалога добавляются в messages[]. Это помогает помнить беседу, но увеличивает контекст. Выключено: текущий текст и системная инструкция.', 'On: previous turns from the current OpenAI conversation are added to messages[]. This preserves conversational context but increases input size. Off: current text and system instructions only.'],
     'openai-tools-enabled': ['Включает передачу описаний функций модели. Модель может попросить вызов, а приложение выполняет HTTP по кнопке или принимает результат вручную.', 'Sends function definitions to the model. The model can request a call; the app runs HTTP on your click or accepts a manually entered result.'],
@@ -42,11 +42,13 @@
         if (!host) { host = document.createElement('span'); host.id = 'openai-profile-help'; field.closest('.profile-combo').after(host); }
       }
       if (!host) return;
+      host = host.closest('.parameter-heading') || host.querySelector('.parameter-heading') || host;
       let button = [...host.querySelectorAll('.api-help')].find(el => el.dataset.helpKey === key);
       if (!button) {
         button = document.createElement('span'); button.className = 'api-help'; button.tabIndex = 0; button.role = 'button'; button.textContent = '?'; button.dataset.helpKey = key;
         FieldHelp.attach(button);
-        host.append(button);
+        const toggle = host.querySelector(':scope > .parameter-toggle');
+        if (toggle) toggle.before(button); else host.append(button);
       }
       const ru = document.documentElement.lang !== 'en';
       const range = field.type === 'number' ? (ru ? '\nДиапазон формы: ' : '\nForm range: ') + (field.min || '—') + ' … ' + (field.max || (ru ? 'лимит модели' : 'model limit')) + '.' : '';

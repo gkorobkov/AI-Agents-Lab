@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.3.9';
+const APP_VERSION = '1.3.10';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -15,7 +15,7 @@ const APP_VERSION = '1.3.9';
 const CFG_DEBUG_DEFAULT_MODE = 'collapsed';
 
 // Initial suggestion chips shown before first message
-const CFG_INITIAL_SUGGESTIONS = ['Вызови geocode_city инструмент с любым параметром', 'Что ты умеешь?', 'Расскажи о себе', 'Расскажи про Москву'];
+const CFG_INITIAL_SUGGESTIONS = ['Что ты умеешь?', 'Расскажи о себе', 'Расскажи про Москву'];
 
 // Max webhook URL entries kept in history dropdown
 const CFG_WEBHOOK_HISTORY_MAX = 20;
@@ -200,7 +200,7 @@ const CFG_OPENAI_PRESETS = [{
     opacity: 0.8;
   }
 
-  #webhook-url {
+  :is(#webhook-url, #header-webhook-url) {
     flex: 1;
     width: 100%;
     background: var(--bg);
@@ -214,13 +214,13 @@ const CFG_OPENAI_PRESETS = [{
     transition: border-color 0.2s, color 0.2s, box-shadow 0.2s;
     min-width: 0;
   }
-  #webhook-url::placeholder { color: var(--accent2); opacity: 0.75; }
-  #webhook-url:focus { border-color: var(--accent2); color: var(--text); box-shadow: 0 0 0 2px rgba(0,200,255,0.15); }
-  #webhook-url.has-value { color: #00c8ff; font-weight: 500; }
-  #webhook-url.has-value:focus { border-color: rgba(79,255,176,0.55); box-shadow: 0 0 0 2px rgba(79,255,176,0.1); }
+  :is(#webhook-url, #header-webhook-url)::placeholder { color: var(--accent2); opacity: 0.75; }
+  :is(#webhook-url, #header-webhook-url):focus { border-color: var(--accent2); color: var(--text); box-shadow: 0 0 0 2px rgba(0,200,255,0.15); }
+  :is(#webhook-url, #header-webhook-url).has-value { color: #00c8ff; font-weight: 500; }
+  :is(#webhook-url, #header-webhook-url).has-value:focus { border-color: rgba(79,255,176,0.55); box-shadow: 0 0 0 2px rgba(79,255,176,0.1); }
 
   #transport-toggle { flex-shrink: 0; }
-  #transport-toggle .compact-select-trigger { min-width: 110px; color: var(--accent); }
+  #transport-toggle .compact-select-trigger { min-width: 90px; width: 90px; color: var(--accent); }
   body[data-transport="openai"] header { border-bottom-color: rgba(0,200,255,.45); box-shadow: 0 1px 18px rgba(0,200,255,.06); }
   body[data-transport="openai"] #transport-toggle .compact-select-trigger { color: var(--accent2); border-color: rgba(0,200,255,.45); }
   body[data-transport="demo"] header { border-bottom-color: rgba(245,158,11,.45); box-shadow: 0 1px 18px rgba(245,158,11,.06); }
@@ -304,6 +304,18 @@ const CFG_OPENAI_PRESETS = [{
   .msg-row[data-transport="demo"] .response-source { color: color-mix(in srgb, #f5a623 72%, var(--text-muted)); }
   .api-settings-title { font: 600 14px var(--font-ui); letter-spacing: .02em; }
   .api-kicker { color: var(--accent); font: 9px var(--font-mono); letter-spacing: .16em; text-transform: uppercase; margin-bottom: 4px; }
+  .api-field > .parameter-heading, .parameter-heading { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .parameter-heading > [data-i18n] { min-width: 0; }
+  .api-field > .parameter-heading { color: var(--text-muted); font: 10px var(--font-mono); margin-bottom: 6px; }
+  .parameter-toggle { display: inline-flex; flex: 0 0 auto; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text-muted); font: 8px var(--font-mono); line-height: 14px; cursor: pointer; }
+  .parameter-toggle > button { padding: 0 3px; border: 0; background: transparent; color: inherit; font: inherit; line-height: inherit; cursor: pointer; }
+  .parameter-toggle > button:disabled { cursor: default; }
+  .parameter-toggle > button:first-child, .parameter-toggle.custom > button:last-child { background: color-mix(in srgb, var(--accent) 12%, transparent); color: color-mix(in srgb, var(--text-muted) 85%, var(--accent)); border-radius: 3px; }
+  .parameter-toggle.custom > button:first-child { background: transparent; color: var(--text-muted); }
+  .parameter-toggle[aria-disabled="true"] { opacity: .65; cursor: default; }
+  .parameter-toggle[aria-disabled="true"] > button:first-child, .parameter-toggle.custom[aria-disabled="true"] > button:last-child { background: color-mix(in srgb, var(--text-muted) 8%, transparent); color: var(--text-muted); }
+  .parameter-toggle.custom[aria-disabled="true"] > button:first-child { background: transparent; }
+  .parameter-toggle > button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .api-field { display: block; margin-bottom: 10px; min-width: 0; }
   #openai-settings > .api-field:nth-of-type(4) { grid-column: 1 / 3; display: flex; flex-direction: column; }
   #openai-system-prompt { flex: 1 0 auto; height: 130px; min-height: 130px; }
@@ -313,7 +325,7 @@ const CFG_OPENAI_PRESETS = [{
   #mode-settings-btn:hover, #mode-settings-btn:focus-visible { color: var(--accent); border-color: rgba(79,255,176,.28); background: var(--accent-dim); outline: none; }
   #mode-settings-btn[aria-expanded="true"] { color: var(--accent); border-color: currentColor; background: var(--accent-dim); box-shadow: 0 0 12px rgba(79,255,176,.1); }
   #mode-settings-btn svg { width: 18px; height: 18px; }
-  #transport-select-menu { min-width: 178px; }
+  #transport-select-menu { min-width: 132px; }
   .transport-option-row { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: stretch; }
   .transport-option-row + .transport-option-row { border-top: 1px solid rgba(136,152,184,.12); }
   .transport-option-row .compact-select-option { min-width: 0; }
@@ -981,6 +993,9 @@ const CFG_OPENAI_PRESETS = [{
   .debug-section pre { max-height: 320px; overflow: auto; border: 0; border-radius: 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; }
   .debug-section[data-section="summary"] .debug-summary-text { display: flex; flex-wrap: wrap; gap: 3px 18px; padding: 5px 2px; white-space: normal; color: var(--text); }
   .debug-summary-field { min-width: 0; overflow-wrap: anywhere; }
+  .debug-server-trace-content { padding: 5px 2px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-muted); font: 11px/1.6 var(--font-mono); }
+  .debug-server-trace-content b, .debug-server-trace-content strong { color: var(--accent2); font-weight: 600; }
+  .debug-server-trace-content code, .debug-server-trace-content pre { color: var(--text); font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
   .debug-reasoning { margin-top: 5px; border-top: 1px solid var(--border); padding-top: 5px; }
   .debug-block .debug-reasoning > summary { padding: 5px 7px; border-radius: 5px; background: rgba(0,200,255,.06); color: var(--accent2); font: 600 10px/1.5 var(--font-mono); white-space: normal; }
   .debug-reasoning > summary::before { content: '›'; margin-right: 6px; }
@@ -1364,7 +1379,7 @@ const CFG_OPENAI_PRESETS = [{
     .webhook-panel-actions { position: sticky; bottom: -10px; z-index: 2; margin-inline: -12px; padding: 8px 12px 2px; background: var(--panel-bg); border-top: 1px solid var(--border); }
     #webhook-settings #session-id-box { display: block; grid-column: 1 / -1; width: fit-content; }
     #webhook-settings #webhook-wrap { display: grid; grid-template-columns: auto auto minmax(100px, 1fr) auto; align-items: center; }
-    #webhook-settings #url-input-wrap { min-width: 100px; }
+    #webhook-settings :is(#url-input-wrap, #header-url-input-wrap) { min-width: 100px; }
 
     /* Show connection (session controls) in drawer */
     #drawer-connection { display: none; }
@@ -1388,7 +1403,7 @@ const CFG_OPENAI_PRESETS = [{
     header { gap: 5px; padding: 0 8px; }
     .header-title { display: none; }
     #btn-debug-toggle { display: none; }
-    #webhook-url { font-size: 10px; }
+    :is(#webhook-url, #header-webhook-url) { font-size: 10px; }
     .compact-select-trigger { min-width: 47px; padding-left: 5px; gap: 3px; }
     .compact-select:last-of-type .compact-select-menu { left: auto; right: 0; }
     #transport-toggle .compact-select-trigger { min-width: 66px; padding-inline: 6px; }
@@ -1514,14 +1529,14 @@ const CFG_OPENAI_PRESETS = [{
     align-items: center;
     gap: 3px;
   }
-  #url-input-wrap {
+  :is(#url-input-wrap, #header-url-input-wrap) {
     flex: 1;
     min-width: 0;
     position: relative;
     display: flex;
     align-items: center;
   }
-  #url-input-wrap .status-dot {
+  :is(#url-input-wrap, #header-url-input-wrap) .status-dot {
     position: absolute;
     right: 7px;
     z-index: 2;
@@ -1539,7 +1554,7 @@ const CFG_OPENAI_PRESETS = [{
   .debug-mode-options { display: flex; gap: 6px; flex-shrink: 0; }
   .debug-mode-options .icon-btn[aria-pressed="true"] { color: var(--accent2); border-color: var(--accent2); }
 
-  #webhook-hist-btn {
+  :is(#webhook-hist-btn, #header-webhook-hist-btn) {
     width: 20px; height: 20px;
     flex-shrink: 0;
     background: transparent;
@@ -1551,10 +1566,10 @@ const CFG_OPENAI_PRESETS = [{
     transition: color 0.2s, border-color 0.2s, background 0.2s;
     padding: 0;
   }
-  #webhook-hist-btn:hover { color: var(--accent2); border-color: var(--accent2); background: rgba(0,200,255,0.07); }
-  #webhook-hist-btn svg { width: 11px; height: 11px; transition: transform 0.2s; }
-  #webhook-hist-btn.active { color: var(--accent2); border-color: var(--accent2); background: rgba(0,200,255,0.1); }
-  #webhook-hist-btn.active svg { transform: rotate(180deg); }
+  :is(#webhook-hist-btn, #header-webhook-hist-btn):hover { color: var(--accent2); border-color: var(--accent2); background: rgba(0,200,255,0.07); }
+  :is(#webhook-hist-btn, #header-webhook-hist-btn) svg { width: 11px; height: 11px; transition: transform 0.2s; }
+  :is(#webhook-hist-btn, #header-webhook-hist-btn).active { color: var(--accent2); border-color: var(--accent2); background: rgba(0,200,255,0.1); }
+  :is(#webhook-hist-btn, #header-webhook-hist-btn).active svg { transform: rotate(180deg); }
 
   #webhook-hist-dropdown {
     display: none;
@@ -1700,8 +1715,8 @@ const CFG_OPENAI_PRESETS = [{
   .env-test { color: var(--text-muted); }
   #method-toggle[data-value="get"] .compact-select-trigger { color: #60a5fa; border-color: rgba(59,130,246,0.45); background: rgba(59,130,246,0.12); box-shadow: 0 0 8px rgba(59,130,246,0.12); }
   #method-toggle[data-value="post"] .compact-select-trigger { color: var(--accent); border-color: rgba(79,255,176,0.35); background: rgba(79,255,176,0.1); box-shadow: 0 0 8px rgba(79,255,176,0.1); }
-  #url-type-toggle[data-value="prod"] .compact-select-trigger { color: var(--accent2); border-color: rgba(0,200,255,0.35); background: rgba(0,200,255,0.1); box-shadow: 0 0 8px rgba(0,200,255,0.1); }
-  #url-type-toggle[data-value="test"] .compact-select-trigger { color: var(--text-muted); border-color: rgba(136,152,184,0.35); background: rgba(136,152,184,0.08); }
+  :is(#url-type-toggle, #header-url-type-toggle)[data-value="prod"] .compact-select-trigger { color: var(--accent2); border-color: rgba(0,200,255,0.35); background: rgba(0,200,255,0.1); box-shadow: 0 0 8px rgba(0,200,255,0.1); }
+  :is(#url-type-toggle, #header-url-type-toggle)[data-value="test"] .compact-select-trigger { color: var(--text-muted); border-color: rgba(136,152,184,0.35); background: rgba(136,152,184,0.08); }
   @media (hover: none), (pointer: coarse) { .compact-select-option { min-height: 36px; } }
 
   .wh-time {
@@ -1852,6 +1867,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
   <button class="icon-btn" id="mode-settings-btn" type="button" onclick="toggleActiveSettings()" aria-expanded="false" aria-controls="webhook-settings" data-i18n-title="modeSettingsTitle" data-i18n-aria-label="modeSettingsTitle" aria-label="Current mode settings" title="Current mode settings">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2h5l.5 3 2 1.2 2.8-1 2.5 4.3L20 11.4v2.2l2.3 1.9-2.5 4.3-2.8-1-2 1.2-.5 3h-5L9 20l-2-1.2-2.8 1-2.5-4.3L4 13.6v-2.2L1.7 9.5l2.5-4.3 2.8 1L9 5Z" transform="translate(0 -.5)"/><circle cx="12" cy="12" r="3.5"/></svg>
   </button>
+  <div id="header-webhook-controls" hidden></div>
   <div id="connection-summary"><span id="connection-summary-text"></span><span class="status-dot" id="connection-summary-dot"></span></div>
   <div id="webhook-wrap">
     <div class="compact-select" id="method-toggle" data-value="get">
@@ -1986,7 +2002,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
     <button class="cfg-btn profile-action" id="openai-profile-delete" type="button" onclick="deleteOpenAIProfile()" data-i18n-title="profileDeleteAction" data-i18n-aria-label="profileDeleteAction" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg></button>
   </div>
   <div class="openai-section-label" data-i18n="openaiApiSection">OpenAI API request</div>
-  <a class="api-docs-link" href="documentation.html#openai-api" data-i18n="openaiDocsLink">OpenAI API: пояснения и справочник →</a>
+  <a class="api-docs-link" href="documentation.html#openai-api" data-app-beside="settings" data-i18n="openaiDocsLink">OpenAI API: пояснения и справочник →</a>
   <label class="api-field"><span data-i18n="openaiBaseUrl">Base URL</span><input class="api-input" id="openai-base-url" type="text" inputmode="url" value="" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"></label>
   <label class="api-field"><span data-i18n="openaiApiKey">API key · saved in this browser</span><div class="api-secret-wrap"><input class="api-input credential-input" id="openai-api-key" type="text" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="api-eye" id="openai-eye-btn" type="button" onclick="toggleApiKeyVisibility()" data-i18n-title="openaiShowKey" data-i18n-aria-label="openaiShowKey" title="Show key" aria-label="Show key"><svg id="openai-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></label>
   <label class="api-field"><span data-i18n="openaiModel">Model</span><input class="api-input" id="openai-model" type="text" value="qwen3.8-27b" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true"></label>
@@ -1994,7 +2010,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
   <div class="api-grid lab-parameters">
     <label class="api-field"><span data-i18n="openaiTemperature">Temperature (0–2)</span><input class="api-input" id="openai-temperature" type="number" min="0" max="2" step="0.1" value="0.7"></label>
     <label class="api-field"><span data-i18n="openaiTopP">Top p (0–1)</span><input class="api-input" id="openai-top-p" type="number" min="0" max="1" step="0.1" value="1"></label>
-    <label class="api-field"><span data-i18n="openaiMaxCompletionTokens">Max completion tokens</span><input class="api-input" id="openai-max-completion-tokens" type="number" min="1" step="1" value="500"></label>
+    <label class="api-field"><span data-i18n="openaiMaxCompletionTokens">Max completion tokens</span><input class="api-input" id="openai-max-completion-tokens" type="number" min="1" step="1" value="10000"></label>
     <label class="api-field"><span data-i18n="openaiN">Responses · n (1–128)</span><input class="api-input" id="openai-n" type="number" min="1" max="128" step="1" value="1"></label>
     <section class="client-behavior" aria-labelledby="client-history-label">
       <div class="client-behavior-head"><div class="client-behavior-title"><div><label class="client-behavior-label" id="client-history-label" for="openai-context" data-i18n="openaiContext">Send previous messages to the OpenAI API</label></div></div><label class="switch"><input type="checkbox" id="openai-context" aria-labelledby="client-history-label" checked><span class="slider"></span></label></div>
@@ -2949,12 +2965,94 @@ function normalizeOpenAIBaseUrl(baseUrl, serverProfile) {
   const value = String(baseUrl || '').trim().replace(/\/+$/, '');
   return value;
 }
+const CFG_OPENAI_PARAMETER_FIELDS = {
+  baseUrl: 'openai-base-url', model: 'openai-model', systemPrompt: 'openai-system-prompt',
+  temperature: 'openai-temperature', topP: 'openai-top-p', maxCompletionTokens: 'openai-max-completion-tokens', n: 'openai-n',
+  includeContext: 'openai-context', toolsEnabled: 'openai-tools-enabled', toolChoice: 'openai-tool-choice',
+  forcedTool: 'openai-forced-tool', parallelToolCalls: 'openai-parallel-tools'
+};
+function openAIParameterDefaults(config = openAIConfig) {
+  const preset = CFG_OPENAI_PRESETS.find(item => item.serverProfile && item.serverProfile === config.serverProfile);
+  return preset || config.parameterDefaults || CFG_OPENAI_PRESETS[0];
+}
+function readOpenAIParameter(key) {
+  const field = document.getElementById(CFG_OPENAI_PARAMETER_FIELDS[key]);
+  return field.type === 'checkbox' ? field.checked : field.type === 'number' && field.value !== '' ? Number(field.value) : field.value.trim();
+}
+function writeOpenAIParameter(key, value) {
+  const field = document.getElementById(CFG_OPENAI_PARAMETER_FIELDS[key]);
+  if (field.type === 'checkbox') field.checked = Boolean(value);
+  else field.value = value ?? '';
+}
+function syncOpenAIParameterToggles() {
+  const defaults = openAIParameterDefaults();
+  Object.keys(CFG_OPENAI_PARAMETER_FIELDS).forEach(key => {
+    const field = document.getElementById(CFG_OPENAI_PARAMETER_FIELDS[key]);
+    const button = document.getElementById('openai-default-' + key);
+    if (!button) return;
+    const state = openAIConfig.parameterOverrides?.[key];
+    const value = readOpenAIParameter(key);
+    const custom = state ? state.mode === 'custom' : value !== defaults[key];
+    const different = (state ? state.custom : value) !== defaults[key];
+    const disabled = !different || field.disabled || field.readOnly;
+    button.setAttribute('aria-disabled', String(disabled));
+    [...button.children].forEach((choice, index) => {
+      choice.disabled = disabled;
+      choice.setAttribute('aria-pressed', String(index === (custom ? 1 : 0)));
+    });
+    button.classList.toggle('custom', custom);
+    button.setAttribute('role', 'group');
+    button.setAttribute('aria-label', (lang === 'ru' ? 'Выбор значения: ' : 'Value selection: ') + key);
+    button.title = lang === 'ru' ? 'Переключить на исходное или изменённое значение' : 'Switch to the default or custom value';
+    button.children[0].textContent = 'Default';
+    button.children[1].textContent = 'Custom';
+  });
+}
+function initOpenAIParameterToggles() {
+  Object.entries(CFG_OPENAI_PARAMETER_FIELDS).forEach(([key, id]) => {
+    const field = document.getElementById(id);
+    const label = field.closest('.api-field');
+    if (label) label.htmlFor = id;
+    let heading = label?.querySelector(':scope > span');
+    if (!heading) heading = key === 'includeContext' ? document.getElementById('client-history-label')
+      : key === 'toolsEnabled' ? document.querySelector('.tool-builder-summary > span')
+      : document.querySelector('[data-i18n="openaiParallelTools"]');
+    const row = document.createElement('span');
+    row.className = 'parameter-heading';
+    heading.before(row); row.appendChild(heading);
+    const button = document.createElement('span');
+    button.id = 'openai-default-' + key; button.className = 'parameter-toggle';
+    button.innerHTML = '<button type="button" data-mode="default"></button><button type="button" data-mode="custom"></button>';
+    row.appendChild(button);
+    field.addEventListener('input', () => {
+      const value = readOpenAIParameter(key);
+      openAIConfig.parameterOverrides = { ...openAIConfig.parameterOverrides, [key]: { custom: value, mode: value === openAIParameterDefaults()[key] ? 'default' : 'custom' } };
+      syncOpenAIParameterToggles();
+    });
+    button.addEventListener('click', event => {
+      event.preventDefault(); event.stopPropagation();
+      const defaults = openAIParameterDefaults();
+      const state = openAIConfig.parameterOverrides?.[key] || { custom: readOpenAIParameter(key), mode: 'custom' };
+      const choice = event.target.closest('button[data-mode]');
+      if (!choice || choice.disabled || state.mode === choice.dataset.mode) return;
+      state.mode = choice.dataset.mode;
+      openAIConfig.parameterOverrides = { ...openAIConfig.parameterOverrides, [key]: state };
+      writeOpenAIParameter(key, state.mode === 'default' ? defaults[key] : state.custom);
+      syncOpenAIToolControls();
+      commitOpenAISettings();
+      syncOpenAIParameterToggles();
+    });
+  });
+  syncOpenAIParameterToggles();
+}
+
 function normalizeOpenAIConfig(value = {}) {
   // Inherit request settings only; custom providers must not inherit proxy identity.
   const { id, name, serverProfile, ...defaults } = CFG_OPENAI_PRESETS[0] || {};
   const merged = { ...defaults, ...value };
   if (value.maxCompletionTokens == null && value.maxTokens != null) merged.maxCompletionTokens = value.maxTokens;
   delete merged.maxTokens;
+  if (!merged.parameterDefaults) merged.parameterDefaults = Object.fromEntries(Object.keys(CFG_OPENAI_PARAMETER_FIELDS).map(key => [key, ['baseUrl', 'model'].includes(key) ? merged[key] : defaults[key]]));
   merged.baseUrl = normalizeOpenAIBaseUrl(merged.baseUrl, merged.serverProfile || serverProfile);
   if (!Array.isArray(merged.tools)) merged.tools = getOpenAIStarterTools();
   else if (merged.tools.length === 1 && isLegacyOpenAITool(merged.tools[0])) merged.tools = getOpenAIStarterTools();
@@ -2966,7 +3064,7 @@ let openAIConfig = (() => {
   try { return normalizeOpenAIConfig(JSON.parse(localStorage.getItem('ai_openai_config') || '{}')); }
   catch (_) { return normalizeOpenAIConfig(); }
 })();
-let openAIParseLegacyReplyHtml = localStorage.getItem('ai_openai_parse_legacy_reply') !== 'false';
+let responseParseEnabled = (localStorage.getItem('ai_response_parse_reply') ?? localStorage.getItem('ai_openai_parse_legacy_reply')) !== 'false';
 let openAIApiKey = localStorage.getItem('ai_openai_key') ?? sessionStorage.getItem('ai_openai_key') ?? '';
 localStorage.setItem('ai_openai_key', openAIApiKey);
 sessionStorage.removeItem('ai_openai_key');
@@ -2981,7 +3079,7 @@ if (legacyDefault) {
   if (localStorage.getItem('ai_openai_active_profile') === legacyDefault.id) localStorage.removeItem('ai_openai_active_profile');
 }
 if (!openAIProfiles.some(profile => profile.id === 'profile_neuraldeep')) {
-  openAIProfiles.push({ ...normalizeOpenAIConfig({ baseUrl: 'https://api.neuraldeep.ru/v1', model: 'qwen3.6-35b-a3b', maxCompletionTokens: 500 }), id: 'profile_neuraldeep', name: 'NeuralDeep LLM Provider' });
+  openAIProfiles.push({ ...normalizeOpenAIConfig({ baseUrl: 'https://api.neuraldeep.ru/v1', model: 'qwen3.6-35b-a3b', maxCompletionTokens: 10000 }), id: 'profile_neuraldeep', name: 'NeuralDeep LLM Provider' });
   localStorage.setItem('ai_openai_profiles', JSON.stringify(openAIProfiles));
 }
 const providerAccessUrl = new URL(location.href);
@@ -3003,13 +3101,20 @@ const initialPreset = CFG_OPENAI_PRESETS.find(profile => profile.id === localSto
 if (initialPreset || (!openAIProfiles.length && CFG_OPENAI_PRESETS.length)) {
   const preset = initialPreset || CFG_OPENAI_PRESETS[0];
   openAIConfig = normalizeOpenAIConfig(openAIConfig.serverProfile === preset.serverProfile
-    ? { ...openAIConfig, id: preset.id, baseUrl: preset.baseUrl, model: preset.model } : preset);
+    ? { ...openAIConfig, id: preset.id, baseUrl: preset.baseUrl } : { ...preset, ...openAIPresetDrafts()[preset.id], baseUrl: preset.baseUrl, serverProfile: preset.serverProfile });
   localStorage.setItem('ai_openai_active_profile', preset.id);
 }
 function isServerOpenAIProfile(config = openAIConfig) {
   return !!config.serverProfile && CFG_OPENAI_PRESETS.some(profile => profile.serverProfile === config.serverProfile);
 }
-function allOpenAIProfiles() { return [...CFG_OPENAI_PRESETS.filter(profile => profile.id !== 'preset_default' || defaultProviderUnlocked()), ...openAIProfiles]; }
+function openAIPresetDrafts() {
+  try { const drafts = JSON.parse(localStorage.getItem('ai_openai_preset_drafts') || '{}'); return drafts && typeof drafts === 'object' && !Array.isArray(drafts) ? drafts : {}; }
+  catch (_) { return {}; }
+}
+function allOpenAIProfiles() {
+  const drafts = openAIPresetDrafts();
+  return [...CFG_OPENAI_PRESETS.filter(profile => profile.id !== 'preset_default' || defaultProviderUnlocked()).map(profile => ({ ...profile, ...drafts[profile.id], id: profile.id, name: profile.name, serverProfile: profile.serverProfile, baseUrl: profile.baseUrl })), ...openAIProfiles];
+}
 function openAIRequestEndpoint(config) {
   return getOpenAIEndpoint(config.baseUrl, config);
 }
@@ -3033,8 +3138,8 @@ function syncOpenAIKeyAccess() {
   document.getElementById('openai-eye-btn').disabled = shared;
   document.getElementById('openai-base-url').readOnly = shared;
   document.getElementById('openai-base-url').setAttribute('aria-readonly', String(shared));
-  document.getElementById('openai-model').readOnly = shared;
-  document.getElementById('openai-model').setAttribute('aria-readonly', String(shared));
+  document.getElementById('openai-model').readOnly = false;
+  document.getElementById('openai-model').setAttribute('aria-readonly', 'false');
   syncOpenAIPresetReadonly();
 }
 function isReadonlyOpenAIPreset() {
@@ -3044,7 +3149,7 @@ function isReadonlyOpenAIPreset() {
 function syncOpenAIPresetReadonly() {
   const readonly = isReadonlyOpenAIPreset();
   ['openai-system-prompt','openai-temperature','openai-top-p','openai-max-completion-tokens','openai-n','openai-forced-tool'].forEach(id => {
-    const field = document.getElementById(id); field.readOnly = readonly; field.setAttribute('aria-readonly', String(readonly));
+    const field = document.getElementById(id); field.readOnly = false; field.setAttribute('aria-readonly', 'false');
   });
   ['openai-context','openai-tools-enabled','tool-library-select'].forEach(id => { document.getElementById(id).disabled = false; });
   ['openai-parallel-tools','openai-tool-choice'].forEach(id => { document.getElementById(id).disabled = !document.getElementById('openai-tools-enabled').checked; });
@@ -3056,7 +3161,7 @@ function syncOpenAIPresetReadonly() {
   let note = document.getElementById('openai-preset-readonly');
   if (!note) { note = document.createElement('p'); note.id = 'openai-preset-readonly'; note.className = 'api-note'; document.querySelector('#openai-settings .api-settings-head').after(note); }
   note.hidden = !readonly;
-  note.textContent = lang === 'ru' ? 'Текстовые поля встроенного профиля доступны только для чтения. Переключатели можно менять. Для изменения текста нажмите Clone.' : 'Built-in profile text fields are read-only. Toggles remain available. Choose Clone to edit text.';
+  note.textContent = lang === 'ru' ? 'Default / Custom сравнивает исходные настройки профиля с вашими. В запрос отправляется выбранное значение.' : 'Default / Custom compares the original profile settings with yours. The selected value is sent in the request.';
 }
 let openAISettingsPinned = true;
 let webhookSettingsPinned = true;
@@ -3151,6 +3256,7 @@ function updateComposerDestination() {
 }
 function updateTransportUI() {
   document.body.dataset.transport = transportMode;
+  renderSuggestionMenu();
   document.getElementById('transport-toggle').dataset.value = transportMode;
   document.getElementById('transport-select-value').textContent = transportMode === 'openai' ? 'OpenAI API' : transportMode === 'demo' ? t('demoMode') : 'Webhook';
   document.getElementById('transport-btn-webhook').setAttribute('aria-checked', transportMode === 'webhook');
@@ -3183,6 +3289,7 @@ function updateTransportUI() {
   if (welcomeTransport) welcomeTransport.textContent = transportMode === 'demo' ? t('demoTransport') : transportMode === 'openai' ? t('openaiTransport') : t('webhookTransport');
   const welcomeDetail = document.getElementById('welcome-detail');
   if (welcomeDetail) welcomeDetail.textContent = transportMode === 'demo' ? t('demoWelcomeDetail') : transportMode === 'openai' ? t('openaiWelcomeDetail') : t('webhookWelcomeDetail');
+  syncHeaderWebhook();
   updateMobileConnectionSummary();
   updateOpenAISettingsPinUI();
   updateWebhookSettingsPinUI();
@@ -3438,20 +3545,22 @@ function readOpenAIForm() {
   };
   return {
     serverProfile: openAIConfig.serverProfile,
+    parameterDefaults: openAIConfig.parameterDefaults,
+    parameterOverrides: openAIConfig.parameterOverrides,
     baseUrl: isServerOpenAIProfile() ? openAIConfig.baseUrl : normalizeOpenAIBaseUrl(document.getElementById('openai-base-url').value, openAIConfig.serverProfile),
     apiKey: document.getElementById('openai-api-key').value.trim(),
     model: document.getElementById('openai-model').value.trim(),
     systemPrompt: document.getElementById('openai-system-prompt').value.trim(),
     temperature: numberValue('openai-temperature', 0),
     topP: numberValue('openai-top-p', 1),
-    maxCompletionTokens: numberValue('openai-max-completion-tokens', 500),
+    maxCompletionTokens: numberValue('openai-max-completion-tokens', 10000),
     n: numberValue('openai-n', 1),
     includeContext: document.getElementById('openai-context').checked,
     toolsEnabled: document.getElementById('openai-tools-enabled').checked,
     toolChoice: document.getElementById('openai-tool-choice').value,
     forcedTool: document.getElementById('openai-forced-tool').value.trim(),
     parallelToolCalls: document.getElementById('openai-parallel-tools').checked,
-    parseLegacyReplyHtml: openAIParseLegacyReplyHtml,
+    parseLegacyReplyHtml: responseParseEnabled,
     tools: [...document.querySelectorAll('.tool-definition')].map(row => ({
       ...(row.libraryMetadata || {}),
       ...(row.mcpMetadata ? {mcp:row.mcpMetadata} : {}),
@@ -3730,8 +3839,8 @@ function commitOpenAISettings() {
   const valid = validateOpenAIDraft();
   const cfg = readOpenAIForm();
   if (!isServerOpenAIProfile(cfg)) openAIApiKey = cfg.apiKey;
-  openAIParseLegacyReplyHtml = Boolean(cfg.parseLegacyReplyHtml);
-  localStorage.setItem('ai_openai_parse_legacy_reply', String(openAIParseLegacyReplyHtml));
+  responseParseEnabled = Boolean(cfg.parseLegacyReplyHtml);
+  localStorage.setItem('ai_response_parse_reply', String(responseParseEnabled));
   localStorage.setItem('ai_openai_key', openAIApiKey);
   document.getElementById('openai-temperature').value = cfg.temperature;
   document.getElementById('openai-top-p').value = cfg.topP;
@@ -3741,6 +3850,9 @@ function commitOpenAISettings() {
   openAIConfig = cfg;
   localStorage.setItem('ai_openai_config', JSON.stringify(openAIConfig));
   const id = localStorage.getItem('ai_openai_active_profile');
+  if (CFG_OPENAI_PRESETS.some(profile => profile.id === id)) {
+    localStorage.setItem('ai_openai_preset_drafts', JSON.stringify({ ...openAIPresetDrafts(), [id]: cfg }));
+  }
   openAIProfiles = openAIProfiles.map(profile => profile.id === id ? { ...cfg, id: profile.id, name: profile.name } : profile);
   localStorage.setItem('ai_openai_profiles', JSON.stringify(openAIProfiles));
   if (valid) setAutosaveStatus('openai-autosave-status', '');
@@ -3858,9 +3970,9 @@ function loadOpenAIProfile(id) {
   if (!profile) { cancelOpenAIProfileNameEdit(); return; }
   openAIConfig = normalizeOpenAIConfig(profile);
   syncOpenAIKeyAccess();
-  openAIParseLegacyReplyHtml = Boolean(openAIConfig.parseLegacyReplyHtml ?? openAIParseLegacyReplyHtml);
+  responseParseEnabled = Boolean(openAIConfig.parseLegacyReplyHtml ?? responseParseEnabled);
   localStorage.setItem('ai_openai_config', JSON.stringify(openAIConfig));
-  localStorage.setItem('ai_openai_parse_legacy_reply', String(openAIParseLegacyReplyHtml));
+  localStorage.setItem('ai_response_parse_reply', String(responseParseEnabled));
   openAIConversationId = profile.id;
   sessionStorage.setItem('ai_openai_conversation', openAIConversationId);
   document.getElementById('openai-base-url').value = isServerOpenAIProfile() ? '' : openAIConfig.baseUrl;
@@ -3916,6 +4028,8 @@ function getOpenAIRequestPreviewData() {
   return { endpoint: openAIRequestEndpoint(config), body: buildOpenAIRequest(config, [], ''), currentText: '' };
 }
 function updateOpenAIRequestPreview() {
+  syncOpenAIParameterToggles();
+  renderSuggestionMenu();
   const json = document.getElementById('openai-preview-json');
   if (!json) return;
   const preview = getOpenAIRequestPreviewData();
@@ -4024,6 +4138,47 @@ function closeCompactSelects(except = null) {
   });
 }
 
+function syncHeaderWebhook() {
+  const header = document.getElementById('header-webhook-controls');
+  const field = document.getElementById('header-webhook-url');
+  if (!field) return;
+  header.hidden = transportMode !== 'webhook';
+  if (field.value.trim() !== webhookUrl) field.value = webhookUrl;
+  field.classList.toggle('has-value', !!webhookUrl);
+  const type = document.getElementById('url-type-toggle').dataset.value || 'prod';
+  document.getElementById('header-url-type-toggle').dataset.value = type;
+  document.getElementById('header-env-select-value').textContent = type.toUpperCase();
+  ['prod', 'test'].forEach(value => document.getElementById('header-url-btn-' + value).setAttribute('aria-selected', String(type === value)));
+  document.getElementById('header-status-dot').className = document.getElementById('status-dot').className;
+}
+function initHeaderWebhook() {
+  const host = document.getElementById('header-webhook-controls');
+  ['url-type-toggle', 'url-input-wrap'].forEach(id => {
+    const copy = document.getElementById(id).cloneNode(true);
+    [copy, ...copy.querySelectorAll('[id]')].forEach(node => { node.id = 'header-' + node.id; });
+    copy.querySelectorAll('[aria-controls]').forEach(node => node.setAttribute('aria-controls', 'header-' + node.getAttribute('aria-controls')));
+    host.appendChild(copy);
+  });
+  const historyButton = document.getElementById('webhook-hist-btn').cloneNode(true);
+  historyButton.id = 'header-webhook-hist-btn';
+  historyButton.setAttribute('onclick', "toggleHistoryDropdown('header')");
+  host.appendChild(historyButton);
+  const field = document.getElementById('header-webhook-url');
+  field.setAttribute('aria-label', 'Webhook URL');
+  field.addEventListener('input', () => {
+    const original = document.getElementById('webhook-url');
+    original.value = field.value;
+    original.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  ['keydown', 'blur'].forEach(type => field.addEventListener(type, event => {
+    const original = document.getElementById('webhook-url');
+    original.dispatchEvent(type === 'keydown' ? new KeyboardEvent(type, { key: event.key }) : new Event(type));
+  }));
+  new MutationObserver(syncHeaderWebhook).observe(document.getElementById('status-dot'), { attributes: true, attributeFilter: ['class'] });
+  syncHeaderWebhook();
+}
+initHeaderWebhook();
+
 document.querySelectorAll('.compact-select').forEach(select => {
   const trigger = select.querySelector('.compact-select-trigger');
   const options = [...select.querySelectorAll('.compact-select-option')];
@@ -4127,6 +4282,7 @@ function updateUrlTypeToggle() {
   document.getElementById('env-select-value').textContent = type.toUpperCase();
   document.getElementById('url-btn-prod').setAttribute('aria-selected', type === 'prod');
   document.getElementById('url-btn-test').setAttribute('aria-selected', type === 'test');
+  syncHeaderWebhook();
 }
 
 function setUrlType(type) {
@@ -4235,18 +4391,27 @@ function fmtHistTs(ts) {
 
 let histDropOpen = false;
 
-function toggleHistoryDropdown() { histDropOpen ? closeHistoryDropdown() : openHistoryDropdown(); }
+function toggleHistoryDropdown(source = 'settings') {
+  const dropdown = document.getElementById('webhook-hist-dropdown');
+  const host = document.getElementById(source === 'header' ? 'header-webhook-controls' : 'webhook-history-slot');
+  if (histDropOpen && dropdown.parentElement === host) { closeHistoryDropdown(); return; }
+  closeHistoryDropdown();
+  host.appendChild(dropdown);
+  openHistoryDropdown();
+}
 
 function openHistoryDropdown() {
   renderHistoryDropdown();
   document.getElementById('webhook-hist-dropdown').classList.add('open');
-  document.getElementById('webhook-hist-btn').classList.add('active');
+  const inHeader = document.getElementById('webhook-hist-dropdown').parentElement.id === 'header-webhook-controls';
+  document.getElementById(inHeader ? 'header-webhook-hist-btn' : 'webhook-hist-btn').classList.add('active');
   histDropOpen = true;
 }
 
 function closeHistoryDropdown() {
   document.getElementById('webhook-hist-dropdown').classList.remove('open');
   document.getElementById('webhook-hist-btn').classList.remove('active');
+  document.getElementById('header-webhook-hist-btn').classList.remove('active');
   histDropOpen = false;
 }
 
@@ -4434,7 +4599,7 @@ async function checkWebhookStatus(url, dotEl, btnEl) {
 }
 
 document.addEventListener('click', (e) => {
-  if (histDropOpen && !document.getElementById('webhook-wrap')?.contains(e.target)) {
+  if (histDropOpen && !document.getElementById('webhook-wrap')?.contains(e.target) && !document.getElementById('header-webhook-controls')?.contains(e.target) && !document.getElementById('webhook-hist-dropdown')?.contains(e.target)) {
     closeHistoryDropdown();
   }
 });
@@ -4664,14 +4829,16 @@ function appendMessage(role, text, provenance = '') {
   return row;
 }
 
-function addOpenAIResponseView(row, rawReply, parsed) {
+function addResponseView(row, rawReply, parsed = null) {
+  rawReply = typeof rawReply === 'string' ? rawReply : JSON.stringify(rawReply, null, 2);
+  parsed = parsed || extractLegacyReplyPayload(rawReply, true);
   const bubble = row.querySelector('.bubble');
   const copyButton = bubble.querySelector('.bubble-copy-btn');
   const control = document.createElement('label');
   control.className = 'response-view';
   control.innerHTML = `<span>Raw</span><span class="switch"><input type="checkbox" aria-label="md / reply_html parser"><span class="slider"></span></span><span>md / reply_html parser</span>`;
   const toggle = control.querySelector('input');
-  toggle.checked = openAIParseLegacyReplyHtml;
+  toggle.checked = responseParseEnabled;
   function render() {
     if (toggle.checked) {
       const rendered = parsed ? parsed.reply_html || parsed.text || rawReply : rawReply;
@@ -4685,8 +4852,8 @@ function addOpenAIResponseView(row, rawReply, parsed) {
     if (copyButton) bubble.appendChild(copyButton);
   }
   toggle.addEventListener('change', () => {
-    openAIParseLegacyReplyHtml = toggle.checked;
-    localStorage.setItem('ai_openai_parse_legacy_reply', String(toggle.checked));
+    responseParseEnabled = toggle.checked;
+    localStorage.setItem('ai_response_parse_reply', String(toggle.checked));
     render();
   });
   bubble.after(control);
@@ -4865,6 +5032,23 @@ function formatDebugSummary(contract) {
   return lines.join('\n');
 }
 
+function renderServerDebug(container, value) {
+  if (typeof value !== 'string') { renderDebugJson(container, JSON.stringify(value, null, 2)); return; }
+  const template = document.createElement('template');
+  template.innerHTML = value;
+  const allowed = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'CODE', 'PRE', 'BR', 'P', 'UL', 'OL', 'LI', 'H2', 'H3', 'BLOCKQUOTE']);
+  const omitted = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH']);
+  const append = (parent, node) => {
+    if (node.nodeType === Node.TEXT_NODE) { parent.appendChild(document.createTextNode(node.textContent)); return; }
+    if (node.nodeType !== Node.ELEMENT_NODE || omitted.has(node.tagName)) return;
+    const target = allowed.has(node.tagName) ? document.createElement(node.tagName.toLowerCase()) : parent;
+    if (target !== parent) parent.appendChild(target);
+    if (node.tagName === 'CODE' || node.tagName === 'PRE') { renderDebugJson(target, node.textContent); return; }
+    node.childNodes.forEach(child => append(target, child));
+  };
+  template.content.childNodes.forEach(node => append(container, node));
+}
+
 function debugContractSections(contract, responseBadge = 'debugServerProvided') {
   const sections = [];
   sections.push({ id: 'summary', titleKey: 'debugSummary', badgeKey: 'debugUiGenerated', data: formatDebugSummary(contract) });
@@ -5023,6 +5207,8 @@ function appendDebug(row, debugData) {
     summary: { transport: row.dataset.transport || 'legacy' }, trace: debugData, rawResponse: debugData
   });
   if (receivedContract && receivedContract !== contract) {
+    // Keep the exact request snapshot captured before fetch, including its shape.
+    contract.request = receivedContract.request;
     contract.raw_response_text = receivedContract.raw_response_text;
     if (receivedContract.response) contract.response = { ...contract.response, headers: receivedContract.response.headers };
   }
@@ -5114,6 +5300,11 @@ function appendDebug(row, debugData) {
       heading.insertBefore(toggle, sectionCopy); section.appendChild(tree);
     }
     if (safeSection.id === 'summary') {
+      if (safeContract.trace != null && safeContract.trace !== '') {
+        const body = document.createElement('div'); body.className = 'debug-server-trace-content';
+        renderServerDebug(body, safeContract.trace);
+        section.appendChild(body);
+      }
       const reasoning = openAIReasoning(safeContract.raw_response?.choices?.[0]?.message);
       if (reasoning) {
         const block = document.createElement('details'); block.className = 'debug-reasoning';
@@ -5554,7 +5745,7 @@ async function continueOpenAIWithToolResults() {
     const elapsed = Math.round(performance.now() - started);
     const row = appendMessage('agent', reply, `OpenAI · ${requestConfig.model}`);
     row.dataset.openaiMessage = JSON.stringify(choice.message);
-    addOpenAIResponseView(row, rawReply, legacyPayload);
+    addResponseView(row, rawReply, legacyPayload);
     appendDebug(row, adaptOpenAIDebug(data, { endpoint: openAIRequestEndpoint(requestConfig), payload, status: res.status, statusText: res.statusText, elapsed }));
     if (calls.length) showOpenAIToolResults(calls, payload, choice.message, row, requestConfig); else resetOpenAIToolTurn();
   } catch (err) {
@@ -5565,6 +5756,7 @@ async function continueOpenAIWithToolResults() {
 }
 
 async function sendOpenAIMessage(text) {
+  if (!commitOpenAISettings()) { openOpenAISettings(false); return; }
   if (!openAIConfig.baseUrl || !openAIConfig.model || (!isServerOpenAIProfile() && !openAIApiKey)) {
     if (!openAIApiKey) setAutosaveStatus('openai-autosave-status', t('openaiMissingKey'), 'error');
     toast(t('toastNoOpenAI'));
@@ -5610,7 +5802,7 @@ async function sendOpenAIMessage(text) {
     const elapsed = Math.round(performance.now() - started);
     const row = appendMessage('agent', reply, `OpenAI · ${requestConfig.model}`);
     row.dataset.openaiMessage = JSON.stringify(choice.message);
-    addOpenAIResponseView(row, rawReply, legacyPayload);
+    addResponseView(row, rawReply, legacyPayload);
     const debugPayload = adaptOpenAIDebug(data, {
           endpoint: openAIRequestEndpoint(requestConfig), payload,
           status: res.status, statusText: res.statusText, elapsed
@@ -5673,6 +5865,7 @@ async function sendMessage() {
       const reply = data?.message || data?.text || data?.output;
       if (reply) {
         const row = appendMessage('agent', reply, requestProvenance);
+        addResponseView(row, reply);
         showSuggestions(data.suggestions);
         const elapsed = Math.round(performance.now() - started);
         appendDebug(row, adaptWebhookDebug(rawData, {
@@ -5694,7 +5887,6 @@ async function sendMessage() {
 
   const abortCtrl = new AbortController();
   const timeoutId = setTimeout(() => abortCtrl.abort(), CFG_REQUEST_TIMEOUT_MS);
-  const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const started = performance.now();
 
   try {
@@ -5703,13 +5895,13 @@ async function sendMessage() {
     if (httpMethod === 'get') {
       const params = new URLSearchParams({ sessionId, message: text,  });
       const getUrl = webhookUrl + (webhookUrl.includes('?') ? '&' : '?') + params.toString();
-      requestMeta = { method: 'GET', url: getUrl, query: { sessionId, message: text }, session_id: sessionId, request_id: requestId };
+      requestMeta = { method: 'GET', endpoint: getUrl, headers: {} };
       res = await fetchWithRequestDebug(getUrl, {
         method: 'GET',
         signal: abortCtrl.signal
       });
     } else {
-      requestMeta = { method: 'POST', url: webhookUrl, headers: { 'Content-Type': 'application/json' }, body: { message: text, sessionId }, session_id: sessionId, request_id: requestId };
+      requestMeta = { method: 'POST', endpoint: webhookUrl, headers: { 'Content-Type': 'application/json' }, body: { message: text, sessionId } };
       res = await fetchWithRequestDebug(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -5744,6 +5936,7 @@ async function sendMessage() {
       const reply = data?.message || data?.text || data?.output;
       if (reply) {
         const row = appendMessage('agent', reply, requestProvenance);
+        addResponseView(row, reply);
         showSuggestions(data.suggestions);
         const elapsed = Math.round(performance.now() - started);
         appendDebug(row, adaptWebhookDebug(rawData, {
@@ -5753,6 +5946,7 @@ async function sendMessage() {
         const jsonStr = JSON.stringify(data, null, 2)
           .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const row = appendMessage('agent', `<pre>${jsonStr}</pre>`, requestProvenance);
+        addResponseView(row, JSON.stringify(data, null, 2));
         const elapsed = Math.round(performance.now() - started);
         appendDebug(row, adaptWebhookDebug(rawData, {
           request: requestMeta, status: res.status, statusText: res.statusText, elapsed
@@ -5863,13 +6057,39 @@ function editSuggestion(text) {
   input.setSelectionRange(text.length, text.length);
 }
 
+function getInitialSuggestions() {
+  const toolsEnabled = document.getElementById('openai-tools-enabled').checked;
+  const names = transportMode === 'openai' && toolsEnabled
+    ? [...new Set([...document.querySelectorAll('.tool-definition [data-tool-field="name"]')].map(input => input.value.trim()).filter(Boolean))]
+    : [];
+  return [...names.map(name => lang === 'ru' ? `Вызови ${name} инструмент с любым параметром` : `Call the ${name} tool with any parameter`), ...INITIAL_SUGGESTIONS];
+}
+
+function fillSuggestionRow(row, chips) {
+  row.replaceChildren();
+  chips.forEach(label => {
+    const btn = document.createElement('button');
+    btn.className = 'suggestion-chip';
+    btn.textContent = label;
+    btn.onclick = () => sendSuggestion(label);
+    row.appendChild(btn);
+  });
+}
+
 function renderSuggestionMenu() {
+  const initialSuggestions = getInitialSuggestions();
+  const signature = JSON.stringify(initialSuggestions);
+  document.querySelectorAll('.suggestions-row[data-initial]').forEach(row => {
+    if (row.dataset.initial === signature) return;
+    fillSuggestionRow(row, initialSuggestions);
+    row.dataset.initial = signature;
+  });
   const menu = document.getElementById('suggestions-menu');
   const caption = lang === 'ru' ? 'Подсказки' : 'Suggestions';
   const trigger = document.getElementById('suggestions-btn');
   trigger.title = caption; trigger.setAttribute('aria-label', caption);
   menu.setAttribute('aria-label', caption); menu.replaceChildren();
-  const groups = [[lang === 'ru' ? 'Стартовые' : 'Getting started', INITIAL_SUGGESTIONS], [lang === 'ru' ? 'Последние' : 'Recent', recentSuggestions]];
+  const groups = [[lang === 'ru' ? 'Стартовые' : 'Getting started', initialSuggestions], [lang === 'ru' ? 'Последние' : 'Recent', recentSuggestions]];
   groups.forEach(([heading, suggestions]) => {
     if (!suggestions.length) return;
     const title = document.createElement('div'); title.className = 'suggestions-heading'; title.textContent = heading; menu.append(title);
@@ -5894,20 +6114,17 @@ function renderSuggestionMenu() {
 
 function showSuggestions(chips, scroll = true) {
   if (!Array.isArray(chips)) return;
+  const initial = chips === INITIAL_SUGGESTIONS;
+  if (initial) chips = getInitialSuggestions();
   chips = [...new Set(chips.filter(label => typeof label === 'string').map(label => label.trim()).filter(Boolean))];
   if (!chips.length) return;
-  recentSuggestions = [...new Set([...chips, ...recentSuggestions])].filter(label => !INITIAL_SUGGESTIONS.includes(label)).slice(0, 20);
+  recentSuggestions = [...new Set([...chips, ...recentSuggestions])].filter(label => !getInitialSuggestions().includes(label)).slice(0, 20);
   renderSuggestionMenu();
   const container = document.getElementById('messages');
   const row = document.createElement('div');
   row.className = 'suggestions-row';
-  chips.forEach(label => {
-    const btn = document.createElement('button');
-    btn.className = 'suggestion-chip';
-    btn.textContent = label;
-    btn.onclick = () => sendSuggestion(label);
-    row.appendChild(btn);
-  });
+  if (initial) row.dataset.initial = JSON.stringify(chips);
+  fillSuggestionRow(row, chips);
   container.appendChild(row);
   if (scroll) row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -5963,6 +6180,7 @@ window.addEventListener('resize', positionSuggestionMenu);
 document.addEventListener('app:pagechange', closeSuggestionMenu);
 inputEl.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} });
 inputEl.addEventListener('input', () => { resizeTextarea(inputEl); updateOpenAIRequestPreview(); });
+initOpenAIParameterToggles();
 ['openai-base-url','openai-model','openai-system-prompt','openai-temperature','openai-top-p','openai-max-completion-tokens','openai-n','openai-context','openai-tools-enabled','openai-tool-choice','openai-forced-tool','openai-parallel-tools'].forEach(id => {
   const field = document.getElementById(id);
   field.addEventListener('input', () => { updateOpenAIRequestPreview(); updateComposerDestination(); validateOpenAIDraft(); });
@@ -6098,7 +6316,7 @@ function copySession() {
 updateTransportUI();
 if (transportMode === 'demo') loadStubFile(demoConfig.filename);
 
-const CONSENT_CONTROLS = ['#webhook-url','#webhook-hist-btn','#transport-select-trigger','#mode-settings-btn','#msg-input','#send-btn','#suggestions-btn',
+const CONSENT_CONTROLS = ['#header-webhook-hist-btn','#header-webhook-url','#header-env-select-trigger','#header-url-btn-prod','#header-url-btn-test','#webhook-url','#webhook-hist-btn','#transport-select-trigger','#mode-settings-btn','#msg-input','#send-btn','#suggestions-btn',
   '#btn-new-session','#btn-clear','#theme-btn','#lang-btn','#session-id-box','#burger-btn'];
 
 function setControlsLocked(locked) {
