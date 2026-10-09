@@ -15,9 +15,19 @@
     if (link.dataset.labId) return;
     const url = new URL(link.href, location.href);
     if (url.origin !== location.origin) return;
+    if (url.searchParams.get('page') === 'settings') {
+      event.preventDefault();
+      parent.appWorkspace.openSettings('openai', { profile: url.searchParams.get('profile'), field: url.searchParams.get('field'), sourceWindow: link.dataset.openBeside ? window : undefined });
+      return;
+    }
     const file = url.pathname.split('/').pop().replace(/\.html$/, '');
     if (!['index', 'labs', 'documentation', 'tools', 'mcp', 'help', ''].includes(file) || url.pathname === location.pathname && url.hash) return;
     event.preventDefault();
+    if (link.dataset.openBeside) {
+      parent.appWorkspace.openBeside(link.dataset.openBeside, window);
+      if (url.hash) parent.appWorkspace.highlightField(url.hash.slice(1));
+      return;
+    }
     parent.navigateApp(file === 'index' || file === '' ? 'chat' : file, url.hash, true, url.searchParams.get('lab'));
   });
 })();

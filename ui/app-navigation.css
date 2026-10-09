@@ -78,7 +78,10 @@ header > .icon-btn, header > .lang-btn { width: 22px; height: 22px; padding: 0; 
 .library-editor input:disabled, .library-editor textarea:disabled, .library-editor select:disabled { opacity:.65; }
 header > .lang-btn { display: inline-flex; align-items: center; justify-content: center; }
 #panel-side-btn { flex-shrink: 0; color: var(--accent2); margin-left: auto; }
-#panel-side-btn svg { width: 16px; height: 16px; }
+#panel-side-btn svg { width: 18px; height: 14px; }
+#panel-side-btn { border: 1px solid color-mix(in srgb, var(--accent2) 55%, var(--border)); }
+#workspace[data-split="true"] > .workspace-panel { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent2) 25%, var(--border)); }
+#workspace-separator { border-inline: 1px solid color-mix(in srgb, var(--accent2) 35%, var(--border)); }
 @media (max-width: 640px) {
   #workspace[data-split="true"] { grid-template: 'first' minmax(0, calc(var(--workspace-ratio) - 4px)) 'divider' 8px 'second' minmax(0, 1fr) / minmax(0, 1fr); }
   #workspace-separator { cursor: row-resize; }
@@ -142,3 +145,10 @@ body[data-transport] header #mode-settings-btn:focus-visible {
 @media (max-width: 400px) {
   header .header-title { display: none; }
 }
+
+#toast { background: color-mix(in srgb, var(--surface2) 82%, transparent); backdrop-filter: blur(4px); }
+#webhook-settings #session-id-box { display:flex; gap:6px; min-width:0; max-width:100%; }
+#sid-display { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#webhook-settings #btn-new-session { border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface2); padding:5px 10px; opacity:1; }
+#webhook-settings #btn-new-session:hover { border-color:var(--accent)!important; background:var(--accent-dim)!important; }
+#webhook-settings #btn-new-session svg { width:16px; height:16px; }

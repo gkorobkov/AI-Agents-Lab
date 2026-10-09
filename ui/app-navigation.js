@@ -4,18 +4,27 @@
   workspace.id = 'workspace';
   document.querySelector('body > header').after(workspace);
   const definitions = {
-    chat: ['Чат', 'Chat'], settings: ['Настройки API', 'API settings'],
-    labs: ['Лабы', 'Labs', 'labs.html'], tools: ['Библиотека Tools', 'Tool library', 'tools.html'], mcp: ['Библиотека MCP', 'MCP library', 'mcp.html'], help: ['Помощь', 'Help', 'help.html'], documentation: ['Документация', 'Documentation', 'documentation.html']
+    chat: ['Чат', 'Chat'], settings: ['Настройки OpenAI API', 'OpenAI API settings'],
+    labs: ['Лабы', 'Labs', 'labs.html'], tools: ['Библиотека Tools', 'Tool library', 'tools.html'], mcp: ['Библиотека MCP', 'MCP library', 'mcp.html'], help: ['Помощь', 'Help', 'documentation.html'], documentation: ['Документация', 'Documentation', 'documentation.html']
   };
   const panels = {};
   let slots = ['chat', null];
   let side = localStorage.getItem('ai_panel_side') === 'start' ? 'start' : 'end';
+  const savedLayout = localStorage.getItem('ai_panel_layout_v2');
+  const legacyLayout = localStorage.getItem('ai_panel_layout');
+  let layoutStep = /^[0-2]$/.test(savedLayout || '') ? Number(savedLayout)
+    : /^[0-3]$/.test(legacyLayout || '') ? (Number(legacyLayout) % 2 ? 2 : Number(legacyLayout) === 2 ? 0 : 1)
+    : side === 'start' ? 0 : 1;
+  let singlePanel = layoutStep === 2;
+  if (!singlePanel) side = layoutStep === 0 ? 'start' : 'end';
+  let activePanel = 'chat';
   let ratio = 50;
   const mobile = matchMedia('(max-width: 640px)');
   const initialized = new Set();
   const scrollPositions = new Map();
+  const frameScrollPositions = new Map();
   const text = (ru, en) => lang === 'ru' ? ru : en;
-  const label = id => text(...definitions[id]);
+  const label = id => id === 'settings' && transportMode !== 'openai' ? text('Настройки API', 'API settings') : text(...definitions[id]);
   const button = (caption, action) => {
     const el = document.createElement('button');
     el.type = 'button'; el.textContent = caption; el.onclick = action;
@@ -52,6 +61,9 @@
       const frame = document.createElement('iframe'); frame.title = label(id);
       frame.addEventListener('load', () => {
         syncTheme(); window.appMetrika?.bindClicks(frame.contentDocument, id);
+        frame.contentWindow.addEventListener('scroll', () => {
+          if (!panel.hidden && frame.clientHeight) frameScrollPositions.set(frame, [frame.contentWindow.scrollX, frame.contentWindow.scrollY]);
+        }, { passive: true });
       });
       content.append(frame); panels[id].frame = frame;
     }
@@ -63,8 +75,13 @@
     if (el.clientHeight) scrollPositions.set(el, el.scrollTop);
   }));
   const sideButton = button('', () => {
-    side = side === 'start' ? 'end' : 'start';
-    localStorage.setItem('ai_panel_side', side); refreshLabels();
+    layoutStep = (layoutStep + 1) % 3;
+    singlePanel = layoutStep === 2;
+    if (!singlePanel) side = layoutStep === 0 ? 'start' : 'end';
+    localStorage.setItem('ai_panel_layout_v2', String(layoutStep));
+    localStorage.setItem('ai_panel_side', side);
+    refreshLabels();
+    toast(singlePanel ? text('Новая панель на весь экран', 'New full-screen panel') : side === 'start' ? text('Новая панель СЛЕВА', 'New panel on the LEFT') : text('Новая панель СПРАВА', 'New panel on the RIGHT'));
   });
   sideButton.id = 'panel-side-btn'; sideButton.className = 'icon-btn';
   document.getElementById('btn-debug-toggle').before(sideButton);
@@ -80,10 +97,13 @@
   }
   function refreshLabels() {
     const position = mobile.matches ? (side === 'start' ? text('сверху', 'above') : text('снизу', 'below')) : (side === 'start' ? text('слева', 'on the left') : text('справа', 'on the right'));
-    sideButton.title = text('Новая панель ', 'New panel ') + position + text('. Нажмите, чтобы сменить сторону.', '. Click to change side.');
+    const nextLayout = (layoutStep + 1) % 3;
+    const nextCaption = nextLayout === 2 ? text('новая панель на весь экран', 'new full-screen panel') : nextLayout === 0 ? text('новая панель СЛЕВА', 'new panel on the LEFT') : text('новая панель СПРАВА', 'new panel on the RIGHT');
+    sideButton.title = text('Переключить: ', 'Switch to: ') + nextCaption;
+    sideButton.dataset.layout = singlePanel ? 'single' : side;
     sideButton.setAttribute('aria-label', sideButton.title);
-    const rect = mobile.matches ? `x="3" y="${side === 'start' ? 3 : 12}" width="14" height="5"` : `x="${side === 'start' ? 3 : 12}" y="3" width="5" height="14"`;
-    sideButton.innerHTML = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="2" width="16" height="16" rx="1"/><rect ${rect} fill="currentColor" stroke="none"/></svg>`;
+    const fill = singlePanel ? '' : `<rect x="${side === 'start' ? 4 : 14}" y="4" width="6" height="8" fill="currentColor" stroke="none"/><path d="M12 2v12"/>`;
+    sideButton.innerHTML = `<svg viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="2" width="20" height="12" rx="1.2"/>${fill}</svg>`;
     Object.entries(panels).forEach(([id, { panel, head, frame }]) => {
       if (frame) frame.title = label(id);
       head.replaceChildren();
@@ -98,7 +118,7 @@
         const destination = mobile.matches
           ? (targetStart ? text('сверху', 'above') : text('снизу', 'below'))
           : (targetStart ? text('слева', 'on the left') : text('справа', 'on the right'));
-        const hint = (split ? text('Открыть в этой панели ', 'Open in this panel ') : text('Открыть в новой панели ', 'Open in a new panel ')) + destination + ': ' + label(candidate);
+        const hint = singlePanel ? text('Открыть на всю рабочую область: ', 'Fill workspace: ') + label(candidate) : (split ? text('Открыть в этой панели ', 'Open in this panel ') : text('Открыть в новой панели ', 'Open in a new panel ')) + destination + ': ' + label(candidate);
         const switcher = iconButton(panelIcons[candidate], hint, () => {
           open(candidate, target); panels[candidate].head.focus();
         }, 'workspace-switch');
@@ -117,7 +137,7 @@
       }, 'workspace-swap');
       swap.disabled = !split;
       const maximize = iconButton(actionIcons.maximize, text('На всю рабочую область: ', 'Fill workspace: ') + label(id), () => {
-        slots = [id, null]; render(); head.focus();
+        activePanel = id; slots = [id, null]; render(); head.focus();
       }, 'workspace-maximize');
       maximize.disabled = !split;
       const collapse = iconButton(actionIcons.close, text('Закрыть панель: ', 'Close panel: ') + label(id), () => {
@@ -126,7 +146,12 @@
         (remaining ? panels[remaining].head : document.querySelector('[data-app-page="chat"]')).focus();
       }, 'workspace-collapse');
       collapse.disabled = !split;
-      head.append(swap, maximize, collapse);
+      const layout = iconButton(sideButton.innerHTML, sideButton.title, () => {
+        activePanel = id; sideButton.click();
+        panels[id].head.querySelector('.workspace-layout')?.focus();
+      }, 'workspace-layout');
+      layout.dataset.layout = sideButton.dataset.layout;
+      head.append(swap, layout, maximize, collapse);
     });
     separator.setAttribute('aria-label', text('Размер областей', 'Panel sizes'));
     separator.setAttribute('aria-orientation', mobile.matches ? 'horizontal' : 'vertical');
@@ -142,6 +167,9 @@
     } finally { api.preparing = false; }
   }
   function render() {
+    Object.values(panels).forEach(({ panel, frame }) => {
+      if (frame?.contentWindow && !panel.hidden && frame.clientHeight) frameScrollPositions.set(frame, [frame.contentWindow.scrollX, frame.contentWindow.scrollY]);
+    });
     scrollable.forEach(el => { if (el.clientHeight) scrollPositions.set(el, el.scrollTop); });
     const split = slots.filter(Boolean).length === 2;
     workspace.dataset.split = String(split);
@@ -162,16 +190,24 @@
       if (slots.includes(link.dataset.appPage)) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
+    Object.values(panels).forEach(({ panel, frame }) => {
+      if (frame && !panel.hidden && frame.clientHeight && frameScrollPositions.has(frame)) {
+        const [left, top] = frameScrollPositions.get(frame);
+        frame.contentWindow.scrollTo({ left, top, behavior: 'instant' });
+      }
+    });
     refreshLabels(); document.dispatchEvent(new Event('app:pagechange'));
   }
   function open(id, target) {
     if (!definitions[id]) id = 'chat';
-    if (slots.includes(id)) {
+    activePanel = id;
+    if (slots.includes(id) && !(singlePanel && slots.filter(Boolean).length > 1)) {
       panels[id].panel.animate([{ outline: '2px solid var(--accent2)' }, { outline: '2px solid transparent' }], { duration: 600 });
       return;
     }
     if (id === 'settings') prepareSettings(transportMode);
-    if (target === undefined || target < 0) {
+    if (singlePanel) slots = [id, null];
+    else if (target === undefined || target < 0) {
       target = side === 'start' ? 0 : 1;
       if (slots.filter(Boolean).length === 1) {
         const current = slots.find(Boolean); slots = target === 0 ? [id, current] : [current, id];
@@ -186,14 +222,66 @@
   }
   const api = window.appWorkspace = {
     preparing: false, open, refreshLabels,
+    openBeside(id, sourceWindow) {
+      if (!definitions[id]) return;
+      const sourceId = Object.keys(panels).find(key => panels[key].frame?.contentWindow === sourceWindow);
+      if (!sourceId || sourceId === id) return;
+      const sourceIndex = slots.indexOf(sourceId);
+      if (sourceIndex < 0) return;
+      slots = sourceIndex === 0 ? [sourceId, id] : [id, sourceId];
+      activePanel = id; render();
+      panels[id].head.focus();
+    },
     setLabLocation(id) {
       const url = new URL(location.href);
       url.searchParams.set('page', 'labs'); url.searchParams.set('lab', id); url.hash = '';
       history.replaceState({ page: 'labs' }, '', url);
     },
-    openSettings(mode) {
+    openSettings(mode, options = {}) {
       if (mode !== transportMode) setTransport(mode);
-      prepareSettings(mode); open('settings');
+      prepareSettings(mode);
+      if (mode === 'openai' && options.profile && options.profile !== localStorage.getItem('ai_openai_active_profile') && allOpenAIProfiles().some(profile => profile.id === options.profile)) {
+        commitOpenAISettings();
+        document.getElementById('openai-profile-select').value = options.profile;
+        loadOpenAIProfile(options.profile);
+      }
+      if (options.sourceWindow) api.openBeside('settings', options.sourceWindow);
+      else if (options.beside && panels[options.beside]?.frame) {
+        if (!slots.includes(options.beside)) open(options.beside);
+        api.openBeside('settings', panels[options.beside].frame.contentWindow);
+      } else open('settings');
+      if (options.field) api.highlightField(options.field);
+    },
+    highlightField(id) {
+      const field = document.getElementById(id);
+      if (!field || !workspace.contains(field)) return;
+      for (let parent = field.parentElement; parent && parent !== workspace; parent = parent.parentElement) {
+        if (parent.tagName === 'DETAILS') parent.open = true;
+      }
+      if (!field.getClientRects().length) return;
+      field.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+      field.focus({ preventScroll: true });
+      field._helpAnimation?.cancel();
+      const theme = getComputedStyle(document.documentElement);
+      const isGreen = value => {
+        const channels = value.match(/[0-9.]+/g)?.map(Number);
+        if (!channels || channels.length < 3 || channels[3] === 0) return false;
+        const [r, g, b] = channels;
+        return g > r * 1.2 && g > b * 1.15;
+      };
+      const surfaces = [field, field.parentElement?.querySelector('.slider')].filter(Boolean);
+      const green = surfaces.some(el => {
+        const style = getComputedStyle(el);
+        return [style.color, style.backgroundColor, style.borderTopColor].some(isGreen);
+      });
+      const color = theme.getPropertyValue(green ? CFG_HELP_HIGHLIGHT_ALTERNATE_COLOR : CFG_HELP_HIGHLIGHT_COLOR).trim();
+      field._helpAnimation = field.animate([
+        { outline: '3px solid transparent', outlineOffset: '3px', boxShadow: 'none', offset: 0 },
+        { outline: '3px solid ' + color, outlineOffset: '3px', boxShadow: '0 0 12px ' + color, offset: .35 },
+        { outline: '3px solid ' + color, outlineOffset: '3px', boxShadow: '0 0 12px ' + color, offset: .55 },
+        { outline: '3px solid transparent', outlineOffset: '3px', boxShadow: 'none', offset: .85 },
+        { outline: '3px solid transparent', outlineOffset: '3px', boxShadow: 'none', offset: 1 }
+      ], { duration: CFG_HELP_HIGHLIGHT_DURATION_MS, iterations: CFG_HELP_HIGHLIGHT_PULSES, easing: 'ease-in-out' });
     },
     closeSettings() { close('settings'); },
     refreshSettings() { if (slots.includes('settings')) prepareSettings(transportMode); render(); }
@@ -219,7 +307,19 @@
     event.preventDefault(); resize(ratio + (event.key === keys[0] ? -5 : 5));
   });
   window.navigateApp = (page, hash = '', push = true, labId = null) => {
-    const id = definitions[page] ? page : 'chat'; closeDrawer(); open(id);
+    if (page === 'help') hash = ({ '#neuraldeep': '#connect-neuraldeep', '#setup': '#connect-settings' })[hash] || hash;
+    if (page === 'documentation') page = 'help';
+    const id = definitions[page] ? page : 'chat'; closeDrawer();
+    const params = new URL(location.href).searchParams;
+    if (id === 'settings') api.openSettings('openai', { profile: params.get('profile'), field: params.get('field'), beside: params.get('beside') });
+    else {
+      const source = params.get('beside');
+      if (source && source !== id && panels[source]?.frame) {
+        if (!slots.includes(source)) open(source);
+        api.openBeside(id, panels[source].frame.contentWindow);
+      } else open(id);
+      if (id === 'chat' && hash) api.highlightField(hash.slice(1));
+    }
     const frame = panels[id].frame;
     if (frame && (hash || (id === 'labs' && labId))) {
       const jump = () => {
@@ -230,6 +330,8 @@
       else frame.addEventListener('load', jump, { once: true });
     }
     const url = new URL(location.href);
+    url.searchParams.delete('beside');
+    if (id !== 'settings') { url.searchParams.delete('profile'); url.searchParams.delete('field'); }
     if (id === 'chat') url.searchParams.delete('page'); else url.searchParams.set('page', id);
     if (id === 'labs' && labId) url.searchParams.set('lab', labId); else url.searchParams.delete('lab');
     url.hash = hash; if (push) history.pushState({ page: id }, '', url);
@@ -240,6 +342,11 @@
     const url = new URL(link.href, location.href); if (url.origin !== location.origin) return;
     const file = url.pathname.split('/').pop().replace(/\.html$/, '');
     const page = link.dataset.appPage || (['labs', 'documentation', 'tools', 'mcp', 'help'].includes(file) ? file : null);
+    if (url.searchParams.get('page') === 'settings') {
+      event.preventDefault(); closeDrawer();
+      api.openSettings('openai', { profile: url.searchParams.get('profile'), field: url.searchParams.get('field'), beside: url.searchParams.get('beside') });
+      return;
+    }
     if (!page) return;
     event.preventDefault(); navigateApp(page, url.hash, true, url.searchParams.get('lab'));
   });
@@ -255,4 +362,5 @@
   render();
   const initialPage = new URL(location.href).searchParams.get('page');
   if (initialPage) navigateApp(initialPage, location.hash, false, new URL(location.href).searchParams.get('lab'));
+  else if (location.hash) api.highlightField(location.hash.slice(1));
 })();

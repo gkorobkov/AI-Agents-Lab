@@ -207,7 +207,7 @@
     identity.append(field('Автор отчёта', 'report-author', report.author, value => { report.author = value; }, false, 200), field('Группа / курс', 'report-group', report.group, value => { report.group = value; }, false, 200)); main.append(identity);
     const objective = node('section'); objective.id = 'objective'; objective.append(node('h2', 'Цель лабораторной')); renderBlocks(objective, selected.objective || [{ type: 'paragraph', text: selected.description }]); main.append(objective); toc.append(linkTo('Цель лабораторной', '#objective'));
     renderBlocks(main, selected.introduction);
-    main.append(linkTo('Подключение NeuralDeep — инструкция →', 'help.html#neuraldeep'));
+    main.append(linkTo('Подключение NeuralDeep — инструкция →', 'documentation.html#connect-neuraldeep'));
     const preparation = node('section'); preparation.id = 'prepare'; preparation.append(node('h2', 'Подготовка')); renderBlocks(preparation, selected.preparation); main.append(preparation); toc.append(linkTo('Подготовка', '#prepare'));
     const experiments = node('section'); experiments.id = 'experiments'; experiments.append(node('h2', 'Эксперименты'), node('p', 'Заполните результат и ответ с выводами — задание автоматически засчитается в прогресс. Если опыт недоступен, опишите причину и сделайте вывод.', 'observe')); main.append(experiments);
     selected.experiments.forEach((experiment, index) => {
@@ -349,6 +349,10 @@
   function jumpToHash() {
     try { const id = decodeURIComponent(location.hash.slice(1)); if (id) (document.getElementById(id) || document.getElementById('task-' + id))?.scrollIntoView(); } catch (_) {}
   }
+  const labBar = document.querySelector('.lab-bar');
+  new ResizeObserver(() => {
+    document.documentElement.style.setProperty('--lab-bar-height', labBar.offsetHeight + 'px');
+  }).observe(labBar);
   function highlightTask() {
     const links = [...$('lab-toc').querySelectorAll('a')];
     const threshold = document.querySelector('.lab-bar').getBoundingClientRect().bottom + 70;

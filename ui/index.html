@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.3.6';
+const APP_VERSION = '1.3.9';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -26,6 +26,12 @@ const CFG_REQUEST_TIMEOUT_MS = 10 * 60 * 1000; // 5 minutes
 // How long the "Undo delete" popup stays visible (milliseconds)
 const CFG_UNDO_TIMEOUT_MS = 10 * 1000; // 10 seconds
 
+// Help links: number, duration and theme colors of field highlight pulses.
+const CFG_HELP_HIGHLIGHT_PULSES = 2;
+const CFG_HELP_HIGHLIGHT_DURATION_MS = 1000;
+const CFG_HELP_HIGHLIGHT_COLOR = '--accent';
+const CFG_HELP_HIGHLIGHT_ALTERNATE_COLOR = '--accent2';
+
 // Show "Check" button in webhook history dropdown
 const CFG_SHOW_CHECK_BTN = false;
 
@@ -34,6 +40,7 @@ const CFG_TRANSPORT_ORDER = ['demo', 'openai', 'webhook'];
 const CFG_TRANSPORT_DEFAULT = 'openai';
 
 // Public presets contain configuration only. Credentials exist exclusively on the server.
+const CFG_DEFAULT_PROVIDER_ACCESS_CODE = 'lab-default-2026';
 const CFG_OPENAI_PRESETS = [{
   id: 'preset_default', name: 'Default LLM Provider', serverProfile: 'Default',
   baseUrl: 'https://ai-agents-lab.gkorobkov.ru/api/neuraldeep', model: 'qwen3.6-unlim',
@@ -173,6 +180,11 @@ const CFG_OPENAI_PRESETS = [{
   .logo-ring.active { box-shadow: 0 0 16px rgba(79,255,176,0.6); }
   .logo-ring svg { width: 13px; height: 13px; stroke: var(--accent); }
 
+  #openai-settings .api-field[hidden] { display: none; }
+  a[target="_blank"]:not(.drawer-link)::after { content: " ↗"; white-space: nowrap; }
+  a.header-title { text-decoration: none; }
+  a.header-title:hover { color: var(--accent); }
+  a.header-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .header-title {
     font-size: 13px;
     font-weight: 600;
@@ -1088,6 +1100,7 @@ const CFG_OPENAI_PRESETS = [{
   .welcome-lab strong { display: block; color: var(--text); font-size: 16px; line-height: 1.4; }
   .welcome .welcome-lab p { margin: 8px 0 14px; font: 12px/1.65 var(--font-ui); }
   .welcome-lab a { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 9px 16px; border: 1px solid var(--accent2); border-radius: var(--radius-sm); background: var(--accent-dim); color: var(--accent2); font: 600 12px/1.5 var(--font-ui); text-decoration: none; pointer-events: auto; }
+  .welcome-lab-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
   .welcome-lab a:hover { color: var(--text); border-color: var(--accent); }
   .welcome-lab a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
   @media (max-height: 760px) { #messages .welcome { position: relative; top: auto; left: auto; transform: none; margin: auto; flex-shrink: 0; } }
@@ -1813,7 +1826,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
       <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>
     </svg>
   </button>
-  <span class="header-title" id="app-title">AI Agents Lab</span>
+  <a class="header-title" id="app-title" href="index.html" data-app-page="chat">AI Agents Lab</a>
   <span class="app-nav-divider" aria-hidden="true"></span>
   <a class="app-nav-link" href="?page=help" data-app-page="help" data-i18n-aria-label="navHelp" aria-label="Помощь"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5a2.5 2.5 0 1 1 4 2c-1 .6-1.5 1-1.5 2"/><path d="M12 16h.01"/></svg><span data-i18n="navHelp">Помощь</span></a>
   <span class="app-nav-divider" aria-hidden="true"></span>
@@ -2136,7 +2149,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
       </svg>
       <span data-i18n="drawerPrivacy">Privacy Policy</span>
-      <span class="drawer-link-arrow">›</span>
+      <span class="drawer-link-arrow">↗</span>
     </a>
 
     <a href="terms.html" class="drawer-link" target="_blank">
@@ -2148,7 +2161,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
         <polyline points="10 9 9 9 8 9"/>
       </svg>
       <span data-i18n="drawerTerms">Terms of Use</span>
-      <span class="drawer-link-arrow">›</span>
+      <span class="drawer-link-arrow">↗</span>
     </a>
 
     <a href="../LICENSE" class="drawer-link" target="_blank">
@@ -2158,7 +2171,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
         <line x1="12" y1="16" x2="12.01" y2="16"/>
       </svg>
       <span data-i18n="drawerLicense">License</span>
-      <span class="drawer-link-arrow">›</span>
+      <span class="drawer-link-arrow">↗</span>
     </a>
   </div>
 
@@ -2203,7 +2216,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
     </button>
   </div>
   <div id="tool-chain-controls" hidden>
-    <button type="button" id="tool-chain-mode" role="switch" aria-checked="false" aria-label="Автоматическое выполнение инструментов">
+    <button type="button" id="tool-chain-mode" role="switch" aria-checked="false" aria-label="Режим запуска инструментов: вручную" title="Режим запуска инструментов: вручную. Нажмите, чтобы включить автоматический запуск.">
       <span id="tool-chain-icon" aria-hidden="true"></span>
       <svg class="chain-hand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6-8a1.5 1.5 0 0 1 3 0v8-6a1.5 1.5 0 0 1 3 0v7-4a1.5 1.5 0 0 1 3 0v7c0 4-2 7-6 7h-1c-2 0-4-1-5-3l-4-6a1.5 1.5 0 0 1 2-2Z"/></svg>
       <svg class="chain-auto-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m13 2-9 12h7l-1 8 10-13h-7Z"/></svg>
@@ -2435,8 +2448,9 @@ const i18n = {
     projectGuide:       'AI agents: explore the laboratory →',
     welcomeTitle:       'AI Agents Lab',
     welcomeLabTitle:    'What makes AI answer differently?',
-    welcomeLabText:     'Change one setting and see the result. Explore context, creativity and function calls with step-by-step exercises right in this chat.',
-    welcomeLabAction:   'Start the lab →',
+    welcomeLabText:     'Experiment with AI: change one setting at a time — observe the outcome and record your results in Labs. Explore conversation memory, creativity and function calls with step-by-step exercises right in this chat.',
+    welcomeLabAction:   'Start your AI research in Labs →',
+    welcomeProviderAction: 'Set up your LLM provider →',
     welcomeSub:         'Paste Webhook URL to start',
     inputPlaceholder:   'Message… (Enter to send, Shift+Enter for newline)',
     composerTarget:     'Next message will be sent via {name}: {detail}',
@@ -2667,8 +2681,9 @@ const i18n = {
     projectGuide:       'ИИ Агенты: как устроена лаборатория →',
     welcomeTitle:       'Лаборатория ИИ Агентов',
     welcomeLabTitle:    'Почему ИИ отвечает по-разному?',
-    welcomeLabText:     'Измени одну настройку — и посмотри на результат. Исследуй память диалога, креативность и вызовы функций по пошаговым заданиям прямо в этом чате.',
-    welcomeLabAction:   'Начать лабораторную →',
+    welcomeLabText:     'Проведи ИИследование: меняй настройки по одной — смотри на результат и фиксируй результаты в Лабах. Исследуй память диалога, креативность и вызовы функций по пошаговым заданиям прямо в этом чате.',
+    welcomeLabAction:   'Начани ИИследование в Лабе →',
+    welcomeProviderAction: 'Настрой LLM провайдера →',
     welcomeSub:         'Вставь Webhook URL и начинай',
     inputPlaceholder:   'Сообщение… (Enter — отправить, Shift+Enter — перенос)',
     composerTarget:     'Следующее сообщение будет отправлено через {name}: {detail}',
@@ -2760,7 +2775,7 @@ function addWelcomeLab(welcome) {
   if (!welcome || welcome.querySelector('.welcome-lab')) return;
   const card = document.createElement('div');
   card.className = 'welcome-lab';
-  card.innerHTML = `<strong data-i18n="welcomeLabTitle">${t('welcomeLabTitle')}</strong><p data-i18n="welcomeLabText">${t('welcomeLabText')}</p><a href="labs.html" data-i18n="welcomeLabAction">${t('welcomeLabAction')}</a>`;
+  card.innerHTML = `<strong data-i18n="welcomeLabTitle">${t('welcomeLabTitle')}</strong><p data-i18n="welcomeLabText">${t('welcomeLabText')}</p><div class="welcome-lab-actions"><a href="documentation.html#connect-neuraldeep" data-app-page="help" data-i18n="welcomeProviderAction">${t('welcomeProviderAction')}</a><a href="labs.html" data-i18n="welcomeLabAction">${t('welcomeLabAction')}</a></div>`;
   welcome.prepend(card);
   if (!welcome.querySelector('.project-intro')) {
     const intro = document.createElement('p'); intro.className = 'project-intro'; intro.dataset.i18n = 'projectIntro'; intro.textContent = t('projectIntro');
@@ -2965,7 +2980,26 @@ if (legacyDefault) {
   localStorage.setItem('ai_openai_profiles', JSON.stringify(openAIProfiles));
   if (localStorage.getItem('ai_openai_active_profile') === legacyDefault.id) localStorage.removeItem('ai_openai_active_profile');
 }
-const initialPreset = CFG_OPENAI_PRESETS.find(profile => profile.id === localStorage.getItem('ai_openai_active_profile'));
+if (!openAIProfiles.some(profile => profile.id === 'profile_neuraldeep')) {
+  openAIProfiles.push({ ...normalizeOpenAIConfig({ baseUrl: 'https://api.neuraldeep.ru/v1', model: 'qwen3.6-35b-a3b', maxCompletionTokens: 500 }), id: 'profile_neuraldeep', name: 'NeuralDeep LLM Provider' });
+  localStorage.setItem('ai_openai_profiles', JSON.stringify(openAIProfiles));
+}
+const providerAccessUrl = new URL(location.href);
+if (providerAccessUrl.searchParams.has('provider_access')) {
+  if (providerAccessUrl.searchParams.get('provider_access') === CFG_DEFAULT_PROVIDER_ACCESS_CODE) {
+    sessionStorage.setItem('ai_default_provider_unlocked', '1');
+    localStorage.setItem('ai_openai_active_profile', 'preset_default');
+  }
+  providerAccessUrl.searchParams.delete('provider_access');
+  history.replaceState(history.state, '', providerAccessUrl);
+}
+const defaultProviderUnlocked = () => sessionStorage.getItem('ai_default_provider_unlocked') === '1';
+if (!defaultProviderUnlocked() && (!localStorage.getItem('ai_openai_active_profile') || localStorage.getItem('ai_openai_active_profile') === 'preset_default')) {
+  openAIConfig = normalizeOpenAIConfig(openAIProfiles.find(profile => profile.id === 'profile_neuraldeep'));
+  localStorage.setItem('ai_openai_active_profile', 'profile_neuraldeep');
+  localStorage.setItem('ai_openai_config', JSON.stringify(openAIConfig));
+}
+const initialPreset = CFG_OPENAI_PRESETS.find(profile => profile.id === localStorage.getItem('ai_openai_active_profile') && defaultProviderUnlocked());
 if (initialPreset || (!openAIProfiles.length && CFG_OPENAI_PRESETS.length)) {
   const preset = initialPreset || CFG_OPENAI_PRESETS[0];
   openAIConfig = normalizeOpenAIConfig(openAIConfig.serverProfile === preset.serverProfile
@@ -2973,9 +3007,9 @@ if (initialPreset || (!openAIProfiles.length && CFG_OPENAI_PRESETS.length)) {
   localStorage.setItem('ai_openai_active_profile', preset.id);
 }
 function isServerOpenAIProfile(config = openAIConfig) {
-  return CFG_OPENAI_PRESETS.some(profile => profile.serverProfile === config.serverProfile);
+  return !!config.serverProfile && CFG_OPENAI_PRESETS.some(profile => profile.serverProfile === config.serverProfile);
 }
-function allOpenAIProfiles() { return [...CFG_OPENAI_PRESETS, ...openAIProfiles]; }
+function allOpenAIProfiles() { return [...CFG_OPENAI_PRESETS.filter(profile => profile.id !== 'preset_default' || defaultProviderUnlocked()), ...openAIProfiles]; }
 function openAIRequestEndpoint(config) {
   return getOpenAIEndpoint(config.baseUrl, config);
 }
@@ -2985,6 +3019,8 @@ function openAIRequestHeaders(config) {
 function syncOpenAIKeyAccess() {
   const shared = isServerOpenAIProfile();
   const field = document.getElementById('openai-api-key');
+  field.closest('label').hidden = shared;
+  document.getElementById('openai-base-url').closest('label').hidden = shared;
   field.disabled = false;
   field.readOnly = shared;
   field.setAttribute('aria-readonly', String(shared));
@@ -3122,7 +3158,7 @@ function updateTransportUI() {
   document.getElementById('transport-btn-demo').setAttribute('aria-checked', transportMode === 'demo');
   document.getElementById('openai-model-chip').textContent = '';
   document.getElementById('openai-model-chip').style.display = 'none';
-  document.getElementById('openai-base-label').textContent = openAIConfig.baseUrl;
+  document.getElementById('openai-base-label').textContent = isServerOpenAIProfile() ? 'Default LLM Provider' : openAIConfig.baseUrl;
   document.getElementById('openai-status-dot').className = 'status-dot' + ((isServerOpenAIProfile() || openAIApiKey) ? ' online' : '');
   const summaryDot = document.getElementById('connection-summary-dot');
   const summaryText = document.getElementById('connection-summary-text');
@@ -3131,7 +3167,7 @@ function updateTransportUI() {
     summaryText.textContent = `LOCAL · ${demoConfig.filename}`;
   } else if (transportMode === 'openai') {
     summaryDot.className = 'status-dot' + ((isServerOpenAIProfile() || openAIApiKey) ? ' online' : '');
-    summaryText.textContent = openAIRequestEndpoint(openAIConfig);
+    summaryText.textContent = isServerOpenAIProfile() ? 'Default LLM Provider' : openAIRequestEndpoint(openAIConfig);
   } else {
     summaryDot.className = document.getElementById('status-dot').className;
     summaryText.textContent = webhookUrl || '';
@@ -3155,6 +3191,7 @@ function updateTransportUI() {
   renderOpenAIProfiles();
 }
 function toggleActiveSettings() {
+  if (window.appWorkspace) { window.appWorkspace.openSettings(transportMode); return; }
   if (transportMode === 'openai') {
     const open = document.getElementById('openai-settings').classList.contains('open');
     open ? closeOpenAISettings(true) : openOpenAISettings();
@@ -3175,7 +3212,7 @@ function updateMobileConnectionSummary() {
   const summary = document.getElementById('mobile-connection-summary');
   if (!summary) return;
   summary.textContent = transportMode === 'demo' ? `LOCAL · ${demoConfig.filename}` : transportMode === 'openai'
-    ? `${openAIConfig.model} · ${shortHost(openAIRequestEndpoint(openAIConfig))}`
+    ? (isServerOpenAIProfile() ? 'Default LLM Provider' : `${openAIConfig.model} · ${shortHost(openAIRequestEndpoint(openAIConfig))}`)
     : `${httpMethod.toUpperCase()} · ${shortHost(webhookUrl)}`;
 }
 function openActiveConnection() {
@@ -3330,7 +3367,7 @@ function openOpenAISettings(focusBase = true) {
   if (window.appWorkspace && !window.appWorkspace.preparing) return window.appWorkspace.openSettings('openai');
   closeWebhookSettings(true);
   closeDemoSettings(true);
-  document.getElementById('openai-base-url').value = openAIConfig.baseUrl;
+  document.getElementById('openai-base-url').value = isServerOpenAIProfile() ? '' : openAIConfig.baseUrl;
   syncOpenAIKeyAccess();
   document.getElementById('openai-model').value = openAIConfig.model;
   document.getElementById('openai-system-prompt').value = openAIConfig.systemPrompt;
@@ -3401,7 +3438,7 @@ function readOpenAIForm() {
   };
   return {
     serverProfile: openAIConfig.serverProfile,
-    baseUrl: normalizeOpenAIBaseUrl(document.getElementById('openai-base-url').value, openAIConfig.serverProfile),
+    baseUrl: isServerOpenAIProfile() ? openAIConfig.baseUrl : normalizeOpenAIBaseUrl(document.getElementById('openai-base-url').value, openAIConfig.serverProfile),
     apiKey: document.getElementById('openai-api-key').value.trim(),
     model: document.getElementById('openai-model').value.trim(),
     systemPrompt: document.getElementById('openai-system-prompt').value.trim(),
@@ -3660,7 +3697,7 @@ function setAutosaveStatus(id, message, type = 'saved') {
   el.className = `autosave-status ${type}`;
 }
 function validateOpenAIDraft() {
-  const baseUrl = document.getElementById('openai-base-url').value.trim();
+  const baseUrl = isServerOpenAIProfile() ? openAIConfig.baseUrl : document.getElementById('openai-base-url').value.trim();
   const model = document.getElementById('openai-model').value.trim();
   const temperature = document.getElementById('openai-temperature').value;
   const topP = document.getElementById('openai-top-p').value;
@@ -3826,7 +3863,7 @@ function loadOpenAIProfile(id) {
   localStorage.setItem('ai_openai_parse_legacy_reply', String(openAIParseLegacyReplyHtml));
   openAIConversationId = profile.id;
   sessionStorage.setItem('ai_openai_conversation', openAIConversationId);
-  document.getElementById('openai-base-url').value = openAIConfig.baseUrl;
+  document.getElementById('openai-base-url').value = isServerOpenAIProfile() ? '' : openAIConfig.baseUrl;
   document.getElementById('openai-model').value = openAIConfig.model;
   document.getElementById('openai-system-prompt').value = openAIConfig.systemPrompt;
   document.getElementById('openai-temperature').value = openAIConfig.temperature;
@@ -3886,7 +3923,7 @@ function updateOpenAIRequestPreview() {
   const headers = isServerOpenAIProfile(config)
     ? 'Content-Type: application/json'
     : 'Content-Type: application/json\nAuthorization: Bearer $OPENAI_API_KEY';
-  document.getElementById('openai-preview-endpoint').textContent = `POST ${preview.endpoint}`;
+  document.getElementById('openai-preview-endpoint').textContent = isServerOpenAIProfile(config) ? 'POST · Default LLM Provider' : `POST ${preview.endpoint}`;
   document.getElementById('openai-preview-headers').innerHTML = headers.replace(/\n/g, '<br>');
   json.textContent = JSON.stringify(preview.body, null, 2);
   document.getElementById('openai-preview-empty').hidden = !!preview.currentText || !!preview.body?.messages?.length;
@@ -3943,7 +3980,7 @@ function resetSession() {
   toast(t('toastNewSession'));
 }
 function updateSessionDisplay() {
-  document.getElementById('sid-display').textContent = sessionId.slice(0,14) + '…';
+  document.getElementById('sid-display').textContent = sessionId;
   document.getElementById('session-id-box').title = 'Session ID: ' + sessionId;
 }
 function setMethod(m) {
@@ -5311,8 +5348,10 @@ function renderToolChainControls() {
   controls.hidden = transportMode !== 'openai';
   const toggle = document.getElementById('tool-chain-mode');
   toggle.setAttribute('aria-checked', String(toolChain.mode === 'auto'));
-  toggle.setAttribute('aria-label', toolHttpText('Автоматическое выполнение инструментов', 'Automatic tool execution'));
-  toggle.title = toolChain.mode === 'auto' ? toolHttpText('Инструменты: автоматически. Переключить на ручной режим.', 'Tools: automatic. Switch to manual.') : toolHttpText('Инструменты: вручную. Переключить на автоматический режим.', 'Tools: manual. Switch to automatic.');
+  toggle.title = toolChain.mode === 'auto'
+    ? toolHttpText('Режим запуска инструментов: автоматически. Нажмите, чтобы переключить на ручной запуск.', 'Tool execution mode: automatic. Click to switch to manual execution.')
+    : toolHttpText('Режим запуска инструментов: вручную. Нажмите, чтобы включить автоматический запуск.', 'Tool execution mode: manual. Click to enable automatic execution.');
+  toggle.setAttribute('aria-label', toggle.title);
   const icon = document.getElementById('tool-chain-icon');
   if (!icon.firstChild) icon.append(document.querySelector('#tool-library-btn svg').cloneNode(true));
   const pause = document.getElementById('tool-chain-pause'), next = document.getElementById('tool-chain-next');
@@ -5368,6 +5407,9 @@ document.getElementById('tool-chain-mode').onclick = () => {
   try { localStorage.setItem('ai_tool_chain_mode', toolChain.mode); } catch (_) {}
   if (toolChain.mode !== 'manual' && (pendingOpenAIToolTurn || isThinking)) startToolChain();
   else stopToolChain();
+  toast(toolChain.mode === 'auto'
+    ? toolHttpText('Запуск инструментов: автоматически', 'Tool execution: automatic')
+    : toolHttpText('Запуск инструментов: вручную', 'Tool execution: manual'));
 };
 document.getElementById('tool-chain-pause').onclick = () => { toolChain.paused = !toolChain.paused; clearToolChainAction(); renderToolChainControls(); };
 document.getElementById('tool-chain-next').onclick = () => { toolChain.next = true; advanceToolChain(); };
@@ -5775,7 +5817,7 @@ function clearChat(anchor) {
   messagesEl.appendChild(w);
   addWelcomeLab(w);
   recentSuggestions = [];
-  showSuggestions(INITIAL_SUGGESTIONS);
+  showSuggestions(INITIAL_SUGGESTIONS, false);
   toast(t('toastCleared'));
 }
 
@@ -5850,7 +5892,7 @@ function renderSuggestionMenu() {
   updateSendState(); positionSuggestionMenu();
 }
 
-function showSuggestions(chips) {
+function showSuggestions(chips, scroll = true) {
   if (!Array.isArray(chips)) return;
   chips = [...new Set(chips.filter(label => typeof label === 'string').map(label => label.trim()).filter(Boolean))];
   if (!chips.length) return;
@@ -5867,7 +5909,7 @@ function showSuggestions(chips) {
     row.appendChild(btn);
   });
   container.appendChild(row);
-  row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (scroll) row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function hideSuggestions() {}
@@ -5947,6 +5989,8 @@ let pendingDeletion = null;
 
 function showPopup(message, options = {}) {
   const el = document.getElementById('toast');
+  const controlsBottom = Math.max(document.querySelector('body > header').getBoundingClientRect().bottom, ...[...document.querySelectorAll('.workspace-panel:not([hidden]) .workspace-panel-head')].map(head => head.getBoundingClientRect().bottom));
+  el.style.top = (controlsBottom + 8) + 'px';
   clearTimeout(el._t);
   clearInterval(el._iv);
   el.classList.remove('show');
