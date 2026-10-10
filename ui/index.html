@@ -3011,6 +3011,7 @@ function syncOpenAIParameterToggles() {
 function initOpenAIParameterToggles() {
   Object.entries(CFG_OPENAI_PARAMETER_FIELDS).forEach(([key, id]) => {
     const field = document.getElementById(id);
+    if (field.type === 'checkbox') return;
     const label = field.closest('.api-field');
     if (label) label.htmlFor = id;
     let heading = label?.querySelector(':scope > span');
@@ -6062,12 +6063,18 @@ function getInitialSuggestions() {
   const names = transportMode === 'openai' && toolsEnabled
     ? [...new Set([...document.querySelectorAll('.tool-definition [data-tool-field="name"]')].map(input => input.value.trim()).filter(Boolean))]
     : [];
-  return [...names.map(name => lang === 'ru' ? `Вызови ${name} инструмент с любым параметром` : `Call the ${name} tool with any parameter`), ...INITIAL_SUGGESTIONS];
+  return [...INITIAL_SUGGESTIONS, ...names.map(name => lang === 'ru' ? `Вызови ${name} инструмент с любым параметром` : `Call the ${name} tool with any parameter`)];
 }
 
-function fillSuggestionRow(row, chips) {
+function fillSuggestionRow(row, chips, initial = false) {
   row.replaceChildren();
-  chips.forEach(label => {
+  chips.forEach((label, index) => {
+    if (initial && index === INITIAL_SUGGESTIONS.length) {
+      const separator = document.createElement('div');
+      separator.style.flexBasis = '100%';
+      separator.setAttribute('aria-hidden', 'true');
+      row.appendChild(separator);
+    }
     const btn = document.createElement('button');
     btn.className = 'suggestion-chip';
     btn.textContent = label;
@@ -6081,7 +6088,7 @@ function renderSuggestionMenu() {
   const signature = JSON.stringify(initialSuggestions);
   document.querySelectorAll('.suggestions-row[data-initial]').forEach(row => {
     if (row.dataset.initial === signature) return;
-    fillSuggestionRow(row, initialSuggestions);
+    fillSuggestionRow(row, initialSuggestions, true);
     row.dataset.initial = signature;
   });
   const menu = document.getElementById('suggestions-menu');
@@ -6124,7 +6131,7 @@ function showSuggestions(chips, scroll = true) {
   const row = document.createElement('div');
   row.className = 'suggestions-row';
   if (initial) row.dataset.initial = JSON.stringify(chips);
-  fillSuggestionRow(row, chips);
+  fillSuggestionRow(row, chips, initial);
   container.appendChild(row);
   if (scroll) row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
