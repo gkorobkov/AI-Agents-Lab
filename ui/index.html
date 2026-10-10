@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.3.10';
+const APP_VERSION = '1.3.11';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -36,20 +36,35 @@ const CFG_HELP_HIGHLIGHT_ALTERNATE_COLOR = '--accent2';
 const CFG_SHOW_CHECK_BTN = false;
 
 // Transport order and defaults for users without saved preferences.
-const CFG_TRANSPORT_ORDER = ['demo', 'openai', 'webhook'];
-const CFG_TRANSPORT_DEFAULT = 'openai';
+const CFG_TRANSPORT_ORDER = ['webhook', 'openai', 'demo'];
+const CFG_TRANSPORT_DEFAULT = 'webhook';
 
-// Public presets contain configuration only. Credentials exist exclusively on the server.
-const CFG_DEFAULT_PROVIDER_ACCESS_CODE = 'lab-default-2026';
-const CFG_OPENAI_PRESETS = [{
-  id: 'preset_default', name: 'Default LLM Provider', serverProfile: 'Default',
-  baseUrl: 'https://ai-agents-lab.gkorobkov.ru/api/neuraldeep', model: 'qwen3.6-unlim',
-  systemPrompt: 'Ты — ИИ-агент для чата. Отвечай только в понятном Markdown/HTML-совместимом стиле, как в Telegram: короткие абзацы, ясные заголовки, списки и факты. Используй H2 для заголовков, короткие списки через "-" или "1.". Выделяй важное жирным **текстом**. Не используй JSON, таблицы и длинные блоки кода. Не пиши служебные комментарии и не повторяй шаблоны. Отвечай на русском языке, если не попросили иначе. Делай ответ компактным, читабельным и красиво оформленным для чата.',
-  temperature: 0.7, topP: 1, maxCompletionTokens: 10000, n: 1,
-  includeContext: false, toolsEnabled: false, toolChoice: 'auto',
-  forcedTool: '', parallelToolCalls: false, parseLegacyReplyHtml: true,
-  tools: null // null uses the starter tools; [] disables predefined tools.
-}];
+const CFG_OPENAI_PRESETS = [];
+
+// Public OpenAI-compatible providers. Add one JSON object per provider.
+// Keep all provider request settings together in each entry. No API keys here.
+// tools: null uses starter tools; [] means no tools; an array defines custom tools.
+// The first entry is selected for new users; saved profiles keep their settings.
+const CFG_OPENAI_PROVIDERS = [
+  {
+    "id": "profile_neuraldeep",
+    "name": "NeuralDeep LLM Provider",
+    "baseUrl": "https://api.neuraldeep.ru/v1",
+    "model": "qwen3.6-35b-a3b",
+    "systemPrompt": "Ты — ИИ-агент для чата. Отвечай только в понятном Markdown/HTML-совместимом стиле, как в Telegram: короткие абзацы, ясные заголовки, списки и факты. Используй H2 для заголовков, короткие списки через \"-\" или \"1.\". Выделяй важное жирным **текстом**. Не используй JSON, таблицы и длинные блоки кода. Не пиши служебные комментарии и не повторяй шаблоны. Отвечай на русском языке, если не попросили иначе. Делай ответ компактным, читабельным и красиво оформленным для чата.",
+    "temperature": 0.7,
+    "topP": 1,
+    "maxCompletionTokens": 10000,
+    "n": 1,
+    "includeContext": false,
+    "toolsEnabled": false,
+    "toolChoice": "auto",
+    "forcedTool": "",
+    "parallelToolCalls": false,
+    "parseLegacyReplyHtml": true,
+    "tools": null
+  }
+];
 </script>
 
 <meta charset="UTF-8">
@@ -307,15 +322,24 @@ const CFG_OPENAI_PRESETS = [{
   .api-field > .parameter-heading, .parameter-heading { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
   .parameter-heading > [data-i18n] { min-width: 0; }
   .api-field > .parameter-heading { color: var(--text-muted); font: 10px var(--font-mono); margin-bottom: 6px; }
-  .parameter-toggle { display: inline-flex; flex: 0 0 auto; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text-muted); font: 8px var(--font-mono); line-height: 14px; cursor: pointer; }
-  .parameter-toggle > button { padding: 0 3px; border: 0; background: transparent; color: inherit; font: inherit; line-height: inherit; cursor: pointer; }
+  .parameter-toggle { display: inline-flex; align-items: center; gap: 1px; flex: 0 0 auto; padding: 1px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text-muted); font: 8px var(--font-mono); line-height: 14px; cursor: pointer; }
+  .parameter-toggle > button { display: inline-flex; align-items: center; justify-content: center; height: 14px; padding: 0 3px; border: 0; border-radius: 2px; background: transparent; color: inherit; font: inherit; line-height: 1; cursor: pointer; }
   .parameter-toggle > button:disabled { cursor: default; }
-  .parameter-toggle > button:first-child, .parameter-toggle.custom > button:last-child { background: color-mix(in srgb, var(--accent) 12%, transparent); color: color-mix(in srgb, var(--text-muted) 85%, var(--accent)); border-radius: 3px; }
+  .parameter-toggle > button:first-child, .parameter-toggle.custom > button[data-mode="custom"] { background: color-mix(in srgb, var(--accent) 12%, transparent); color: color-mix(in srgb, var(--text-muted) 85%, var(--accent)); border-radius: 3px; }
   .parameter-toggle.custom > button:first-child { background: transparent; color: var(--text-muted); }
   .parameter-toggle[aria-disabled="true"] { opacity: .65; cursor: default; }
-  .parameter-toggle[aria-disabled="true"] > button:first-child, .parameter-toggle.custom[aria-disabled="true"] > button:last-child { background: color-mix(in srgb, var(--text-muted) 8%, transparent); color: var(--text-muted); }
+  .parameter-toggle[aria-disabled="true"] > button:first-child, .parameter-toggle.custom[aria-disabled="true"] > button[data-mode="custom"] { background: color-mix(in srgb, var(--text-muted) 8%, transparent); color: var(--text-muted); }
   .parameter-toggle.custom[aria-disabled="true"] > button:first-child { background: transparent; }
   .parameter-toggle > button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .parameter-toggle > span[aria-hidden] { width: 1px; height: 9px; margin: 0 2px; background: var(--border); font-size: 0; }
+  .parameter-toggle > [data-remove-custom] { width: 16px; padding: 0; }
+  .parameter-toggle > [data-remove-custom]:not(:disabled):hover { background: color-mix(in srgb, var(--text-muted) 12%, transparent); color: var(--text); }
+  .parameter-toggle > [data-remove-custom] svg { display: block; }
+  .parameter-toggle > [data-remove-custom]:disabled { color: var(--text-muted); opacity: .35; cursor: default; }
+  .parameter-undo { position: relative; display: inline-flex; align-items: center; gap: 4px; overflow: hidden; border: 1px solid var(--border); border-radius: 4px; padding: 0 4px 2px; color: var(--text-muted); font: 8px/14px var(--font-mono); }
+  .parameter-undo button { padding: 0; border: 0; background: transparent; color: var(--accent); font: inherit; cursor: pointer; }
+  .parameter-undo::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: var(--accent); transform-origin: left; animation: parameterUndoCountdown 3s linear forwards; }
+  @keyframes parameterUndoCountdown { to { transform: scaleX(0); } }
   .api-field { display: block; margin-bottom: 10px; min-width: 0; }
   #openai-settings > .api-field:nth-of-type(4) { grid-column: 1 / 3; display: flex; flex-direction: column; }
   #openai-system-prompt { flex: 1 0 auto; height: 130px; min-height: 130px; }
@@ -2972,8 +2996,8 @@ const CFG_OPENAI_PARAMETER_FIELDS = {
   forcedTool: 'openai-forced-tool', parallelToolCalls: 'openai-parallel-tools'
 };
 function openAIParameterDefaults(config = openAIConfig) {
-  const preset = CFG_OPENAI_PRESETS.find(item => item.serverProfile && item.serverProfile === config.serverProfile);
-  return preset || config.parameterDefaults || CFG_OPENAI_PRESETS[0];
+  const id = config.id || localStorage.getItem('ai_openai_active_profile');
+  return CFG_OPENAI_PROVIDERS.find(provider => provider.id === id) || config.parameterDefaults || CFG_OPENAI_PROVIDERS[0] || {};
 }
 function readOpenAIParameter(key) {
   const field = document.getElementById(CFG_OPENAI_PARAMETER_FIELDS[key]);
@@ -2996,10 +3020,11 @@ function syncOpenAIParameterToggles() {
     const different = (state ? state.custom : value) !== defaults[key];
     const disabled = !different || field.disabled || field.readOnly;
     button.setAttribute('aria-disabled', String(disabled));
-    [...button.children].forEach((choice, index) => {
+    [...button.querySelectorAll('button[data-mode]')].forEach((choice, index) => {
       choice.disabled = disabled;
       choice.setAttribute('aria-pressed', String(index === (custom ? 1 : 0)));
     });
+    button.querySelector('[data-remove-custom]').disabled = disabled || !custom;
     button.classList.toggle('custom', custom);
     button.setAttribute('role', 'group');
     button.setAttribute('aria-label', (lang === 'ru' ? 'Выбор значения: ' : 'Value selection: ') + key);
@@ -3008,6 +3033,38 @@ function syncOpenAIParameterToggles() {
     button.children[1].textContent = 'Custom';
   });
 }
+function removeOpenAICustomParameter(key, button) {
+  const value = readOpenAIParameter(key);
+  const state = openAIConfig.parameterOverrides?.[key];
+  const previous = state ? { ...state } : { custom: value, mode: 'custom' };
+  const profileId = localStorage.getItem('ai_openai_active_profile');
+  button.parentElement.querySelector('.parameter-undo')?.remove();
+  delete openAIConfig.parameterOverrides?.[key];
+  writeOpenAIParameter(key, openAIParameterDefaults()[key]);
+  syncOpenAIToolControls();
+  commitOpenAISettings();
+  syncOpenAIParameterToggles();
+  const note = document.createElement('span');
+  note.className = 'parameter-undo';
+  note.setAttribute('role', 'status');
+  note.append('Custom data removed.');
+  const undo = document.createElement('button');
+  undo.type = 'button'; undo.textContent = 'Undo';
+  note.appendChild(undo);
+  button.after(note);
+  const timer = setTimeout(() => note.remove(), 3000);
+  undo.onclick = event => {
+    event.preventDefault(); event.stopPropagation();
+    clearTimeout(timer); note.remove();
+    if (localStorage.getItem('ai_openai_active_profile') !== profileId) return;
+    openAIConfig.parameterOverrides = { ...openAIConfig.parameterOverrides, [key]: previous };
+    writeOpenAIParameter(key, value);
+    syncOpenAIToolControls();
+    commitOpenAISettings();
+    syncOpenAIParameterToggles();
+  };
+}
+
 function initOpenAIParameterToggles() {
   Object.entries(CFG_OPENAI_PARAMETER_FIELDS).forEach(([key, id]) => {
     const field = document.getElementById(id);
@@ -3023,7 +3080,7 @@ function initOpenAIParameterToggles() {
     heading.before(row); row.appendChild(heading);
     const button = document.createElement('span');
     button.id = 'openai-default-' + key; button.className = 'parameter-toggle';
-    button.innerHTML = '<button type="button" data-mode="default"></button><button type="button" data-mode="custom"></button>';
+    button.innerHTML = '<button type="button" data-mode="default"></button><button type="button" data-mode="custom"></button><span aria-hidden="true">|</span><button type="button" data-remove-custom title="Remove custom data" aria-label="Remove custom data"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg></button>';
     row.appendChild(button);
     field.addEventListener('input', () => {
       const value = readOpenAIParameter(key);
@@ -3032,6 +3089,11 @@ function initOpenAIParameterToggles() {
     });
     button.addEventListener('click', event => {
       event.preventDefault(); event.stopPropagation();
+      const remove = event.target.closest('button[data-remove-custom]');
+      if (remove) {
+        if (!remove.disabled) removeOpenAICustomParameter(key, button);
+        return;
+      }
       const defaults = openAIParameterDefaults();
       const state = openAIConfig.parameterOverrides?.[key] || { custom: readOpenAIParameter(key), mode: 'custom' };
       const choice = event.target.closest('button[data-mode]');
@@ -3049,12 +3111,28 @@ function initOpenAIParameterToggles() {
 
 function normalizeOpenAIConfig(value = {}) {
   // Inherit request settings only; custom providers must not inherit proxy identity.
-  const { id, name, serverProfile, ...defaults } = CFG_OPENAI_PRESETS[0] || {};
+  const providerId = value.id || localStorage.getItem('ai_openai_active_profile');
+  const provider = CFG_OPENAI_PROVIDERS.find(item => item.id === providerId);
+  const { id, name, ...defaults } = provider || CFG_OPENAI_PROVIDERS[0] || {};
   const merged = { ...defaults, ...value };
+  delete merged.serverProfile;
   if (value.maxCompletionTokens == null && value.maxTokens != null) merged.maxCompletionTokens = value.maxTokens;
   delete merged.maxTokens;
-  if (!merged.parameterDefaults) merged.parameterDefaults = Object.fromEntries(Object.keys(CFG_OPENAI_PARAMETER_FIELDS).map(key => [key, ['baseUrl', 'model'].includes(key) ? merged[key] : defaults[key]]));
-  merged.baseUrl = normalizeOpenAIBaseUrl(merged.baseUrl, merged.serverProfile || serverProfile);
+  if (provider) {
+    merged.id = provider.id;
+    merged.parameterOverrides = { ...value.parameterOverrides };
+    Object.keys(CFG_OPENAI_PARAMETER_FIELDS).forEach(key => {
+      if (document.getElementById(CFG_OPENAI_PARAMETER_FIELDS[key])?.type === 'checkbox') return;
+      const state = merged.parameterOverrides[key];
+      const wasDefault = state ? state.mode === 'default' : value[key] == null || value[key] === value.parameterDefaults?.[key] || value[key] === provider[key];
+      if (wasDefault) merged[key] = provider[key];
+      else if (!state) merged.parameterOverrides[key] = { custom: value[key], mode: 'custom' };
+    });
+    merged.parameterDefaults = Object.fromEntries(Object.keys(CFG_OPENAI_PARAMETER_FIELDS).map(key => [key, provider[key]]));
+  } else if (!merged.parameterDefaults) {
+    merged.parameterDefaults = Object.fromEntries(Object.keys(CFG_OPENAI_PARAMETER_FIELDS).map(key => [key, merged[key]]));
+  }
+  merged.baseUrl = normalizeOpenAIBaseUrl(merged.baseUrl);
   if (!Array.isArray(merged.tools)) merged.tools = getOpenAIStarterTools();
   else if (merged.tools.length === 1 && isLegacyOpenAITool(merged.tools[0])) merged.tools = getOpenAIStarterTools();
   else merged.tools = merged.tools.map(tool => ({ ...CFG_OPENAI_EMPTY_TOOL, ...tool }));
@@ -3073,37 +3151,25 @@ let openAIContextStart = 0;
 let openAIConversationId = sessionStorage.getItem('ai_openai_conversation') || ('openai_' + Date.now().toString(36));
 sessionStorage.setItem('ai_openai_conversation', openAIConversationId);
 let openAIProfiles = (() => { try { const value = JSON.parse(localStorage.getItem('ai_openai_profiles') || '[]'); return Array.isArray(value) ? value.slice(0, 15).map(profile => ({ ...profile, ...normalizeOpenAIConfig(profile), id: profile.id, name: profile.name })) : []; } catch (_) { return []; } })();
+openAIProfiles = openAIProfiles.filter(profile => profile.id !== 'preset_default');
 const legacyDefault = openAIProfiles.find(profile => profile.id === 'profile_default' && profile.name === profile.model);
 if (legacyDefault) {
   openAIProfiles = openAIProfiles.filter(profile => profile !== legacyDefault);
   localStorage.setItem('ai_openai_profiles', JSON.stringify(openAIProfiles));
   if (localStorage.getItem('ai_openai_active_profile') === legacyDefault.id) localStorage.removeItem('ai_openai_active_profile');
 }
-if (!openAIProfiles.some(profile => profile.id === 'profile_neuraldeep')) {
-  openAIProfiles.push({ ...normalizeOpenAIConfig({ baseUrl: 'https://api.neuraldeep.ru/v1', model: 'qwen3.6-35b-a3b', maxCompletionTokens: 10000 }), id: 'profile_neuraldeep', name: 'NeuralDeep LLM Provider' });
-  localStorage.setItem('ai_openai_profiles', JSON.stringify(openAIProfiles));
-}
-const providerAccessUrl = new URL(location.href);
-if (providerAccessUrl.searchParams.has('provider_access')) {
-  if (providerAccessUrl.searchParams.get('provider_access') === CFG_DEFAULT_PROVIDER_ACCESS_CODE) {
-    sessionStorage.setItem('ai_default_provider_unlocked', '1');
-    localStorage.setItem('ai_openai_active_profile', 'preset_default');
+CFG_OPENAI_PROVIDERS.forEach(provider => {
+  if (openAIProfiles.some(profile => profile.id === provider.id)) return;
+  openAIProfiles.push({ ...normalizeOpenAIConfig(provider), id: provider.id, name: provider.name });
+});
+localStorage.setItem('ai_openai_profiles', JSON.stringify(openAIProfiles));
+if (!openAIProfiles.some(profile => profile.id === localStorage.getItem('ai_openai_active_profile'))) {
+  const provider = openAIProfiles.find(profile => profile.id === CFG_OPENAI_PROVIDERS[0]?.id) || openAIProfiles[0];
+  if (provider) {
+    openAIConfig = normalizeOpenAIConfig(provider);
+    localStorage.setItem('ai_openai_active_profile', provider.id);
+    localStorage.setItem('ai_openai_config', JSON.stringify(openAIConfig));
   }
-  providerAccessUrl.searchParams.delete('provider_access');
-  history.replaceState(history.state, '', providerAccessUrl);
-}
-const defaultProviderUnlocked = () => sessionStorage.getItem('ai_default_provider_unlocked') === '1';
-if (!defaultProviderUnlocked() && (!localStorage.getItem('ai_openai_active_profile') || localStorage.getItem('ai_openai_active_profile') === 'preset_default')) {
-  openAIConfig = normalizeOpenAIConfig(openAIProfiles.find(profile => profile.id === 'profile_neuraldeep'));
-  localStorage.setItem('ai_openai_active_profile', 'profile_neuraldeep');
-  localStorage.setItem('ai_openai_config', JSON.stringify(openAIConfig));
-}
-const initialPreset = CFG_OPENAI_PRESETS.find(profile => profile.id === localStorage.getItem('ai_openai_active_profile') && defaultProviderUnlocked());
-if (initialPreset || (!openAIProfiles.length && CFG_OPENAI_PRESETS.length)) {
-  const preset = initialPreset || CFG_OPENAI_PRESETS[0];
-  openAIConfig = normalizeOpenAIConfig(openAIConfig.serverProfile === preset.serverProfile
-    ? { ...openAIConfig, id: preset.id, baseUrl: preset.baseUrl } : { ...preset, ...openAIPresetDrafts()[preset.id], baseUrl: preset.baseUrl, serverProfile: preset.serverProfile });
-  localStorage.setItem('ai_openai_active_profile', preset.id);
 }
 function isServerOpenAIProfile(config = openAIConfig) {
   return !!config.serverProfile && CFG_OPENAI_PRESETS.some(profile => profile.serverProfile === config.serverProfile);
@@ -3114,7 +3180,7 @@ function openAIPresetDrafts() {
 }
 function allOpenAIProfiles() {
   const drafts = openAIPresetDrafts();
-  return [...CFG_OPENAI_PRESETS.filter(profile => profile.id !== 'preset_default' || defaultProviderUnlocked()).map(profile => ({ ...profile, ...drafts[profile.id], id: profile.id, name: profile.name, serverProfile: profile.serverProfile, baseUrl: profile.baseUrl })), ...openAIProfiles];
+  return openAIProfiles;
 }
 function openAIRequestEndpoint(config) {
   return getOpenAIEndpoint(config.baseUrl, config);
@@ -3545,7 +3611,7 @@ function readOpenAIForm() {
     return value === '' ? fallback : Number(value);
   };
   return {
-    serverProfile: openAIConfig.serverProfile,
+    id: localStorage.getItem('ai_openai_active_profile') || openAIConfig.id,
     parameterDefaults: openAIConfig.parameterDefaults,
     parameterOverrides: openAIConfig.parameterOverrides,
     baseUrl: isServerOpenAIProfile() ? openAIConfig.baseUrl : normalizeOpenAIBaseUrl(document.getElementById('openai-base-url').value, openAIConfig.serverProfile),
@@ -3967,6 +4033,7 @@ function loadOpenAIProfile(id) {
   resetOpenAIToolTurn();
   clearTimeout(openAIAutosaveTimer);
   const profile = allOpenAIProfiles().find(item => item.id === id);
+  document.querySelectorAll('.parameter-undo').forEach(note => note.remove());
   syncOpenAIProfileActions();
   if (!profile) { cancelOpenAIProfileNameEdit(); return; }
   openAIConfig = normalizeOpenAIConfig(profile);
