@@ -10,6 +10,11 @@
   const panels = {};
   let slots = ['chat', null];
   let side = localStorage.getItem('ai_panel_side') === 'start' ? 'start' : 'end';
+  const layoutNames = ['left', 'right', 'single'];
+  const configuredOrder = typeof CFG_PANEL_LAYOUT_ORDER !== 'undefined' ? CFG_PANEL_LAYOUT_ORDER : [];
+  const layoutOrder = Array.isArray(configuredOrder) && configuredOrder.length === 3 && layoutNames.every(name => configuredOrder.includes(name))
+    ? configuredOrder : ['right', 'left', 'single'];
+  const nextLayoutStep = () => layoutNames.indexOf(layoutOrder[(layoutOrder.indexOf(layoutNames[layoutStep]) + 1) % layoutOrder.length]);
   const savedLayout = localStorage.getItem('ai_panel_layout_v2');
   const legacyLayout = localStorage.getItem('ai_panel_layout');
   let layoutStep = /^[0-2]$/.test(savedLayout || '') ? Number(savedLayout)
@@ -75,7 +80,7 @@
     if (el.clientHeight) scrollPositions.set(el, el.scrollTop);
   }));
   const sideButton = button('', () => {
-    layoutStep = (layoutStep + 1) % 3;
+    layoutStep = nextLayoutStep();
     singlePanel = layoutStep === 2;
     if (!singlePanel) side = layoutStep === 0 ? 'start' : 'end';
     localStorage.setItem('ai_panel_layout_v2', String(layoutStep));
@@ -97,7 +102,7 @@
   }
   function refreshLabels() {
     const position = mobile.matches ? (side === 'start' ? text('сверху', 'above') : text('снизу', 'below')) : (side === 'start' ? text('слева', 'on the left') : text('справа', 'on the right'));
-    const nextLayout = (layoutStep + 1) % 3;
+    const nextLayout = nextLayoutStep();
     const nextCaption = nextLayout === 2 ? text('новая панель на весь экран', 'new full-screen panel') : nextLayout === 0 ? text('новая панель СЛЕВА', 'new panel on the LEFT') : text('новая панель СПРАВА', 'new panel on the RIGHT');
     sideButton.title = text('Переключить: ', 'Switch to: ') + nextCaption;
     sideButton.dataset.layout = singlePanel ? 'single' : side;

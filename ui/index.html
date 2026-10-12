@@ -14,6 +14,9 @@ const APP_VERSION = '1.3.11';
 // Default debug panel state for new users: "expanded" | "collapsed" | "hidden"
 const CFG_DEBUG_DEFAULT_MODE = 'collapsed';
 
+// New-panel layout cycle: 'right' | 'left' | 'single' (each once).
+const CFG_PANEL_LAYOUT_ORDER = ['right', 'left', 'single'];
+
 // Initial suggestion chips shown before first message
 const CFG_INITIAL_SUGGESTIONS = ['Что ты умеешь?', 'Расскажи о себе', 'Расскажи про Москву'];
 
@@ -21,7 +24,7 @@ const CFG_INITIAL_SUGGESTIONS = ['Что ты умеешь?', 'Расскажи 
 const CFG_WEBHOOK_HISTORY_MAX = 20;
 
 // Request timeout for webhook POST (milliseconds)
-const CFG_REQUEST_TIMEOUT_MS = 10 * 60 * 1000; // 5 minutes
+const CFG_REQUEST_TIMEOUT_MS = 60 * 1000; // 1 minute
 
 // How long the "Undo delete" popup stays visible (milliseconds)
 const CFG_UNDO_TIMEOUT_MS = 10 * 1000; // 10 seconds
@@ -37,7 +40,7 @@ const CFG_SHOW_CHECK_BTN = false;
 
 // Transport order and defaults for users without saved preferences.
 const CFG_TRANSPORT_ORDER = ['webhook', 'openai', 'demo'];
-const CFG_TRANSPORT_DEFAULT = 'webhook';
+const CFG_TRANSPORT_DEFAULT = 'openai';
 
 const CFG_OPENAI_PRESETS = [];
 
@@ -349,8 +352,16 @@ const CFG_OPENAI_PROVIDERS = [
   #mode-settings-btn:hover, #mode-settings-btn:focus-visible { color: var(--accent); border-color: rgba(79,255,176,.28); background: var(--accent-dim); outline: none; }
   #mode-settings-btn[aria-expanded="true"] { color: var(--accent); border-color: currentColor; background: var(--accent-dim); box-shadow: 0 0 12px rgba(79,255,176,.1); }
   #mode-settings-btn svg { width: 18px; height: 18px; }
-  #transport-select-menu { min-width: 132px; }
-  .transport-option-row { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: stretch; }
+  #transport-select-menu { min-width: 0; left: 0; right: auto; }
+  .environment-switch { position: relative; display: grid; grid-template-columns: 1fr 1fr; width: 72px; min-width: 72px; padding: 2px; font: 9px var(--font-mono); }
+  .environment-switch::before { content: ''; position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc((100% - 4px) / 2); border-radius: 2px; background: color-mix(in srgb, var(--accent2) 6%, transparent); transform: translateX(100%); transition: transform .18s ease, background .18s ease; }
+  .environment-switch[data-value="test"]::before { transform: translateX(0); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+  .environment-switch-label { position: relative; z-index: 1; padding: 3px 2px; border: 0; border-radius: 2px; background: transparent; color: color-mix(in srgb, var(--accent2) 45%, var(--text-muted)); font: inherit; cursor: pointer; }
+  .environment-switch-test { color: color-mix(in srgb, var(--accent) 45%, var(--text-muted)); }
+  .environment-switch-label[aria-pressed="true"] { color: color-mix(in srgb, var(--accent2) 75%, var(--text-muted)); }
+  .environment-switch-test[aria-pressed="true"] { color: color-mix(in srgb, var(--accent) 75%, var(--text-muted)); }
+  .environment-switch-label:focus-visible { outline: 1px solid currentColor; outline-offset: -1px; }
+  .transport-option-row { display: grid; grid-template-columns: minmax(0, 1fr) var(--transport-gear-width, 30px); align-items: stretch; }
   .transport-option-row + .transport-option-row { border-top: 1px solid rgba(136,152,184,.12); }
   .transport-option-row .compact-select-option { min-width: 0; }
   .transport-option-gear { border: 0; border-radius: 3px; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 12px; }
@@ -1280,13 +1291,16 @@ const CFG_OPENAI_PROVIDERS = [
     transform: translateX(-50%) translateY(-6px);
     background: var(--surface2); border: 1px solid var(--accent);
     color: var(--accent); font-family: var(--font-mono); font-size: 11px;
-    padding: 10px 14px; border-radius: 20px; white-space: nowrap;
+    padding: 10px 14px; border-radius: 20px; white-space: normal; overflow-wrap: anywhere;
     opacity: 0; transition: opacity .2s, transform .2s; z-index: 200;
     box-shadow: 0 4px 16px rgba(0,0,0,0.3);
     display: flex; align-items: center; gap: 10px;
     justify-content: center; min-width: 220px; max-width: 340px;
     pointer-events: none;
   }
+  #toast.with-url { width: max-content; max-width: calc(100vw - 24px); box-sizing: border-box; }
+  #toast.with-url > span:first-child { min-width: 0; max-width: 100%; }
+  #toast .toast-url { display: block; margin-top: 4px; white-space: nowrap; overflow-wrap: normal; overflow-x: auto; }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   #toast.warn {
     border-color: rgba(255,185,60,0.45);
@@ -1449,7 +1463,7 @@ const CFG_OPENAI_PROVIDERS = [
   }
 
   @media (hover: none), (pointer: coarse) {
-    .transport-option-row { grid-template-columns: 42px minmax(0, 1fr); }
+    .transport-option-row { --transport-gear-width: 42px; }
     .transport-option-gear { min-height: 42px; font-size: 14px; }
   }
 
@@ -1739,8 +1753,6 @@ const CFG_OPENAI_PROVIDERS = [
   .env-test { color: var(--text-muted); }
   #method-toggle[data-value="get"] .compact-select-trigger { color: #60a5fa; border-color: rgba(59,130,246,0.45); background: rgba(59,130,246,0.12); box-shadow: 0 0 8px rgba(59,130,246,0.12); }
   #method-toggle[data-value="post"] .compact-select-trigger { color: var(--accent); border-color: rgba(79,255,176,0.35); background: rgba(79,255,176,0.1); box-shadow: 0 0 8px rgba(79,255,176,0.1); }
-  :is(#url-type-toggle, #header-url-type-toggle)[data-value="prod"] .compact-select-trigger { color: var(--accent2); border-color: rgba(0,200,255,0.35); background: rgba(0,200,255,0.1); box-shadow: 0 0 8px rgba(0,200,255,0.1); }
-  :is(#url-type-toggle, #header-url-type-toggle)[data-value="test"] .compact-select-trigger { color: var(--text-muted); border-color: rgba(136,152,184,0.35); background: rgba(136,152,184,0.08); }
   @media (hover: none), (pointer: coarse) { .compact-select-option { min-height: 36px; } }
 
   .wh-time {
@@ -1883,9 +1895,9 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
       <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m1 1 4 4 4-4"/></svg>
     </button>
     <div class="compact-select-menu transport-menu" id="transport-select-menu" role="menu" aria-label="Message transport">
-      <div class="transport-option-row" role="none"><button class="transport-option-gear" type="button" role="menuitem" onclick="openTransportSettings('webhook', event)" data-i18n-aria-label="modeGearWebhook" data-i18n-title="modeGearWebhook" aria-label="Open Webhook settings" title="Open Webhook settings">⚙</button><button class="compact-select-option" id="transport-btn-webhook" type="button" role="menuitemradio" aria-checked="true" onclick="setTransport('webhook')" title="n8n · Make · Activepieces · Custom">Webhook</button></div>
-      <div class="transport-option-row" role="none"><button class="transport-option-gear" type="button" role="menuitem" onclick="openTransportSettings('openai', event)" data-i18n-aria-label="modeGearOpenAI" data-i18n-title="modeGearOpenAI" aria-label="Open OpenAI settings" title="Open OpenAI settings">⚙</button><button class="compact-select-option" id="transport-btn-openai" type="button" role="menuitemradio" aria-checked="false" onclick="setTransport('openai')">OpenAI API</button></div>
-      <div class="transport-option-row" role="none"><button class="transport-option-gear" type="button" role="menuitem" onclick="openTransportSettings('demo', event)" data-i18n-aria-label="modeGearDemo" data-i18n-title="modeGearDemo" aria-label="Open Stub settings" title="Open Stub settings">⚙</button><button class="compact-select-option" id="transport-btn-demo" type="button" role="menuitemradio" aria-checked="false" onclick="setTransport('demo')" data-i18n="demoMode">Stub</button></div>
+      <div class="transport-option-row" role="none"><button class="compact-select-option" id="transport-btn-webhook" type="button" role="menuitemradio" aria-checked="true" onclick="setTransport('webhook')" title="n8n · Make · Activepieces · Custom">Webhook</button><button class="transport-option-gear" type="button" role="menuitem" onclick="openTransportSettings('webhook', event)" data-i18n-aria-label="modeGearWebhook" data-i18n-title="modeGearWebhook" aria-label="Open Webhook settings" title="Open Webhook settings">⚙</button></div>
+      <div class="transport-option-row" role="none"><button class="compact-select-option" id="transport-btn-openai" type="button" role="menuitemradio" aria-checked="false" onclick="setTransport('openai')">OpenAI API</button><button class="transport-option-gear" type="button" role="menuitem" onclick="openTransportSettings('openai', event)" data-i18n-aria-label="modeGearOpenAI" data-i18n-title="modeGearOpenAI" aria-label="Open OpenAI settings" title="Open OpenAI settings">⚙</button></div>
+      <div class="transport-option-row" role="none"><button class="compact-select-option" id="transport-btn-demo" type="button" role="menuitemradio" aria-checked="false" onclick="setTransport('demo')" data-i18n="demoMode">Stub</button><button class="transport-option-gear" type="button" role="menuitem" onclick="openTransportSettings('demo', event)" data-i18n-aria-label="modeGearDemo" data-i18n-title="modeGearDemo" aria-label="Open Stub settings" title="Open Stub settings">⚙</button></div>
     </div>
   </div>
   <button class="icon-btn" id="mode-settings-btn" type="button" onclick="toggleActiveSettings()" aria-expanded="false" aria-controls="webhook-settings" data-i18n-title="modeSettingsTitle" data-i18n-aria-label="modeSettingsTitle" aria-label="Current mode settings" title="Current mode settings">
@@ -1904,14 +1916,11 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
         <button class="compact-select-option method-post" id="method-btn-post" type="button" role="option" onclick="setMethod('post')">POST</button>
       </div>
     </div>
-    <div class="compact-select" id="url-type-toggle" data-value="prod">
-      <button class="compact-select-trigger" id="env-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="env-select-menu" title="Webhook environment">
-        <span id="env-select-value">PROD</span>
-        <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m1 1 4 4 4-4"/></svg>
-      </button>
-      <div class="compact-select-menu" id="env-select-menu" role="listbox" aria-label="Webhook environment">
-        <button class="compact-select-option env-prod" id="url-btn-prod" type="button" role="option" onclick="setUrlType('prod')">PROD</button>
-        <button class="compact-select-option env-test" id="url-btn-test" type="button" role="option" onclick="setUrlType('test')">TEST</button>
+    <div class="environment-toggle" id="url-type-toggle" data-value="prod">
+      <div class="environment-switch" id="env-select-trigger" role="group" aria-label="Webhook environment" data-value="prod" title="Webhook environment">
+        <span id="env-select-value" hidden>PROD</span>
+        <button class="environment-switch-label environment-switch-test" id="url-btn-test" type="button" data-env="test" aria-pressed="false" onclick="setUrlType('test')">TEST</button>
+        <button class="environment-switch-label environment-switch-prod" id="url-btn-prod" type="button" data-env="prod" aria-pressed="true" onclick="setUrlType('prod')">PROD</button>
       </div>
     </div>
     <div id="url-input-wrap">
@@ -3284,6 +3293,7 @@ function setTransport(mode, openSettings = false) {
   window.appWorkspace?.refreshSettings();
   if (transportMode === 'demo') loadStubFile(demoConfig.filename);
   closeCompactSelects();
+  toast((lang === 'ru' ? 'Режим: ' : 'Mode: ') + document.getElementById('transport-select-value').textContent);
   if (openSettings) {
     if (transportMode === 'openai') openOpenAISettings();
     else if (transportMode === 'demo') openDemoSettings();
@@ -4216,7 +4226,7 @@ function syncHeaderWebhook() {
   const type = document.getElementById('url-type-toggle').dataset.value || 'prod';
   document.getElementById('header-url-type-toggle').dataset.value = type;
   document.getElementById('header-env-select-value').textContent = type.toUpperCase();
-  ['prod', 'test'].forEach(value => document.getElementById('header-url-btn-' + value).setAttribute('aria-selected', String(type === value)));
+  updateEnvironmentSwitch(document.getElementById('header-env-select-trigger'), type);
   document.getElementById('header-status-dot').className = document.getElementById('status-dot').className;
 }
 function initHeaderWebhook() {
@@ -4272,6 +4282,14 @@ document.querySelectorAll('.compact-select').forEach(select => {
     closeCompactSelects(select);
     select.classList.toggle('open', willOpen);
     trigger.setAttribute('aria-expanded', String(willOpen));
+    if (willOpen && select.id === 'transport-toggle') {
+      const menu = document.getElementById('transport-select-menu');
+      const gear = document.getElementById('mode-settings-btn').getBoundingClientRect();
+      const rect = select.getBoundingClientRect();
+      const column = parseFloat(getComputedStyle(menu.querySelector('.transport-option-row')).gridTemplateColumns.split(' ').pop()) || 30;
+      const inset = parseFloat(getComputedStyle(menu).paddingRight) + parseFloat(getComputedStyle(menu).borderRightWidth);
+      menu.style.width = (gear.left + gear.width / 2 - rect.left + column / 2 + inset) + 'px';
+    }
     if (willOpen && !finePointer.matches) options[0]?.focus();
   });
   select.addEventListener('keydown', e => {
@@ -4341,6 +4359,14 @@ function syncWebhookStyle() {
   if (transportMode === 'webhook') updateTransportUI();
 }
 
+function updateEnvironmentSwitch(button, type) {
+  button.dataset.value = type;
+  button.querySelectorAll('[data-env]').forEach(segment => segment.setAttribute('aria-pressed', String(segment.dataset.env === type)));
+  const next = type === 'test' ? 'prod' : 'test';
+  const nextUrl = webhookUrl.replace(/\/webhook(-test)?\//, next === 'test' ? '/webhook-test/' : '/webhook/');
+  button.title = `${type.toUpperCase()}: ${webhookUrl || t('composerNotSet')}\n${lang === 'ru' ? 'Переключить на' : 'Switch to'} ${next.toUpperCase()}: ${nextUrl || t('composerNotSet')}`;
+}
+
 function updateUrlTypeToggle() {
   const wrap = document.getElementById('url-type-toggle');
   if (!wrap) return;
@@ -4348,12 +4374,12 @@ function updateUrlTypeToggle() {
   const type = hasWebhook ? getUrlType(webhookUrl) : (wrap.dataset.value || 'prod');
   wrap.dataset.value = type;
   document.getElementById('env-select-value').textContent = type.toUpperCase();
-  document.getElementById('url-btn-prod').setAttribute('aria-selected', type === 'prod');
-  document.getElementById('url-btn-test').setAttribute('aria-selected', type === 'test');
+  updateEnvironmentSwitch(document.getElementById('env-select-trigger'), type);
   syncHeaderWebhook();
 }
 
 function setUrlType(type) {
+  if (document.getElementById('url-type-toggle').dataset.value === type) return;
   closeCompactSelects();
   if (!webhookUrl) {
     showPopup('No webhook URL entered yet.', { type: 'warn', duration: 2500 });
@@ -4379,7 +4405,7 @@ function setUrlType(type) {
   syncWebhookStyle();
   saveUrlToHistory(webhookUrl);
   startUrlCheck(webhookUrl);
-  showPopup(`Switched to ${type.toUpperCase()} webhook.`, { duration: 1800 });
+  showPopup(`${lang === 'ru' ? 'Переключено на' : 'Switched to'} ${type.toUpperCase()}:`, { duration: 3500, url: newUrl });
 }
 
 let urlDotState = ''; // 'online' | 'warn' | 'error' | ''
@@ -6290,6 +6316,13 @@ function showPopup(message, options = {}) {
 
   const text = document.createElement('span');
   text.textContent = message;
+  el.classList.toggle('with-url', !!options.url);
+  if (options.url) {
+    const url = document.createElement('span');
+    url.className = 'toast-url';
+    url.textContent = options.url;
+    text.appendChild(url);
+  }
   el.appendChild(text);
 
   if (options.countdown && options.duration) {
@@ -6390,7 +6423,7 @@ function copySession() {
 updateTransportUI();
 if (transportMode === 'demo') loadStubFile(demoConfig.filename);
 
-const CONSENT_CONTROLS = ['#header-webhook-hist-btn','#header-webhook-url','#header-env-select-trigger','#header-url-btn-prod','#header-url-btn-test','#webhook-url','#webhook-hist-btn','#transport-select-trigger','#mode-settings-btn','#msg-input','#send-btn','#suggestions-btn',
+const CONSENT_CONTROLS = ['#header-webhook-hist-btn','#header-webhook-url','#header-url-btn-test','#header-url-btn-prod','#url-btn-test','#url-btn-prod','#webhook-url','#webhook-hist-btn','#transport-select-trigger','#mode-settings-btn','#msg-input','#send-btn','#suggestions-btn',
   '#btn-new-session','#btn-clear','#theme-btn','#lang-btn','#session-id-box','#burger-btn'];
 
 function setControlsLocked(locked) {
