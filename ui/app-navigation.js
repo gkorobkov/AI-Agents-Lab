@@ -259,7 +259,7 @@
     },
     highlightField(id) {
       const field = document.getElementById(id);
-      if (!field || !workspace.contains(field)) return;
+      if (!field || (!workspace.contains(field) && id !== 'transport-select-trigger')) return;
       for (let parent = field.parentElement; parent && parent !== workspace; parent = parent.parentElement) {
         if (parent.tagName === 'DETAILS') parent.open = true;
       }

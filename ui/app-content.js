@@ -25,6 +25,13 @@
     event.preventDefault();
     if (link.dataset.openBeside) {
       parent.appWorkspace.openBeside(link.dataset.openBeside, window);
+      if (link.hasAttribute('data-fill-message')) {
+        const input = parent.document.getElementById('msg-input');
+        if (input && !input.disabled) {
+          input.value = link.textContent.trim();
+          input.dispatchEvent(new parent.Event('input', { bubbles: true }));
+        }
+      }
       if (url.hash) parent.appWorkspace.highlightField(url.hash.slice(1));
       return;
     }
