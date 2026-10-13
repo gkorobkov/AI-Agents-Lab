@@ -364,8 +364,39 @@
   document.addEventListener('app:consent', syncConsent);
   syncConsent();
   window.addEventListener('popstate', () => navigateApp(new URL(location.href).searchParams.get('page'), location.hash, false, new URL(location.href).searchParams.get('lab')));
+  const workspaceStateKey = 'ai_workspace_panels_v1';
+  window.addEventListener('pagehide', () => {
+    try {
+      const frames = {};
+      Object.entries(panels).forEach(([id, { frame }]) => {
+        if (frame && slots.includes(id) && frame.contentDocument?.URL !== 'about:blank') frames[id] = frame.contentWindow.location.href;
+      });
+      sessionStorage.setItem(workspaceStateKey, JSON.stringify({ url: location.href, slots, activePanel, ratio, frames }));
+    } catch (_) {}
+  });
+  let restored = false;
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(workspaceStateKey) || 'null');
+    const reload = performance.getEntriesByType('navigation')[0]?.type === 'reload';
+    if (reload && saved?.url === location.href && Array.isArray(saved.slots) && saved.slots.length === 2
+      && saved.slots.some(Boolean) && saved.slots.every(id => id === null || Object.hasOwn(panels, id))
+      && new Set(saved.slots.filter(Boolean)).size === saved.slots.filter(Boolean).length) {
+      slots = saved.slots;
+      activePanel = slots.includes(saved.activePanel) ? saved.activePanel : slots.find(Boolean);
+      if (Number.isFinite(saved.ratio)) ratio = Math.max(20, Math.min(80, saved.ratio));
+      if (slots.includes('settings')) prepareSettings(transportMode);
+      Object.entries(saved.frames || {}).forEach(([id, href]) => {
+        if (!slots.includes(id) || !panels[id]?.frame || typeof href !== 'string') return;
+        const url = new URL(href, location.href), expected = new URL(definitions[id][2], location.href);
+        if (url.origin === expected.origin && url.pathname === expected.pathname) panels[id].frame.src = url.href;
+      });
+      restored = true;
+    }
+  } catch (_) {}
   render();
   const initialPage = new URL(location.href).searchParams.get('page');
-  if (initialPage) navigateApp(initialPage, location.hash, false, new URL(location.href).searchParams.get('lab'));
-  else if (location.hash) api.highlightField(location.hash.slice(1));
+  if (!restored) {
+    if (initialPage) navigateApp(initialPage, location.hash, false, new URL(location.href).searchParams.get('lab'));
+    else if (location.hash) api.highlightField(location.hash.slice(1));
+  }
 })();

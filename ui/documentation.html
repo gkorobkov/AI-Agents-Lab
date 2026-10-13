@@ -40,11 +40,16 @@ h1{font-size:24px}h2{font-size:20px}h3{font-size:16px}.lead{font-size:14px;margi
 .toc a{min-height:40px;margin:3px 0;padding:5px 0 5px 12px}
 .toc a[aria-current="location"]{color:var(--accent);border-left:2px solid var(--accent);background:var(--accent-dim)}
 pre{white-space:pre-wrap;overflow-wrap:anywhere}p,li,code{overflow-wrap:anywhere}
+#toggle-all-sections{flex-shrink:0;align-self:center;display:grid;place-items:center;width:26px;height:26px;padding:3px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--accent2);cursor:pointer}
+#toggle-all-sections:hover,#toggle-all-sections:focus-visible{border-color:var(--accent2);background:var(--cyan-dim)}
+#toggle-all-sections svg{width:16px;height:16px}
+.toc-heading{display:flex;align-items:center;gap:6px;flex-shrink:0}.toc .toc-heading strong{margin:0}
 html{scroll-padding-top:46px}
 @media(max-width:800px){
   .layout{display:block;padding-top:0}
   .toc,.app-embedded nav.toc{position:sticky;top:34px!important;display:flex;flex-wrap:nowrap;gap:6px;padding:6px 0;margin:0 0 12px;max-height:none;overflow-x:auto;background:var(--bg)}
   .app-embedded nav.toc{top:0!important}
+
   .toc a{flex-shrink:0;min-height:28px;white-space:nowrap;border:1px solid var(--border);padding:4px 8px;margin:0;font-size:11px}
   .toc a[aria-current="location"]{border:1px solid var(--accent)}
   html{scroll-padding-top:84px}.app-embedded{scroll-padding-top:44px}
@@ -55,7 +60,7 @@ html{scroll-padding-top:46px}
 </head>
 <body>
 <header><a class="brand" href="index.html"><span class="brand-mark">AI</span><span>Agent Chat</span><span class="page-label" data-t="pageLabel">Документация</span></a><div class="controls"><button class="control" id="lang" type="button">EN</button><button class="control" id="theme" type="button" aria-label="Сменить тему">◐</button><a class="back" href="index.html" data-t="back">← В чат</a></div></header>
-<div class="layout"><nav class="toc" aria-label="Содержание"><strong>Содержание</strong><a href="#about-lab">О лаборатории</a><a href="#connect-neuraldeep">Подключение к LLM</a><a href="#work-modes">Режимы</a><a href="#site-controls">Элементы сайта</a><a href="#panels">Панели и окна</a><a href="#api-context">Практика с моделью</a><a href="#connect-settings">Первый запрос</a><a href="#start">Полевой справочник</a><a href="#openai-api">Chat Completions</a><a href="#routes">Маршрут запроса</a><a href="#contract">Запрос и ответ</a><a href="#neuraldeep">NeuralDeep API</a><a href="#setup">Webhook</a><a href="#help">Ошибки</a></nav>
+<div class="layout"><nav class="toc" aria-label="Содержание"><div class="toc-heading"><strong data-t="toc">Содержание</strong><button id="toggle-all-sections" type="button" aria-label="Свернуть все разделы" title="Свернуть все разделы" aria-expanded="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m7 9 5 7 5-7Z"/></svg></button></div><a href="#about-lab">О лаборатории</a><a href="#connect-neuraldeep">Подключение к LLM</a><a href="#openai-settings-guide" data-t="connectSettingsHeading">Настройки OpenAI API</a><a href="#work-modes">Режимы</a><a href="#site-controls">Элементы сайта</a><a href="#panels">Панели и окна</a><a href="#api-context">Практика с моделью</a><a href="#start">Полевой справочник</a><a href="#openai-api">Chat Completions</a><a href="#routes">Маршрут запроса</a><a href="#contract">Запрос и ответ</a><a href="#neuraldeep">NeuralDeep API</a><a href="#setup">Webhook</a><a href="#help">Ошибки</a></nav>
 <main>
 <section class="section" id="about-lab"><p class="eyebrow">AI Agents Lab · Лаборатория ИИ Агентов</p><h2>ИИ Агенты: обучение и эксперименты в браузере</h2>
 <p>AI Агенты — это помощники на основе языковых моделей, которые используют инструкции, контекст диалога и внешние инструменты для решения задач. В AI Agents Lab можно изучать поведение AI Агентов: менять настройки модели, смотреть полный запрос и ответ сервера, подключать функции и проверять результаты их вызова.</p>
@@ -63,27 +68,31 @@ html{scroll-padding-top:46px}
     <section class="section" id="connect-neuraldeep">
       <h2 data-t="connectTitle">Подключение к LLM</h2>
       <p data-t="connectIntro">Пройдите шаги по порядку: получите адрес OpenAI-совместимого API, личный API-ключ и API-имя модели у провайдера LLM, затем настройте подключение. Ссылки со стрелкой открывают нужную панель рядом с Помощью независимо от раскладки окон; указанный элемент плавно подсвечивается два раза.</p>
-      <details open><summary><span style="color:var(--accent)">NeuralDeep AI-хаб LLM Provider</span> <span data-t="connectGuide">: регистрация, получение адреса API и ключа</span></summary>
+      <details open>
+        <summary>
+          <img src="neuraldeep-icon.svg" width="22" height="22" alt="" style="vertical-align:-5px;margin-right:5px"><span style="color:var(--accent)">NeuralDeep AI-хаб LLM Provider</span>
+        </summary>
+        <p data-t="connectGuide" style="color:var(--text)">регистрация, получение адреса API и ключа:</p>
         <ol>
           <li><span data-t="connectAccount">Зарегистрируйтесь или войдите в</span> <a href="https://neuraldeep.ru/" target="_blank" rel="noopener noreferrer">NeuralDeep</a>.</li>
-          <li><span data-t="connectAddressBefore">Откройте раздел</span> <a href="https://neuraldeep.ru/docs" target="_blank" rel="noopener noreferrer" data-t="connectDocumentation">«Документация»</a> <span data-t="connectAddressAfter">и скопируйте адрес OpenAI-совместимого API (Base URL).</span></li>
+          <li><span data-t="connectAddressBefore">Откройте раздел</span> <a href="https://neuraldeep.ru/docs" target="_blank" rel="noopener noreferrer" data-t="connectDocumentation">«Документация»</a> <span data-t="connectAddressAfter">и скопируйте Base URL адрес OpenAI-совместимого API</span></li>
           <li><span data-t="connectKeyBefore">Откройте раздел</span> <a href="https://hub.neuraldeep.ru/app/keys" target="_blank" rel="noopener noreferrer" data-t="connectKeys">«Ключи»</a><span data-t="connectKeyAfter">, создайте API-ключ и скопируйте его.</span></li>
           <li><span data-t="connectModelBefore">В разделе</span> <a href="https://neuraldeep.ru/pricing" target="_blank" rel="noopener noreferrer" data-t="connectPricing">«Тарифы»</a> <span data-t="connectModelAfter">проверьте доступные модели и скопируйте точное API-имя выбранной модели. Название тарифа и API-имя модели могут различаться.</span></li>
         </ol>
         <p><a href="https://neuraldeep.ru/docs" target="_blank" rel="noopener noreferrer" data-t="connectDocs">Официальная документация NeuralDeep</a></p>
       </details>
-      <details open><summary><svg class="help-element-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2h5l.5 3 2 1.2 2.8-1 2.5 4.3L20 11.4v2.2l2.3 1.9-2.5 4.3-2.8-1-2 1.2-.5 3h-5L9 20l-2-1.2-2.8 1-2.5-4.3L4 13.6v-2.2L1.7 9.5l2.5-4.3 2.8 1L9 5Z" transform="translate(0 -.5)"/><circle cx="12" cy="12" r="3.5"/></svg><span data-t="connectSettingsHeading">Настройки OpenAI API</span></summary>
+      <details open id="openai-settings-guide"><summary><svg class="help-element-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2h5l.5 3 2 1.2 2.8-1 2.5 4.3L20 11.4v2.2l2.3 1.9-2.5 4.3-2.8-1-2 1.2-.5 3h-5L9 20l-2-1.2-2.8 1-2.5-4.3L4 13.6v-2.2L1.7 9.5l2.5-4.3 2.8 1L9 5Z" transform="translate(0 -.5)"/><circle cx="12" cy="12" r="3.5"/></svg><span data-t="connectSettingsHeading">Настройки OpenAI API</span></summary>
         <ol>
           <li><span data-t="connectOpenBefore">Откройте</span> <a href="./?page=settings&amp;profile=profile_neuraldeep&amp;field=openai-profile-select&amp;beside=help" data-open-beside="settings"><svg class="help-element-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2h5l.5 3 2 1.2 2.8-1 2.5 4.3L20 11.4v2.2l2.3 1.9-2.5 4.3-2.8-1-2 1.2-.5 3h-5L9 20l-2-1.2-2.8 1-2.5-4.3L4 13.6v-2.2L1.7 9.5l2.5-4.3 2.8 1L9 5Z" transform="translate(0 -.5)"/><circle cx="12" cy="12" r="3.5"/></svg><strong data-t="connectOpenSettings">Настройки OpenAI API →</strong></a>. <span data-t="connectSelect">В списке провайдеров будет выбран NeuralDeep LLM Provider. Этот профиль уже создан — добавлять новый не нужно.</span></li>
-          <li><a href="./?page=settings&amp;profile=profile_neuraldeep&amp;field=openai-base-url&amp;beside=help" data-open-beside="settings" data-t="connectUrlLink">В поле Base URL →</a> <span data-t="connectUrl">вставьте адрес OpenAI-совместимого API, скопированный на предыдущем шаге. Для NeuralDeep:</span> <code>https://api.neuraldeep.ru/v1</code>.<br><span data-t="connectUrlSuffix">Не добавляйте /chat/completions: приложение добавляет этот путь самостоятельно.</span></li>
+          <li><a href="./?page=settings&amp;profile=profile_neuraldeep&amp;field=openai-base-url&amp;beside=help" data-open-beside="settings" data-t="connectUrlLink">В поле Base URL →</a> <span data-t="connectUrl">проверьте или вставьте свой Base URL адрес OpenAI-совместимого API.</span><br><span data-t="connectUrlSuffix">Не добавляйте /chat/completions: приложение добавляет этот путь самостоятельно.</span></li>
           <li><a href="./?page=settings&amp;profile=profile_neuraldeep&amp;field=openai-api-key&amp;beside=help" data-open-beside="settings" data-t="connectKeyLink">В поле API key →</a> <span data-t="connectKeyPaste">вставьте личный API-ключ из кабинета провайдера без кавычек и слова Bearer. Ключ скрыт; кнопка с глазом позволяет проверить ввод.</span></li>
           <li><a href="./?page=settings&amp;profile=profile_neuraldeep&amp;field=openai-model&amp;beside=help" data-open-beside="settings" data-t="connectModelLink">В поле «Модель» →</a> <span data-t="connectModel">укажите точное API-имя выбранной модели. В профиле указан пример qwen3.6-35b-a3b; замените его, если эта модель недоступна вашему аккаунту.</span></li>
           <li><span data-t="connectSave">Нажмите Tab или щёлкните вне поля: настройки сохраняются автоматически в этом браузере. Для пробного запроса оставьте остальные параметры профиля без изменений.</span></li>
           <li><a href="./?page=chat&amp;beside=help#msg-input" data-open-beside="chat" data-t="connectChatLink">Перейдите в чат к полю сообщения →</a>. <span data-t="connectModeBefore">Убедитесь, что выбран</span> <a href="./?page=chat&amp;beside=help#transport-select-trigger" data-open-beside="chat" data-t="connectModeLink">режим OpenAI API</a>. <span data-t="connectSendBefore">Введите</span> «<a href="./?page=chat&amp;beside=help#msg-input" data-open-beside="chat" data-fill-message data-t="connectExample">Ответь одним словом: привет</a>» <span data-t="connectSend">и нажмите кнопку отправки или Enter. Дождитесь ответа модели в чате — это подтверждает, что подключение работает.</span></li>
         </ol>
         <p><svg class="help-element-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m14.5 14.5 6 6M10 7v4M10 13h.01"/></svg><span data-t="connectErrors">Если ответа нет: при ошибке 401 проверьте ключ, при 403 — доступ аккаунта, при ошибке модели — её API-имя, при 429 — лимиты. При сетевой ошибке проверьте Base URL и разрешение браузерных запросов у провайдера. Сообщение об ошибке появится в чате.</span></p>
+        <p class="observe" data-t="connectPrivacy" style="color:var(--text)">Личный API-ключ сохраняется в этом браузере. Не включайте его в сообщения, отчёты и скриншоты.</p>
       </details>
-      <p class="observe" data-t="connectPrivacy">Личный API-ключ сохраняется в этом браузере. Не включайте его в сообщения, отчёты и скриншоты.</p>
     </section>
 
 <section class="section" id="work-modes"><h2>Режимы работы</h2><p>Режим определяет, куда отправляется сообщение. Выберите его в списке рядом с названием «Чат»; <svg class="help-element-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2h5l.5 3 2 1.2 2.8-1 2.5 4.3L20 11.4v2.2l2.3 1.9-2.5 4.3-2.8-1-2 1.2-.5 3h-5L9 20l-2-1.2-2.8 1-2.5-4.3L4 13.6v-2.2L1.7 9.5l2.5-4.3 2.8 1L9 5Z" transform="translate(0 -.5)"/><circle cx="12" cy="12" r="3.5"/></svg>шестерёнка открывает настройки выбранного режима.</p><ul><li><strong>OpenAI API</strong> — запрос к языковой модели через совместимый API. Нужны профиль, URL, ключ и модель.</li><li><strong>Webhook</strong> — запрос к вашему workflow, например в n8n. Нужен адрес обработчика; модель и инструменты настраиваются в workflow.</li><li><strong>Stub</strong> — учебный ответ из локального JSON-файла. Подходит для знакомства с интерфейсом без вызова LLM.</li></ul><details open><summary>Что меняется при выборе режима</summary><p>Меняются параметры подключения и источник ответа. Поле сообщения остаётся тем же. Режим подключения и раскладка окон — отдельные настройки: один выбирает обработчик, другая — место открытия страницы.</p></details></section>
@@ -176,16 +185,6 @@ html{scroll-padding-top:46px}
 <details open><summary>Кнопки заголовка панели</summary><ul><li><strong><svg class="help-element-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2h5l.5 3 2 1.2 2.8-1 2.5 4.3L20 11.4v2.2l2.3 1.9-2.5 4.3-2.8-1-2 1.2-.5 3h-5L9 20l-2-1.2-2.8 1-2.5-4.3L4 13.6v-2.2L1.7 9.5l2.5-4.3 2.8 1L9 5Z" transform="translate(0 -.5)"/><circle cx="12" cy="12" r="3.5"/></svg>Иконки страниц и шестерёнка</strong> — открыть страницу или настройки. При двух панелях кнопки заголовка выбирают содержимое этой панели.</li><li><strong><svg class="help-element-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h18l-4-4M21 16H3l4 4"/></svg>Две стрелки</strong> — поменять панели местами.</li><li><strong><svg class="help-element-icon" viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="2" width="20" height="12" rx="1.2"/><rect x="14" y="4" width="6" height="8" fill="currentColor" stroke="none"/><path d="M12 2v12"/></svg>Прямоугольник</strong> — режим следующего открытия, синхронизирован с хедером.</li><li><strong><svg class="help-element-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/></svg>Четыре уголка</strong> — развернуть текущую панель на рабочую область. Выбранный режим открытия не меняется.</li><li><strong><svg class="help-element-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>Крестик</strong> — закрыть эту панель, оставив соседнюю. Последнюю панель закрыть нельзя.</li></ul></details>
 <details open><summary>Размер, сохранение состояния и ссылки из помощи</summary><p>Перетаскивайте разделитель, чтобы изменить размеры; с клавиатуры используйте стрелки после фокуса на разделителе. Переключение страниц сохраняет состояние уже открытых панелей. Перезагрузка — отдельное действие: не рассчитывайте на сохранение текста чата.</p><p>Три ссылки в начале этой помощи открывают чат, лабы или Tools рядом с помощью независимо от режима. Помощь остаётся видимой, а настройка раскладки не меняется. Это позволяет посмотреть интерфейс и вернуться к инструкции.</p></details></section>
 <section class="section" id="api-context"><h2>Практика с моделью</h2><p>OpenAI API — одно из направлений практики: параметры генерации, системные инструкции, история сообщений и JSON Schema. Для автоматизации используйте Webhook.</p><p>В библиотеке Tools приложение выполняет HTTP-запрос и передаёт результат обратно модели. Модель выбирает функцию и формирует аргументы; сами данные получает приложение.</p></section>
-    <section class="section" id="connect-settings">
-      <h2>Первый запрос к LLM</h2>
-      <p>Начните с <a href="#connect-neuraldeep">пошагового подключения к LLM</a>: там есть ссылки на каждый нужный параметр.</p>
-      <ol>
-        <li><a href="./?page=settings&amp;profile=profile_neuraldeep&amp;field=openai-profile-select&amp;beside=help" data-open-beside="settings">Откройте настройки NeuralDeep LLM Provider →</a>, проверьте URL, личный ключ и модель.</li>
-        <li><a href="./?page=chat&amp;beside=help#msg-input" data-open-beside="chat">Откройте поле сообщения в чате →</a>, введите «Ответь одним словом: привет» и нажмите Enter.</li>
-        <li>Дождитесь ответа. Для изучения запроса включите Debug кнопкой жука; найдите <code>choices[0].message.content</code> в полном ответе.</li>
-      </ol>
-      <details><summary>Если преподаватель выдал код доступа</summary><p>Откройте сайт по ссылке преподавателя с параметром <code>?provider_access=ваш-код</code> в адресе. Затем <a href="./?page=settings&amp;beside=help" data-open-beside="settings">откройте настройки →</a>. Скрытый Default LLM Provider станет доступен в этой вкладке. Его URL и ключ не отображаются; личный ключ для него не нужен. Для личного подключения используйте NeuralDeep LLM Provider.</p></details>
-    </section>
 <section class="section" id="start"><p class="eyebrow" data-t="eyebrow">Полевой справочник · от сообщения до ответа</p><h1 data-t="title">Как чат общается с AI</h1><p class="lead" data-t="lead">Вы пишете обычный текст. Интерфейс упаковывает его в запрос, отправляет по выбранному маршруту и показывает ответ модели. Весь путь — четыре простых шага.</p>
 <div class="flow"><div class="flow-node"><small>01</small><b data-t="flow1">Сообщение пользователя</b></div><span class="flow-arrow">→</span><div class="flow-node"><small>02</small><b data-t="flow2">JSON-запрос</b></div><span class="flow-arrow">→</span><div class="flow-node"><small>03</small><b data-t="flow3">Выбранный маршрут</b></div><span class="flow-arrow">→</span><div class="flow-node"><small>04</small><b data-t="flow4">Ответ в чате</b></div></div>
 <h2 data-t="quickTitle">Быстрый старт: n8n</h2><div class="steps"><div class="step"><div><h3 data-t="q1h">Вставьте webhook URL</h3><p data-t="q1p">Возьмите Test или Production URL из узла Webhook в n8n.</p></div></div><div class="step"><div><h3 data-t="q2h">Напишите сообщение</h3><p data-t="q2p">Чат отправит message и постоянный sessionId.</p></div></div><div class="step"><div><h3 data-t="q3h">Верните JSON</h3><p data-t="q3p">Самый простой ответ: объект с полем message.</p></div></div></div>
@@ -237,11 +236,11 @@ en:{pageLabel:'Help',back:'← Back to chat',toc:'Contents',navStart:'One minute
 Object.assign(tx.en, {
   "connectTitle": "Connecting to an LLM",
   "connectIntro": "Follow the steps in order: get the OpenAI-compatible API address, your personal API key and the API model name from your LLM provider, then configure the connection. Links with an arrow open the relevant panel beside Help regardless of the window layout; the target control gently pulses twice.",
-  "connectGuide": "AI hub: registration, API address and key",
+  "connectGuide": "registration, API address and key:",
   "connectAccount": "Register or sign in to",
   "connectAddressBefore": "Open",
   "connectDocumentation": "Documentation",
-  "connectAddressAfter": "and copy the OpenAI-compatible API address (Base URL).",
+  "connectAddressAfter": "and copy the Base URL for the OpenAI-compatible API",
   "connectKeyBefore": "Open",
   "connectKeys": "API keys",
   "connectKeyAfter": ", create an API key and copy it.",
@@ -253,7 +252,7 @@ Object.assign(tx.en, {
   "connectOpenSettings": "OpenAI API settings →",
   "connectSelect": "NeuralDeep LLM Provider will be selected in the provider list. This profile already exists; you do not need to add one.",
   "connectUrlLink": "In the Base URL field →",
-  "connectUrl": "paste the OpenAI-compatible API address copied in the earlier step. For NeuralDeep:",
+  "connectUrl": "check or enter your Base URL for the OpenAI-compatible API.",
   "connectUrlSuffix": "Do not append /chat/completions: the app adds this path automatically.",
   "connectKeyLink": "In the API key field →",
   "connectKeyPaste": "paste your personal API key from the provider dashboard without quotes or the word Bearer. The key is masked; the eye button lets you check it.",
@@ -282,6 +281,28 @@ let lang=localStorage.getItem('n8n_lang')|| (navigator.language.startsWith('ru')
 const russianContent = new Map([...document.querySelectorAll('[data-t]')].map(el => [el, el.innerHTML]));
 function applyLang(l){lang=l;localStorage.setItem('n8n_lang',l);document.documentElement.lang=l;russianContent.forEach((html,el)=>{const v=tx[l]?.[el.dataset.t];if(l==='ru'||v==null)el.innerHTML=html;else el.textContent=v});document.getElementById('lang').textContent=l==='ru'?'EN':'RU';document.title=(l==='ru'?'Документация':'Documentation')+' — AI Agents Lab';renderRoute();document.querySelectorAll('[data-copy]').forEach(b=>b.textContent=copyLabel[l][0])}
 function renderRoute(){const names={n8n:'n8n webhook',direct:'Direct LLM API',demo:'Stub'};document.getElementById('route-panel').innerHTML='<small>'+(lang==='ru'?'Выбранный маршрут':'Selected route')+'</small><h3>'+names[activeRoute]+'</h3><p>'+routeText[lang][activeRoute]+'</p>'}
+const sectionToggle = document.getElementById('toggle-all-sections');
+const collapsibleSections = [...document.querySelectorAll('main details')];
+function syncSectionToggle() {
+  const expanded = collapsibleSections.every(section => section.open);
+  const caption = lang === 'ru' ? (expanded ? 'Свернуть все разделы' : 'Раскрыть все разделы') : (expanded ? 'Collapse all sections' : 'Expand all sections');
+  sectionToggle.title = caption;
+  sectionToggle.setAttribute('aria-label', caption);
+  sectionToggle.setAttribute('aria-expanded', String(expanded));
+  sectionToggle.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="' + (expanded ? 'm7 9 5 7 5-7Z' : 'm9 5 7 7-7 7Z') + '"/></svg>';
+}
+document.querySelector('.toc a[href="#openai-settings-guide"]').addEventListener('click', () => {
+  document.getElementById('openai-settings-guide').open = true;
+  syncSectionToggle();
+});
+sectionToggle.onclick = () => {
+  const expand = !collapsibleSections.every(section => section.open);
+  collapsibleSections.forEach(section => { section.open = expand; });
+  syncSectionToggle();
+};
+collapsibleSections.forEach(section => section.addEventListener('toggle', syncSectionToggle));
+new MutationObserver(syncSectionToggle).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+syncSectionToggle();
 // Keep embedded Help in sync with the language selected in the main header.
 window.addEventListener('storage', event => {
   if (event.key === 'n8n_lang' && ['ru', 'en'].includes(event.newValue) && event.newValue !== lang) applyLang(event.newValue);

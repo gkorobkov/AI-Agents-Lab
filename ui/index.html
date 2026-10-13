@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.3.12';
+const APP_VERSION = '1.3.13';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -1246,6 +1246,7 @@ const CFG_OPENAI_PROVIDERS = [
   #composer-suggestions { order:4; }
   #tool-chain-controls { order:1; flex:0 0 auto; display:flex; align-items:center; align-self:center; gap:3px; color:var(--text-muted); font:10px/1.4 var(--font-ui); }
   #tool-chain-mode { display:flex; align-items:center; gap:4px; height:32px; }
+  #tool-chain-mode:disabled { opacity:.4; cursor:default; box-shadow:none; }
   #tool-chain-mode svg { width:16px; height:16px; }
   #tool-chain-mode[aria-checked="true"] { border-color:var(--accent2); color:var(--accent2); background:color-mix(in srgb, var(--accent2) 12%, var(--surface)); }
   #tool-chain-mode .chain-auto-icon, #tool-chain-mode[aria-checked="true"] .chain-hand-icon { display:none; }
@@ -3547,10 +3548,8 @@ function saveDemoSettings() {
   updateTransportUI();
   setAutosaveStatus('demo-autosave-status', '');
 }
-function openOpenAISettings(focusBase = true) {
-  if (window.appWorkspace && !window.appWorkspace.preparing) return window.appWorkspace.openSettings('openai');
-  closeWebhookSettings(true);
-  closeDemoSettings(true);
+let openAIFormInitialized = false;
+function populateOpenAIForm() {
   document.getElementById('openai-base-url').value = isServerOpenAIProfile() ? '' : openAIConfig.baseUrl;
   syncOpenAIKeyAccess();
   document.getElementById('openai-model').value = openAIConfig.model;
@@ -3566,6 +3565,13 @@ function openOpenAISettings(focusBase = true) {
   document.getElementById('openai-parallel-tools').checked = openAIConfig.parallelToolCalls;
   renderOpenAITools(openAIConfig.tools);
   renderOpenAIProfiles();
+  openAIFormInitialized = true;
+}
+function openOpenAISettings(focusBase = true) {
+  if (window.appWorkspace && !window.appWorkspace.preparing) return window.appWorkspace.openSettings('openai');
+  closeWebhookSettings(true);
+  closeDemoSettings(true);
+  populateOpenAIForm();
   const panel = document.getElementById('openai-settings');
   panel.classList.add('open');
   panel.setAttribute('aria-hidden', 'false');
@@ -3913,6 +3919,7 @@ function scheduleOpenAIAutosave() {
 }
 function commitOpenAISettings() {
   clearTimeout(openAIAutosaveTimer);
+  if (!openAIFormInitialized) populateOpenAIForm();
   const valid = validateOpenAIDraft();
   const cfg = readOpenAIForm();
   if (!isServerOpenAIProfile(cfg)) openAIApiKey = cfg.apiKey;
@@ -4066,6 +4073,7 @@ function loadOpenAIProfile(id) {
   document.getElementById('openai-forced-tool').value = openAIConfig.forcedTool;
   document.getElementById('openai-parallel-tools').checked = openAIConfig.parallelToolCalls;
   renderOpenAITools(openAIConfig.tools);
+  openAIFormInitialized = true;
   updateTransportUI(); updateOpenAIRequestPreview();
   setAutosaveStatus('openai-autosave-status', '');
 }
@@ -5626,16 +5634,19 @@ function startToolChain() {
   renderToolChainControls();
 }
 function renderToolChainControls() {
-  const uiKey = JSON.stringify([transportMode,lang,toolChain.mode,toolChain.active,toolChain.paused,toolChain.cycles,toolChain.message,isThinking,pendingOpenAIToolTurn?.controllers.size]);
+  const toolsEnabled = openAIFormInitialized ? document.getElementById('openai-tools-enabled').checked : openAIConfig.toolsEnabled;
+  const uiKey = JSON.stringify([transportMode,lang,toolsEnabled,toolChain.mode,toolChain.active,toolChain.paused,toolChain.cycles,toolChain.message,isThinking,pendingOpenAIToolTurn?.controllers.size]);
   if (toolChain.uiKey === uiKey) return;
   toolChain.uiKey = uiKey;
   const controls = document.getElementById('tool-chain-controls');
   controls.hidden = transportMode !== 'openai';
   const toggle = document.getElementById('tool-chain-mode');
+  toggle.disabled = !toolsEnabled;
   toggle.setAttribute('aria-checked', String(toolChain.mode === 'auto'));
   toggle.title = toolChain.mode === 'auto'
     ? toolHttpText('Режим запуска инструментов: автоматически. Нажмите, чтобы переключить на ручной запуск.', 'Tool execution mode: automatic. Click to switch to manual execution.')
     : toolHttpText('Режим запуска инструментов: вручную. Нажмите, чтобы включить автоматический запуск.', 'Tool execution mode: manual. Click to enable automatic execution.');
+  if (!toolsEnabled) toggle.title = toolHttpText('Включите Tools / function calling в настройках OpenAI API.', 'Enable Tools / function calling in OpenAI API settings.');
   toggle.setAttribute('aria-label', toggle.title);
   const icon = document.getElementById('tool-chain-icon');
   if (!icon.firstChild) icon.append(document.querySelector('#tool-library-btn svg').cloneNode(true));
@@ -5688,6 +5699,7 @@ function advanceToolChain() {
   toolChain.next = false; clearToolChainAction(); button.click();
 }
 document.getElementById('tool-chain-mode').onclick = () => {
+  if (document.getElementById('tool-chain-mode').disabled) return;
   toolChain.mode = toolChain.mode === 'manual' ? 'auto' : 'manual';
   try { localStorage.setItem('ai_tool_chain_mode', toolChain.mode); } catch (_) {}
   if (toolChain.mode !== 'manual' && (pendingOpenAIToolTurn || isThinking)) startToolChain();
@@ -6292,6 +6304,7 @@ initOpenAIParameterToggles();
   if (field.tagName !== 'TEXTAREA') field.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); field.blur(); } });
 });
 document.getElementById('openai-context').addEventListener('change', commitOpenAISettings);
+document.getElementById('openai-tools-enabled').addEventListener('change', renderToolChainControls);
 ['openai-tools-enabled','openai-tool-choice'].forEach(id => document.getElementById(id).addEventListener('change', syncOpenAIToolControls));
 ['openai-tools-enabled','openai-tool-choice','openai-parallel-tools'].forEach(id => document.getElementById(id).addEventListener('change', commitOpenAISettings));
 ['demo-preset','demo-delay','demo-debug','demo-suggestions'].forEach(id => document.getElementById(id).addEventListener('change', saveDemoSettings));

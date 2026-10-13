@@ -32,7 +32,10 @@
           input.dispatchEvent(new parent.Event('input', { bubbles: true }));
         }
       }
-      if (url.hash) parent.appWorkspace.highlightField(url.hash.slice(1));
+      if (url.hash) {
+        if (link.dataset.openBeside === 'chat') parent.appWorkspace.highlightField(url.hash.slice(1));
+        else parent.navigateApp(link.dataset.openBeside, url.hash);
+      }
       return;
     }
     parent.navigateApp(file === 'index' || file === '' ? 'chat' : file, url.hash, true, url.searchParams.get('lab'));

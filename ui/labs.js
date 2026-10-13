@@ -23,14 +23,63 @@
   const string = (value, max = 100000) => typeof value === 'string' && value.length <= max;
   const identifier = value => string(value, 64) && /^[a-z0-9][a-z0-9-]*$/.test(value);
   const reportKey = lab => CFG_LAB_REPORT_PREFIX + lab.id + ':' + lab.version;
-  const statuses = { todo: 'Не начато', 'in-progress': 'В работе', completed: 'Выполнено', unavailable: 'Недоступно' };
+  const defaultLabels = {
+    "contents": "СОДЕРЖАНИЕ",
+    "versionPrefix": "Практикум · версия",
+    "objectiveTitle": "Цель лабораторной",
+    "reportTitle": "Итоговый отчёт",
+    "experimentsIntro": "Заполните результат и ответ с выводами — задание автоматически засчитается в прогресс. Если опыт недоступен, опишите причину и сделайте вывод.",
+    "author": "Автор отчёта",
+    "group": "Группа / курс",
+    "results": "Результат / JSON или текст",
+    "answer": "Ответ",
+    "conclusion": "Ответ и выводы",
+    "answerHint": "Объясните полученный результат. Запишите выводы.",
+    "reportConclusion": "Общий вывод по лабораторной",
+    "reportNote": "Экспорт содержит автора, задания, статусы и введённые ответы. Проверьте вложенные JSON: не включайте API-ключи. Отправьте скачанный файл преподавателю самостоятельно.",
+    "download": "Скачать отчёт",
+    "downloadFormat": "Формат отчёта",
+    "example": "Пример",
+    "copy": "Копировать",
+    "copied": "Текст скопирован.",
+    "copyFallback": "Текст выделен. Используйте команду «Копировать» браузера.",
+    "progress": "Выполнено {completed} из {total}",
+    "saved": "Сохранено в этом браузере",
+    "autosave": "Ответы сохраняются автоматически в этом браузере.",
+    "statusTodo": "Не начато",
+    "statusInProgress": "В работе",
+    "statusCompleted": "Выполнено",
+    "statusUnavailable": "Недоступно",
+    "exportReady": "Отчёт подготовлен к скачиванию. Его можно отправить на проверку."
+  };
+  const experimentsOf = lab => Array.isArray(lab.experiments) ? lab.experiments : lab.experiments?.items;
+  const blocksOf = section => Array.isArray(section) ? section : section?.blocks;
+  const labText = key => {
+    const section = ['objectiveTitle'].includes(key) ? selected?.objective
+      : ['reportTitle', 'reportConclusion', 'reportNote'].includes(key) ? selected?.reportInstructions
+      : ['experimentsIntro', 'results', 'answer', 'conclusion', 'answerHint', 'statusTodo', 'statusInProgress', 'statusCompleted', 'statusUnavailable'].includes(key) ? selected?.experiments
+      : ['progress', 'saved', 'autosave', 'download', 'downloadFormat', 'author', 'group'].includes(key) ? selected?.progress : null;
+    if (key === 'objectiveTitle' || key === 'reportTitle') return section?.title ?? selected?.labels?.[key] ?? defaultLabels[key];
+    if (key === 'experimentsIntro') return section?.description ?? selected?.labels?.[key] ?? defaultLabels[key];
+    return section?.labels?.[key] ?? selected?.labels?.[key] ?? defaultLabels[key];
+  };
+  const statuses = { get todo() { return labText('statusTodo'); }, get 'in-progress'() { return labText('statusInProgress'); }, get completed() { return labText('statusCompleted'); }, get unavailable() { return labText('statusUnavailable'); } };
   const answerStatus = answer => answer.results.trim() && answer.conclusion.trim() ? 'completed' : answer.results.trim() || answer.conclusion.trim() ? 'in-progress' : 'todo';
   function validateBlocks(blocks, depth = 0) {
     if (!Array.isArray(blocks) || blocks.length > 100 || depth > 4) fail('Неверный список блоков задания.');
     blocks.forEach(block => {
       if (!object(block)) fail('Неверный блок задания.');
       if (block.type === 'paragraph') {
-        if (!string(block.text) || ![undefined, 'normal', 'muted', 'question'].includes(block.tone)) fail('Неверный текст задания.');
+        if (![undefined, 'normal', 'muted', 'question'].includes(block.tone)) fail('Неверный стиль абзаца.');
+        if (block.content !== undefined) {
+          if (block.text !== undefined || !Array.isArray(block.content) || block.content.length > 100) fail('Для абзаца используйте text или массив content.');
+          block.content.forEach(part => {
+            if (typeof part === 'string') { if (!string(part)) fail('Неверный текст абзаца.'); }
+            else { if (!object(part) || part.type !== 'link') fail('В content допустимы строки и ссылки.'); validateBlocks([part], depth + 1); }
+          });
+        } else if (!string(block.text)) fail('Неверный текст задания.');
+      } else if (block.type === 'link') {
+        if (!string(block.text, 3000) || !string(block.href, 2000) || new URL(block.href, location.href).origin !== location.origin || ![undefined, 'help', 'chat', 'settings', 'labs', 'tools', 'mcp'].includes(block.openBeside)) fail('Неверная ссылка в задании.');
       } else if (block.type === 'code') {
         if (!string(block.text) || (block.label !== undefined && !string(block.label, 200))) fail('Неверный блок кода.');
       } else if (block.type === 'list') {
@@ -43,18 +92,31 @@
   }
   function validateLab(lab) {
     if (!object(lab) || lab.schemaVersion !== 1 || !identifier(lab.id) || !string(lab.version, 32) || !/^[a-z0-9][a-z0-9.-]*$/.test(lab.version)) fail('Нужны schemaVersion: 1, id и version лабораторной.');
-    if (!string(lab.title, 200) || !lab.title.trim() || !string(lab.description, 3000)) fail('Нужны название и описание лабораторной.');
-    if (!Array.isArray(lab.experiments) || !lab.experiments.length || lab.experiments.length > 100) fail('В лабораторной должно быть от 1 до 100 заданий.');
+    if (!string(lab.title, 200) || !lab.title.trim() || (lab.description !== undefined && !string(lab.description, 3000))) fail('Нужны название и описание лабораторной.');
+    if (!Array.isArray(experimentsOf(lab)) || !experimentsOf(lab).length || experimentsOf(lab).length > 100) fail('В лабораторной должно быть от 1 до 100 заданий.');
+    if (lab.progress !== undefined && (!object(lab.progress) || lab.progress.type !== 'progress')) fail('Неверный блок прогресса: нужен type: progress.');
+    if (object(lab.experiments) && (!string(lab.experiments.title, 300) || (lab.experiments.description !== undefined && !string(lab.experiments.description, 5000)))) fail('Неверный заголовок или описание экспериментов.');
+    ['preparationTitle', 'experimentsTitle'].forEach(key => { if (lab[key] !== undefined && (!string(lab[key], 300) || !lab[key].trim())) fail('Неверный заголовок раздела: ' + key); });
+    [lab, lab.progress, lab.objective, lab.introduction, lab.preparation, lab.experiments, lab.reportInstructions].forEach(section => {
+      if (object(section) && section.labels !== undefined && (!object(section.labels) || Object.values(section.labels).some(value => !string(value, 5000)))) fail('Подписи labels должны быть строками.');
+    });
     const ids = new Set(['prepare', 'report', 'experiments', 'objective']);
-    lab.experiments.forEach(experiment => {
+    experimentsOf(lab).forEach(experiment => {
       if (!object(experiment) || !identifier(experiment.id) || ids.has(experiment.id) || !string(experiment.title, 200) || !experiment.title.trim()) fail('У заданий должны быть уникальные id и названия.');
       ids.add(experiment.id); validateBlocks(experiment.blocks);
     });
-    ['objective', 'introduction', 'preparation', 'reportInstructions'].forEach(key => { if (lab[key] !== undefined) validateBlocks(lab[key]); });
+    ['objective', 'introduction', 'preparation', 'reportInstructions'].forEach(key => {
+      if (lab[key] === undefined) return;
+      if (object(lab[key])) {
+        if (!string(lab[key].title, 300) || !lab[key].title.trim()) fail('Неверный заголовок раздела: ' + key);
+        validateBlocks(lab[key].blocks);
+      } else validateBlocks(lab[key]);
+    });
+    Object.values(lab).filter(value => object(value) && value.type === 'link').forEach(value => validateBlocks([value]));
     return lab;
   }
   function emptyReport(lab) {
-    return { schemaVersion: 1, kind: 'ai-lab-report', labId: lab.id, labVersion: lab.version, author: '', group: '', conclusion: '', updatedAt: null, answers: Object.fromEntries(lab.experiments.map(experiment => [experiment.id, { results: '', evidence: '', conclusion: '', status: 'todo' }])) };
+    return { schemaVersion: 1, kind: 'ai-lab-report', labId: lab.id, labVersion: lab.version, author: '', group: '', conclusion: '', updatedAt: null, answers: Object.fromEntries(experimentsOf(lab).map(experiment => [experiment.id, { results: '', evidence: '', conclusion: '', status: 'todo' }])) };
   }
   function validateReport(value, lab) {
     if (!object(value) || value.schemaVersion !== 1 || value.kind !== 'ai-lab-report' || value.labId !== lab.id || value.labVersion !== lab.version || !object(value.answers)) fail('Отчёт не соответствует версии лабораторной.');
@@ -65,7 +127,7 @@
     }
     if (value.updatedAt !== null && (!string(value.updatedAt, 40) || !Number.isFinite(Date.parse(value.updatedAt)))) fail('Неверная дата отчёта.');
     clean.updatedAt = value.updatedAt;
-    lab.experiments.forEach(experiment => {
+    experimentsOf(lab).forEach(experiment => {
       const answer = value.answers[experiment.id];
       if (answer === undefined) return; // Newly added tasks start empty in existing reports.
       if (!object(answer) || !Object.hasOwn(statuses, answer.status) || !string(answer.results, 200002) || !['evidence', 'conclusion'].every(key => string(answer[key]))) fail('Неверные ответы задания: ' + experiment.id);
@@ -115,28 +177,60 @@
     updateProgress();
   }
   function progress(lab, value) {
-    const answers = lab.experiments.map(experiment => value.answers[experiment.id]);
+    const answers = experimentsOf(lab).map(experiment => value.answers[experiment.id]);
     return { completed: answers.filter(answer => answerStatus(answer) === 'completed').length, total: answers.length };
   }
   function updateProgress() {
     const count = progress(selected, report);
     $('lab-progress').value = count.completed; $('lab-progress').max = count.total;
-    $('progress-label').textContent = `Выполнено ${count.completed} из ${count.total}`;
-    $('save-status').textContent = storageError || (report.updatedAt ? 'Сохранено в этом браузере · ' + new Date(report.updatedAt).toLocaleTimeString('ru-RU') : 'Ответы сохраняются автоматически в этом браузере.');
+    $('progress-label').textContent = labText('progress').replaceAll('{completed}', count.completed).replaceAll('{total}', count.total);
+    const saveStatus = $('save-status');
+    saveStatus.textContent = storageError || (report.updatedAt ? labText('saved') + ' · ' : labText('autosave'));
+    if (!storageError && report.updatedAt) {
+      const timestamp = node('time', new Date(report.updatedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), 'save-timestamp');
+      timestamp.dateTime = report.updatedAt;
+      saveStatus.append(timestamp);
+    }
     $('save-status').classList.toggle('save-error', Boolean(storageError));
     $('storage-warning').textContent = storageError; $('storage-warning').hidden = !storageError;
-    selected.experiments.forEach(experiment => {
+    experimentsOf(selected).forEach(experiment => {
       const status = answerStatus(report.answers[experiment.id]);
       const link = $('lab-toc').querySelector(`[data-experiment="${experiment.id}"]`);
       link.querySelector('small').textContent = statuses[status]; link.dataset.status = status;
-      $('answer-summary-' + experiment.id).textContent = 'Ответ · ' + statuses[status];
+      $('answer-summary-' + experiment.id).textContent = labText('answer') + ' · ' + statuses[status];
     });
     const link = $('lab-links').querySelector('[aria-current="page"]');
     if (link) link.querySelector('small').textContent = `${count.completed}/${count.total}`;
   }
   function renderBlocks(container, blocks = []) {
     blocks.forEach(block => {
-      if (block.type === 'paragraph') container.append(node('p', block.text, block.tone === 'question' ? 'question' : block.tone === 'muted' ? 'observe' : ''));
+      if (block.type === 'paragraph') {
+        const paragraph = node('p', undefined, block.tone === 'question' ? 'question' : block.tone === 'muted' ? 'observe' : '');
+        (block.content || [block.text]).forEach(part => {
+          if (typeof part === 'string') paragraph.append(document.createTextNode(part));
+          else {
+            const link = linkTo(part.text, part.href);
+            if (part.openBeside) link.dataset.openBeside = part.openBeside;
+            paragraph.append(link);
+          }
+        });
+        container.append(paragraph);
+      }
+      if (block.type === 'link') {
+        const link = linkTo(block.text, block.href);
+        if (block.openBeside) link.dataset.openBeside = block.openBeside;
+        if (block.icon === 'settings') {
+          const icon = node('span'); icon.setAttribute('aria-hidden', 'true');
+          icon.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M9.5 2h5l.5 3 2 1.2 2.8-1 2.5 4.3L20 11.4v2.2l2.3 1.9-2.5 4.3-2.8-1-2 1.2-.5 3h-5L9 20l-2-1.2-2.8 1-2.5-4.3L4 13.6v-2.2L1.7 9.5l2.5-4.3 2.8 1L9 5Z" transform="translate(0 -.5)"/><circle cx="12" cy="12" r="3.5"/></svg>';
+          link.replaceChildren(icon, document.createTextNode(block.text));
+        }
+        if (block.icon === 'help') {
+          const icon = node('span'); icon.setAttribute('aria-hidden', 'true');
+          icon.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-3px;margin-right:5px"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5a2.5 2.5 0 1 1 4 2c-1 .6-1.5 1-1.5 2M12 16h.01"/></svg>';
+          link.prepend(icon);
+        }
+        const line = node('div', undefined, 'lab-link-block'); line.append(link); container.append(line);
+      }
       if (block.type === 'list') {
         const list = node(block.ordered ? 'ol' : 'ul'); block.items.forEach(item => list.append(node('li', item))); container.append(list);
       }
@@ -144,11 +238,11 @@
         const details = node('details'); details.append(node('summary', block.title)); renderBlocks(details, block.blocks); container.append(details);
       }
       if (block.type === 'code') {
-        const box = node('div', undefined, 'copybox'); const bar = node('div', block.label || 'Пример', 'copybar');
-        const button = node('button', 'Копировать'); button.type = 'button'; const pre = node('pre', block.text);
+        const box = node('div', undefined, 'copybox'); const bar = node('div', block.label || labText('example'), 'copybar');
+        const button = node('button', labText('copy')); button.type = 'button'; const pre = node('pre', block.text);
         button.addEventListener('click', async () => {
-          try { await navigator.clipboard.writeText(block.text); $('action-status').textContent = 'Текст скопирован.'; }
-          catch (_) { const range = document.createRange(); range.selectNodeContents(pre); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); $('action-status').textContent = 'Текст выделен. Используйте команду «Копировать» браузера.'; }
+          try { await navigator.clipboard.writeText(block.text); $('action-status').textContent = labText('copied'); }
+          catch (_) { const range = document.createRange(); range.selectNodeContents(pre); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); $('action-status').textContent = labText('copyFallback'); }
         });
         bar.append(button); box.append(bar, pre); container.append(box);
       }
@@ -165,12 +259,12 @@
   function exportButtons() {
     const bar = node('div', undefined, 'report-toolbar');
     const picker = node('details', undefined, 'report-download');
-    const trigger = node('summary', 'Скачать отчёт');
+    const trigger = node('summary', labText('download'));
     const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     arrow.setAttribute('viewBox', '0 0 10 6'); arrow.setAttribute('fill', 'none'); arrow.setAttribute('stroke', 'currentColor'); arrow.setAttribute('stroke-width', '1.5'); arrow.setAttribute('aria-hidden', 'true');
     const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path'); arrowPath.setAttribute('d', 'm1 1 4 4 4-4'); arrow.append(arrowPath); trigger.append(arrow);
     const panel = node('div', undefined, 'report-download-options');
-    panel.setAttribute('role', 'group'); panel.setAttribute('aria-label', 'Формат отчёта');
+    panel.setAttribute('role', 'group'); panel.setAttribute('aria-label', labText('downloadFormat'));
     picker.append(trigger, panel); bar.append(picker);
     picker.addEventListener('toggle', () => {
       if (!picker.open) return;
@@ -194,51 +288,72 @@
   }
   document.addEventListener('pointerdown', event => { document.querySelectorAll('.report-download[open]').forEach(picker => { if (!picker.contains(event.target)) picker.open = false; }); });
   function renderLab() {
-    const main = $('lab-main'); const toc = $('lab-toc'); main.replaceChildren(); toc.replaceChildren(node('strong', 'СОДЕРЖАНИЕ'));
-    main.append(node('p', 'Практикум · версия ' + selected.version, 'eyebrow'), node('h1', selected.title), node('p', selected.description, 'lead'));
-    const toolbar = exportButtons(); toolbar.prepend(linkTo('Открыть чат для практики →', 'index.html')); main.append(toolbar);
+    const main = $('lab-main'); const toc = $('lab-toc'); main.replaceChildren(); toc.replaceChildren(node('strong', labText('contents')));
+    main.append(node('p', labText('versionPrefix') + ' ' + selected.version, 'eyebrow'), node('h1', selected.title), node('p', selected.description, 'lead'));
+    const toolbar = exportButtons();
     const summary = node('div', undefined, 'progress-summary');
     const label = node('label'); label.id = 'progress-label'; label.htmlFor = 'lab-progress';
     const meter = node('progress'); meter.id = 'lab-progress';
     const saveStatus = node('p', '', 'status'); saveStatus.id = 'save-status'; saveStatus.setAttribute('role', 'status');
     const actionStatus = node('p', '', 'status'); actionStatus.id = 'action-status'; actionStatus.setAttribute('role', 'status');
-    summary.append(label, meter, saveStatus, actionStatus); main.append(summary);
+    const progressCount = node('div', undefined, 'progress-count'); progressCount.append(label, meter);
+    const progressPanel = node('div', undefined, 'progress-panel');
+    progressPanel.append(progressCount, saveStatus);
+    summary.append(progressPanel, toolbar, actionStatus); main.append(summary);
     const identity = node('div', undefined, 'report-identity ym-hide-content');
-    identity.append(field('Автор отчёта', 'report-author', report.author, value => { report.author = value; }, false, 200), field('Группа / курс', 'report-group', report.group, value => { report.group = value; }, false, 200)); main.append(identity);
-    const objective = node('section'); objective.id = 'objective'; objective.append(node('h2', 'Цель лабораторной')); renderBlocks(objective, selected.objective || [{ type: 'paragraph', text: selected.description }]); main.append(objective); toc.append(linkTo('Цель лабораторной', '#objective'));
-    renderBlocks(main, selected.introduction);
-    main.append(linkTo('Подключение NeuralDeep — инструкция →', 'documentation.html#connect-neuraldeep'));
-    const preparation = node('section'); preparation.id = 'prepare'; preparation.append(node('h2', 'Подготовка')); renderBlocks(preparation, selected.preparation); main.append(preparation); toc.append(linkTo('Подготовка', '#prepare'));
-    const experiments = node('section'); experiments.id = 'experiments'; experiments.append(node('h2', 'Эксперименты'), node('p', 'Заполните результат и ответ с выводами — задание автоматически засчитается в прогресс. Если опыт недоступен, опишите причину и сделайте вывод.', 'observe')); main.append(experiments);
-    selected.experiments.forEach((experiment, index) => {
+    identity.append(field(labText('author'), 'report-author', report.author, value => { report.author = value; }, false, 200), field(labText('group'), 'report-group', report.group, value => { report.group = value; }, false, 200)); main.append(identity);
+    const objective = node('section'); objective.id = 'objective'; objective.append(node('h2', labText('objectiveTitle'))); renderBlocks(objective, blocksOf(selected.objective) || [{ type: 'paragraph', text: selected.description }]); main.append(objective); toc.append(linkTo(labText('objectiveTitle'), '#objective'));
+    const introduction = node('section'); introduction.id = 'introduction';
+    renderBlocks(introduction, blocksOf(selected.introduction));
+    main.append(introduction);
+    const preparation = node('section'); preparation.id = 'prepare'; preparation.append(node('h2', selected.preparation?.title || selected.preparationTitle || 'Подготовка')); renderBlocks(preparation, selected.preparation?.blocks || selected.preparation); main.append(preparation); toc.append(linkTo(selected.preparation?.title || selected.preparationTitle || 'Подготовка', '#prepare'));
+    const experiments = node('section'); experiments.id = 'experiments'; experiments.append(node('h2', selected.experiments?.title || selected.experimentsTitle || 'Эксперименты'), node('p', labText('experimentsIntro'), 'observe')); main.append(experiments);
+    experimentsOf(selected).forEach((experiment, index) => {
       const link = linkTo(`${String(index + 1).padStart(2, '0')} · ${experiment.title}`, '#task-' + experiment.id); link.dataset.experiment = experiment.id; link.append(node('small')); toc.append(link);
       const article = node('article', undefined, 'experiment'); article.id = 'task-' + experiment.id;
       const head = node('div', undefined, 'experiment-head'); head.append(node('span', String(index + 1).padStart(2, '0'), 'number'), node('h3', experiment.title)); article.append(head);
-      const questions = [];
-      const withoutQuestions = blocks => blocks.flatMap(block => {
-        if (block.type === 'paragraph' && block.tone === 'question') { questions.push(block.text); return []; }
-        return [{ ...block, ...(block.type === 'details' ? { blocks: withoutQuestions(block.blocks) } : {}) }];
-      });
-      renderBlocks(article, withoutQuestions(experiment.blocks));
+      renderBlocks(article, experiment.blocks);
       const answer = report.answers[experiment.id]; const form = node('div', undefined, 'answer-form ym-hide-content');
       const changed = (key, value) => {
         answer[key] = value;
         answer.status = answerStatus(answer);
       };
-      form.append(field('Результат / JSON или текст', 'results-' + experiment.id, answer.results, value => changed('results', value), true, 200002));
-      const question = node('p', questions.length ? 'Ответьте на вопрос: ' : 'Объясните полученный результат.', 'question');
-      if (questions.length) question.append(node('span', questions.join(' '), 'question-text'));
-      question.append(node('br'), document.createTextNode('Запишите выводы.'));
+      form.append(field(labText('results'), 'results-' + experiment.id, answer.results, value => changed('results', value), true, 200002));
+      const question = node('p', labText('answerHint'), 'question');
       form.append(question);
-      form.append(field('Ответ и выводы', 'conclusion-' + experiment.id, answer.conclusion, value => changed('conclusion', value)));
+      form.append(field(labText('conclusion'), 'conclusion-' + experiment.id, answer.conclusion, value => changed('conclusion', value)));
       const answers = node('details', undefined, 'answer-details');
       const answerSummary = node('summary'); answerSummary.id = 'answer-summary-' + experiment.id;
-      answers.append(answerSummary, form); article.append(answers); main.append(article);
+      answers.append(answerSummary, form); article.append(answers); experiments.append(article);
     });
-    const final = node('section'); final.id = 'report'; final.append(node('h2', 'Итоговый отчёт')); renderBlocks(final, selected.reportInstructions);
-    const finalForm = node('div', undefined, 'ym-hide-content'); finalForm.append(field('Общий вывод по лабораторной', 'report-conclusion', report.conclusion, value => { report.conclusion = value; })); final.append(finalForm);
-    final.append(node('p', 'Экспорт содержит автора, задания, статусы и введённые ответы. Проверьте вложенные JSON: не включайте API-ключи. Отправьте скачанный файл преподавателю самостоятельно.', 'observe'), exportButtons());
-    main.append(final); toc.append(linkTo('Итоговый отчёт', '#report')); $('lab-layout').hidden = false; updateProgress(); highlightTask();
+    const final = node('section'); final.id = 'report'; final.append(node('h2', labText('reportTitle'))); renderBlocks(final, blocksOf(selected.reportInstructions));
+    const finalForm = node('div', undefined, 'ym-hide-content'); finalForm.append(field(labText('reportConclusion'), 'report-conclusion', report.conclusion, value => { report.conclusion = value; })); final.append(finalForm);
+    final.append(node('p', labText('reportNote'), 'observe'), exportButtons());
+    main.append(final); toc.append(linkTo(labText('reportTitle'), '#report'));
+    // Content sections follow their property order in the source JSON.
+    // Arrays (including nested blocks and experiments) retain their original order.
+    const eyebrow = main.querySelector('.eyebrow');
+    const sections = { title: main.querySelector('h1'), progress: summary, description: main.querySelector('.lead'), objective, introduction, preparation, experiments, reportInstructions: final };
+    Object.entries(selected).forEach(([key, value]) => {
+      if (!Object.hasOwn(sections, key) && object(value) && value.type === 'link') {
+        const section = node('div', undefined, 'lab-link-block');
+        renderBlocks(section, [value]);
+        Object.defineProperty(sections, key, { value: section, enumerable: true });
+      }
+    });
+    const orderedKeys = Object.keys(selected).filter(key => Object.hasOwn(sections, key));
+    if (!orderedKeys.includes('progress')) orderedKeys.splice(orderedKeys.indexOf('title') + 1, 0, 'progress');
+    if (!orderedKeys.includes('objective')) orderedKeys.splice(orderedKeys.indexOf('description') + 1, 0, 'objective');
+    if (!orderedKeys.includes('reportInstructions')) orderedKeys.push('reportInstructions');
+    const orderedContent = document.createDocumentFragment();
+    orderedKeys.forEach(key => {
+      const section = sections[key]; orderedContent.append(section);
+      if (key === 'progress') orderedContent.append(identity);
+      const ids = [section.id, ...section.querySelectorAll('[id]')].map(value => typeof value === 'string' ? value : value.id);
+      [...toc.querySelectorAll('a')].filter(link => ids.includes(link.hash.slice(1))).forEach(link => toc.append(link));
+    });
+    main.replaceChildren(eyebrow, orderedContent);
+    $('lab-layout').hidden = false; updateProgress(); highlightTask();
   }
   function renderCatalog() {
     $('lab-links').replaceChildren();
@@ -246,10 +361,10 @@
       const url = new URL(location.href); url.searchParams.set('lab', lab.id); url.hash = '';
       const link = linkTo('', url.href); link.append(node('span', lab.title)); link.title = lab.title; link.dataset.labId = lab.id;
       if (lab === selected) link.setAttribute('aria-current', 'page');
-      let count = '0/' + lab.experiments.length;
+      let count = '0/' + experimentsOf(lab).length;
       try {
         const raw = localStorage.getItem(reportKey(lab)); const value = drafts.get(reportKey(lab))?.report || (raw ? validateReport(JSON.parse(raw), lab) : null);
-        if (value) count = progress(lab, value).completed + '/' + lab.experiments.length;
+        if (value) count = progress(lab, value).completed + '/' + experimentsOf(lab).length;
       } catch (_) { count = '—'; }
       link.append(node('small', count));
       link.addEventListener('click', event => {
@@ -272,7 +387,7 @@
   function exportReport(format) {
     const count = progress(selected, report);
     const snapshot = { ...report, exportedAt: new Date().toISOString(), progress: count, lab: selected };
-    const describe = blocks => blocks.flatMap(block => block.type === 'details' ? [block.title, ...describe(block.blocks)] : block.type === 'list' ? block.items : [block.text]);
+    const describe = blocks => blocks.flatMap(block => block.type === 'details' ? [block.title, ...describe(block.blocks)] : block.type === 'list' ? block.items : [block.content ? block.content.map(part => typeof part === 'string' ? part : part.text).join('') : block.text]);
     let content;
     if (format === 'json') content = JSON.stringify(snapshot, null, 2);
     else if (format === 'html') {
@@ -283,10 +398,10 @@
       const viewport = doc.createElement('meta'); viewport.name = 'viewport'; viewport.content = 'width=device-width, initial-scale=1'; doc.head.append(viewport);
       doc.head.append(node('style', 'body{max-width:900px;margin:24px auto;padding:0 16px;font:14px/1.5 system-ui;color:#192036}h1{font-size:24px}h2{font-size:18px}h3{font-size:14px;margin-bottom:6px}section{border-top:1px solid #ccd3df;margin-top:18px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f6f9;padding:10px;font:13px/1.5 monospace}@media print{body{margin:0;max-width:none}pre{background:none}}'));
       doc.body.append(node('h1', selected.title), node('p', `Версия: ${selected.version} · ID: ${selected.id}`), node('p', `Автор: ${report.author || 'Не указан'} · Группа / курс: ${report.group || 'Не указаны'}`), node('p', `Выгружено: ${snapshot.exportedAt} · Выполнено: ${count.completed}/${count.total}`));
-      selected.experiments.forEach((experiment, index) => {
+      experimentsOf(selected).forEach((experiment, index) => {
         const answer = report.answers[experiment.id], section = node('section');
         section.append(node('h2', `${index + 1}. ${experiment.title}`), node('p', statuses[answerStatus(answer)]));
-        for (const [heading, value] of [['Условие', describe(experiment.blocks).join('\n\n')], ['Результат / JSON или текст', answer.results], ['Ответ и выводы', answer.conclusion]]) section.append(node('h3', heading), node('pre', value || 'Не заполнено'));
+        for (const [heading, value] of [['Условие', describe(experiment.blocks).join('\n\n')], [labText('results'), answer.results], [labText('conclusion'), answer.conclusion]]) section.append(node('h3', heading), node('pre', value || 'Не заполнено'));
         doc.body.append(section);
       });
       doc.body.append(node('h2', 'Общий вывод'), node('pre', report.conclusion || 'Не заполнено'));
@@ -296,7 +411,7 @@
       // Keep arbitrary Markdown/HTML in submitted text literal in the report.
       const literal = value => { const runs = value.match(/`+/g) || []; const fence = '`'.repeat(Math.max(3, ...runs.map(run => run.length + 1))); return `${fence}\n${value || 'Не заполнено'}\n${fence}`; };
       const lines = ['# Отчёт по лабораторной', literal(selected.title), `Версия: ${selected.version} · ID: ${selected.id}`, '## Автор', literal(report.author), '## Группа / курс', literal(report.group), `Выгружено: ${snapshot.exportedAt}`, `Выполнено: ${count.completed}/${count.total}.`];
-      selected.experiments.forEach((experiment, index) => {
+      experimentsOf(selected).forEach((experiment, index) => {
         const answer = report.answers[experiment.id];
         lines.push(`## Задание ${index + 1}`, literal(experiment.title), `Статус: ${statuses[answerStatus(answer)]}`, '### Условие', literal(describe(experiment.blocks).join('\n\n')), '### Результат / JSON или текст', literal(answer.results), '### Ответ и выводы', literal(answer.conclusion));
       });
@@ -304,7 +419,7 @@
     }
     const url = URL.createObjectURL(new Blob([content], { type: ({ json: 'application/json', html: 'text/html', md: 'text/markdown' })[format] + ';charset=utf-8' }));
     const link = node('a'); link.href = url; link.download = `${selected.id}-report-${snapshot.exportedAt.slice(0, 10)}.${format}`; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
-    $('action-status').textContent = 'Отчёт подготовлен к скачиванию. Его можно отправить на проверку.';
+    $('action-status').textContent = labText('exportReady');
   }
   async function importFile(file) {
     if (!file) return;
