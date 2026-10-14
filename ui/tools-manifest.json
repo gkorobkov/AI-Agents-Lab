@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "tools": [
-    "tool-open-meteo-geocoding.json"
+    "tool-open-meteo-geocoding.json",
+    "tool-open-meteo-forecast.json"
   ]
 }

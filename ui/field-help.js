@@ -9,7 +9,9 @@
   tooltip.addEventListener('pointerleave', scheduleHide);
   tooltip.addEventListener('pointerdown', cancelHide);
   const show = button => {
-    hide(); current = button; tooltip.textContent = button.dataset.helpText; tooltip.hidden = false; button.setAttribute('aria-describedby', tooltip.id);
+    hide(); current = button; tooltip.replaceChildren();
+    if (button.dataset.helpPath) { const path = document.createElement('div'); path.className = 'help-parameter-path'; path.textContent = button.dataset.helpPath; tooltip.append(path); }
+    const text = document.createElement('div'); text.textContent = button.dataset.helpText; tooltip.append(text); tooltip.hidden = false; button.setAttribute('aria-describedby', tooltip.id);
     const rect = button.getBoundingClientRect();
     tooltip.style.left = Math.max(8, Math.min(rect.left, document.documentElement.clientWidth - tooltip.offsetWidth - 8)) + 'px';
     tooltip.style.top = Math.max(8, Math.min(rect.bottom + 6, innerHeight - tooltip.offsetHeight - 8)) + 'px';

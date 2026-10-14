@@ -1,13 +1,12 @@
 {
   "id": "open_meteo_geocoding",
   "title": "Open-Meteo · Geocoding",
-  "summary": "Поиск города по названию: координаты, страна и регион. Сначала определите местоположение, затем используйте координаты в другом инструменте — например, для погоды. Данные: GeoNames.",
   "docsUrl": "https://open-meteo.com/en/docs/geocoding-api",
   "providerUrl": "https://open-meteo.com/",
   "tool": {
     "name": "geocode_city",
-    "description": "Available tool: geocode_city. Find a city or place by its name (Russian or English) and return matching places with name, country, region, latitude and longitude from Open-Meteo/GeoNames. Use when coordinates are needed, before requesting weather, or to disambiguate a place. Input: name, the place to search. Output: results[] with candidate locations. If several places match, ask the user to clarify. If results are empty or the request fails, explain this and ask for a more specific place; never invent coordinates. When asked about your available tools, describe this city-search capability. This tool does not fetch weather.",
-    "parameters": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"name\": {\n      \"type\": \"string\",\n      \"description\": \"City or place name, optionally followed by country or region, e.g. Moscow or Paris, France.\"\n    }\n  },\n  \"required\": [\n    \"name\"\n  ],\n  \"additionalProperties\": false\n}",
+    "description": "Найти город или населённый пункт по названию. Вызывай, когда нужны координаты, в том числе перед запросом погоды. Передай в name название на русском или английском. Результат — список results с названием, страной, регионом, широтой latitude и долготой longitude. Если найдено несколько подходящих мест, уточни у пользователя, какое он имел в виду. Если ничего не найдено или запрос завершился ошибкой, сообщи об этом и попроси уточнить место. Не придумывай координаты. Этот инструмент не возвращает погоду.",
+    "parameters": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"name\": {\n      \"type\": \"string\",\n      \"description\": \"Название города или населённого пункта, например Москва или Париж. При необходимости укажи страну или регион.\"\n    }\n  },\n  \"required\": [\n    \"name\"\n  ],\n  \"additionalProperties\": false\n}",
     "strict": true,
     "http": {
       "url": "https://geocoding-api.open-meteo.com/v1/search",

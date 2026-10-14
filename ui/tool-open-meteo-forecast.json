@@ -1,0 +1,46 @@
+{
+  "id": "open_meteo_forecast",
+  "title": "Open-Meteo · Weather",
+  "docsUrl": "https://open-meteo.com/en/docs",
+  "providerUrl": "https://open-meteo.com/",
+  "tool": {
+    "name": "get_current_weather",
+    "description": "Получить текущую погоду по latitude и longitude: температуру и ощущаемую температуру (°C), влажность (%), осадки (мм), код погоды WMO, скорость (км/ч) и направление ветра (°), местное время. Если известно только название города, сначала вызовите geocode_city и возьмите координаты выбранного места. Не придумывайте координаты и погодные данные. Результат: current с показателями и временем, current_units с единицами, timezone с часовым поясом. Объясняйте код WMO словами. При ошибке сообщите, что погоду получить не удалось. Инструмент возвращает текущие условия, а не прогноз на будущие даты.",
+    "parameters": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"latitude\": {\n      \"type\": \"number\",\n      \"minimum\": -90,\n      \"maximum\": 90,\n      \"description\": \"Широта места в десятичных градусах, например 55.75.\"\n    },\n    \"longitude\": {\n      \"type\": \"number\",\n      \"minimum\": -180,\n      \"maximum\": 180,\n      \"description\": \"Долгота места в десятичных градусах, например 37.62.\"\n    }\n  },\n  \"required\": [\n    \"latitude\",\n    \"longitude\"\n  ],\n  \"additionalProperties\": false\n}",
+    "strict": true,
+    "http": {
+      "url": "https://api.open-meteo.com/v1/forecast",
+      "method": "GET",
+      "mappings": [
+        {
+          "key": "latitude",
+          "value": "{{latitude}}"
+        },
+        {
+          "key": "longitude",
+          "value": "{{longitude}}"
+        },
+        {
+          "key": "current",
+          "value": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m"
+        },
+        {
+          "key": "timezone",
+          "value": "auto"
+        },
+        {
+          "key": "forecast_days",
+          "value": "1"
+        }
+      ],
+      "body": "",
+      "auth": {
+        "placement": "none",
+        "name": "apikey",
+        "prefix": "",
+        "secretId": ""
+      }
+    }
+  },
+  "schemaVersion": 1
+}

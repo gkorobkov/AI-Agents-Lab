@@ -40,7 +40,7 @@ button > svg + span { margin-left:6px; }
 
 /* Editable copies and quiet read-only definitions. */
 .library-nav > button { display:flex; align-items:center; justify-content:center; width:100%; min-height:34px; margin-top:6px; font-size:12px; white-space:nowrap; }
-#create-tool { border-color:var(--cyan); color:var(--cyan); }
+
 .tool-intro #copy-tool { margin:6px 0; }
 .state { transition:color .4s, opacity .4s; }
 .state.saved-flash { color:var(--accent); }
@@ -95,3 +95,9 @@ pre.result { overflow:auto; }
 #llm-prompt { min-height:110px; }
 .schema-row textarea { min-height:64px; width:100%; }
 .result pre { max-height:420px; overflow:auto; padding:12px; }
+
+.tool-toolbar { position:sticky; top:0; z-index:40; display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:var(--bg); border-bottom:1px solid var(--border); padding:6px 0; }
+.tool-toolbar h2 { flex:1; min-width:160px; font-size:18px; margin:0; }
+.tool-toolbar .actions { gap:6px; }
+.tool-toolbar button { min-height:30px; padding:4px 8px; font-size:12px; }
+.tool-toolbar #copy-tool { margin:0; }

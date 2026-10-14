@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.3.13';
+const APP_VERSION = '1.3.14';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -76,7 +76,7 @@ const CFG_OPENAI_PROVIDERS = [
 
 <link rel="canonical" href="https://ai-agents-lab.gkorobkov.ru/">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebSite","name":"AI Agents Lab","alternateName":"Лаборатория ИИ Агентов","url":"https://ai-agents-lab.gkorobkov.ru/","inLanguage":["ru","en"],"description":"Практическая лаборатория AI агентов: чат с моделями, OpenAI API и HTTP-инструменты."}
+{"@context":"https://schema.org","@type":"WebSite","name":"AI Agents Lab","alternateName":"Лаборатория ИИ Агентов","url":"https://ai-agents-lab.gkorobkov.ru/","inLanguage":["ru","en"],"description":"Практическая лаборатория AI агентов: чат с LLM моделями, OpenAI API и HTTP-инструменты."}
 </script>
 <!-- Link preview / Open Graph -->
 <meta name="description"
@@ -99,7 +99,7 @@ const CFG_OPENAI_PROVIDERS = [
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="AI Agents Lab">
 <meta name="twitter:description"
-      content="AI Agents Lab — Лаборатория ИИ Агентов: чат с моделями, лабораторные работы, OpenAI API и библиотека Tools / function calling.">
+      content="AI Agents Lab — Лаборатория ИИ Агентов: чат с LLM моделями, лабораторные работы, OpenAI API и библиотека Tools / function calling.">
 <meta name="twitter:image"
       content="https://ai-agents-lab.gkorobkov.ru/og-preview.jpg">
 
@@ -451,6 +451,8 @@ const CFG_OPENAI_PROVIDERS = [
   .api-validation { min-height: 29px; padding: 7px 10px; border-left: 2px solid var(--border); background: var(--bg); color: var(--text-muted); font: 9px var(--font-mono); margin: 0; grid-column: 2 / 3; }
   .api-validation.ok { border-color: var(--accent); color: var(--accent); }
   .api-validation.error { border-color: var(--error); color: var(--error); }
+  .tool-field-error { color:var(--error); font:11px/1.5 var(--font-ui); margin-top:5px; }
+  #openai-settings [aria-invalid="true"] { border-color:var(--error); }
   .api-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; grid-column: 3; }
   .api-actions .cfg-btn.primary { border-color: var(--accent); color: var(--accent); }
   .request-preview { grid-column: 1 / -1; min-height: 33px; box-sizing: border-box; margin: 2px 0 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); overflow: hidden; }
@@ -2245,7 +2247,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
     <h2 data-i18n="welcomeTitle">AI Agents Lab</h2>
     <p data-i18n="welcomeSub">Вставь Webhook URL и начинай</p>
     <span class="welcome-detail" id="welcome-detail"></span>
-    <p class="project-intro" data-i18n="projectIntro">AI Agents Lab — Лаборатория ИИ Агентов. Изучайте AI агентов на практике: чат с моделями, лабораторные работы, OpenAI API и вызовы функций.</p>
+    <p class="project-intro" data-i18n="projectIntro">AI Agents Lab — Лаборатория ИИ Агентов. Изучайте AI агентов на практике: чат с LLM моделями, лабораторные работы, OpenAI API и вызовы функций.</p>
     <a class="project-guide" href="documentation.html#about-lab" data-i18n="projectGuide">ИИ Агенты: как устроена лаборатория →</a>
   </div>
 </div>
@@ -2394,7 +2396,7 @@ const i18n = {
     demoDelay:          'Simulated latency',
     demoShowDebug:      'Show debug payload',
     demoShowSuggestions:'Show suggestions',
-    demoPreviewJson:    'Loaded from a deployable JSON file · no model/backend request',
+    demoPreviewJson:    'Loaded from a deployable JSON file · no LLM model/backend request',
     demoLoading:        'Loading Stub file…',
     demoLoadError:      'Could not load Stub file',
     demoWelcomeTitle:   'Stub Response Lab',
@@ -2481,7 +2483,9 @@ const i18n = {
     openaiInvalidTopP:  'Top p must be between 0 and 1.',
     openaiInvalidMaxTokens:'Max completion tokens must be a whole number greater than 0.',
     openaiInvalidN:     'n must be a whole number from 1 to 128.',
-    openaiInvalidToolName:'Function names must use 1–64 letters, numbers, underscores, or hyphens.',
+    openaiInvalidToolName:'Use 1–64 Latin letters, numbers, underscores, or hyphens for the function name.',
+    openaiNoTools:'No tools connected. Add a tool from the library or disable Tools.',
+    openaiForcedToolMissing:'Choose the name of a connected function.',
     openaiDuplicateToolName:'Function names must be unique.',
     openaiInvalidToolSchema:'Each function needs a valid JSON object schema.',
     openaiMissingToolResults:'Enter a result for every tool call.',
@@ -2627,7 +2631,7 @@ const i18n = {
     demoDelay:          'Задержка ответа',
     demoShowDebug:      'Показывать debug',
     demoShowSuggestions:'Показывать подсказки',
-    demoPreviewJson:    'Загружается из deployable JSON-файла · без запроса к модели/бэкенду',
+    demoPreviewJson:    'Загружается из deployable JSON-файла · без запроса к LLM модели/бэкенду',
     demoLoading:        'Загрузка файла Stub…',
     demoLoadError:      'Не удалось загрузить файл Stub',
     demoWelcomeTitle:   'Лаборатория Stub-ответов',
@@ -2639,7 +2643,7 @@ const i18n = {
     openaiApiKey:       'API-ключ · сохраняется в этом браузере',
     openaiShowKey:      'Показать ключ',
     openaiHideKey:      'Скрыть ключ',
-    openaiModel:        'Модель',
+    openaiModel:        'LLM Модель',
     openaiSystem:       'Системный промпт',
     openaiTemperature:  'Температура (0–2)',
     openaiTopP:         'Top p (0–1)',
@@ -2660,7 +2664,7 @@ const i18n = {
     openaiToolStrict:   'Строгая схема',
     openaiAddTool:      '+ Добавить функцию',
     openaiRemoveTool:   'Удалить функцию',
-    openaiToolResults:  'Модель вернула tool calls · выполните HTTP или введите результаты',
+    openaiToolResults:  'LLM Модель вернула tool calls · выполните HTTP или введите результаты',
     openaiToolResult:   'Результат',
     openaiContinueTools:'Продолжить с tool results',
     openaiToolCallsCta: 'Tool calls: {count} · перейти к результатам',
@@ -2709,25 +2713,27 @@ const i18n = {
     openaiValid:        'Поля заполнены. Соединение будет проверено при отправке.',
     openaiInvalidUrl:   'Введите корректный http(s) базовый URL.',
     openaiMissingKey:   'Введите API-ключ.',
-    openaiMissingModel: 'Введите название модели.',
+    openaiMissingModel: 'Введите название LLM модели.',
     openaiInvalidTemperature:'Температура должна быть от 0 до 2.',
     openaiInvalidTopP:  'Top p должен быть от 0 до 1.',
     openaiInvalidMaxTokens:'Максимум completion-токенов должен быть целым числом больше 0.',
     openaiInvalidN:     'n должен быть целым числом от 1 до 128.',
-    openaiInvalidToolName:'Имена функций: 1–64 буквы, цифры, дефисы или подчёркивания.',
+    openaiInvalidToolName:'Укажите имя функции: 1–64 латинские буквы, цифры, дефисы или подчёркивания.',
+    openaiNoTools:'Инструменты не подключены. Добавьте инструмент из библиотеки или выключите Tools.',
+    openaiForcedToolMissing:'Укажите имя одной из подключённых функций.',
     openaiDuplicateToolName:'Имена функций не должны повторяться.',
     openaiInvalidToolSchema:'Для каждой функции нужна корректная JSON-схема-объект.',
     openaiMissingToolResults:'Введите результат для каждого tool call.',
-    toastNoOpenAI:      'Откройте настройки OpenAI API и заполните URL, ключ и модель',
-    openaiToolsUnsupported: 'Модель запросила вызов инструмента. Выполнение tools появится на следующем этапе.',
+    toastNoOpenAI:      'Откройте настройки OpenAI API и заполните URL, ключ и LLM модель',
+    openaiToolsUnsupported: 'LLM Модель запросила вызов инструмента. Выполнение tools появится на следующем этапе.',
     openaiWelcomeSub:  'Настройте OpenAI API и отправьте сообщение',
     webhookWelcomeTitle: 'Webhook-агент',
     openaiWelcomeTitle:  'Лаборатория ИИ Агентов',
     webhookTransport:  'Webhook-транспорт',
-    openaiTransport:   'Прямой вызов модели',
+    openaiTransport:   'Прямой вызов LLM модели',
     webhookWelcomeDetail: 'Работает с n8n, Make, Activepieces и своими endpoint · message + sessionId',
-    openaiWelcomeDetail:  'OpenAI-совместимый /chat/completions · единый чат, модель и контекст под вашим контролем',
-    projectIntro:       'AI Agents Lab — Лаборатория ИИ Агентов. Изучайте AI агентов на практике: чат с моделями, лабораторные работы, OpenAI API и вызовы функций.',
+    openaiWelcomeDetail:  'OpenAI-совместимый /chat/completions · единый чат, LLM модель и контекст под вашим контролем',
+    projectIntro:       'AI Agents Lab — Лаборатория ИИ Агентов. Изучайте AI агентов на практике: чат с LLM моделями, лабораторные работы, OpenAI API и вызовы функций.',
     projectGuide:       'ИИ Агенты: как устроена лаборатория →',
     welcomeTitle:       'Лаборатория ИИ Агентов',
     welcomeLabTitle:    'Почему ИИ отвечает по-разному?',
@@ -3676,7 +3682,7 @@ function renderToolHttpEditor(row, http = {}) {
   };
   box.append(field('HTTP URL', 'url', http.url || ''), field(toolHttpText('Метод', 'Method'), 'method', http.method || 'GET', 'select'));
   const hint = document.createElement('p'); hint.className = 'api-note';
-  hint.textContent = toolHttpText('Значение {{name}} берётся из аргументов модели. Вложенные поля: {{location.latitude}}. GET: query-параметры. POST: JSON из полей ниже или своего шаблона. URL вызывается только кнопкой в чате; сервер должен разрешать CORS.', 'Values such as {{name}} come from model arguments; nested paths: {{location.latitude}}. GET: query parameters. POST: JSON from the fields below or a custom template. Run the URL with the chat button; the server must allow CORS.');
+  hint.textContent = toolHttpText('Значение {{name}} берётся из аргументов LLM модели. Вложенные поля: {{location.latitude}}. GET: query-параметры. POST: JSON из полей ниже или своего шаблона. URL вызывается только кнопкой в чате; сервер должен разрешать CORS.', 'Values such as {{name}} come from model arguments; nested paths: {{location.latitude}}. GET: query parameters. POST: JSON from the fields below or a custom template. Run the URL with the chat button; the server must allow CORS.');
   box.appendChild(hint);
   const mappings = document.createElement('div'); mappings.className = 'tool-http-mappings'; box.appendChild(mappings);
   const addMapping = (mapping = {}) => {
@@ -3752,7 +3758,7 @@ function attachToolHttpRunner(row, input, call, turn) {
   if (!tool?.http?.url) return;
   const box = document.createElement('div'); box.className = 'tool-http-runner';
   const preview = document.createElement('pre'); const status = document.createElement('div'); status.className = 'tool-http-status'; status.setAttribute('role', 'status');
-  const run = document.createElement('button'); run.type = 'button'; run.className = 'cfg-btn tool-action-button tool-run-button'; run.textContent = toolHttpText('Вызвать инструмент с параметром от модели', 'Call tool with model arguments');
+  const run = document.createElement('button'); run.type = 'button'; run.className = 'cfg-btn tool-action-button tool-run-button'; run.textContent = toolHttpText('Вызвать инструмент с параметром от LLM модели', 'Call tool with model arguments');
   let request;
   try {
     request = buildToolHttpRequest(tool, call);
@@ -3760,7 +3766,7 @@ function attachToolHttpRunner(row, input, call, turn) {
     const args = JSON.parse(call.function?.arguments || '{}');
     const substitutions = (tool.http.mappings || []).map(mapping => mapping.key + ' = ' + JSON.stringify(resolveToolTemplate(mapping.value, args)));
     const supplied = Object.entries(args).map(([key,value]) => key + ' = ' + JSON.stringify(value)).join(' · ');
-    preview.textContent = ToolLibrary.redact(toolHttpText('От модели: ', 'From model: ') + supplied + (substitutions.length ? '\n' + toolHttpText('В HTTP: ', 'In HTTP: ') + substitutions.join(' · ') : '') + '\n' + request.method + ' ' + request.url + (request.body ? '\n' + request.body : ''));
+    preview.textContent = ToolLibrary.redact(toolHttpText('От LLM модели: ', 'From model: ') + supplied + (substitutions.length ? '\n' + toolHttpText('В HTTP: ', 'In HTTP: ') + substitutions.join(' · ') : '') + '\n' + request.method + ' ' + request.url + (request.body ? '\n' + request.body : ''));
     input.httpPreview = preview.textContent;
     renderChatData(preview,input.httpPreview);
   }
@@ -3868,7 +3874,9 @@ function syncOpenAIToolControls() {
   state.textContent = t(enabled ? 'openaiToolsOn' : 'openaiToolsOff');
   state.classList.toggle('active', enabled);
   document.querySelectorAll('.tool-options select, .tool-options input, .tool-definitions input, .tool-definitions select, .tool-definitions textarea, .tool-definitions button, #openai-tool-builder .tool-add').forEach(field => { field.disabled = !enabled; });
-  document.getElementById('openai-forced-tool').disabled = !enabled || choice !== 'function';
+  const forced = document.getElementById('openai-forced-tool');
+  forced.disabled = !enabled || choice !== 'function';
+  forced.closest('.api-field').classList.toggle('parameter-inactive', forced.disabled);
   window.syncLibraryOverrides?.();
   document.querySelectorAll('.tool-definition').forEach(row => { if (row.mcpMetadata) row.querySelector('[data-tool-field="strict"]').disabled = true; });
   syncOpenAIPresetReadonly();
@@ -3889,6 +3897,15 @@ function setAutosaveStatus(id, message, type = 'saved') {
   el.className = `autosave-status ${type}`;
 }
 function validateOpenAIDraft() {
+  document.querySelectorAll('.tool-field-error').forEach(note => note.remove());
+  document.querySelectorAll('#openai-settings [aria-invalid="true"]').forEach(field => { field.removeAttribute('aria-invalid'); field.removeAttribute('aria-errormessage'); });
+  let toolError = false;
+  const showToolError = (field, message) => {
+    toolError = true;
+    const note = document.createElement('div'); note.className = 'tool-field-error'; note.id = 'tool-field-error-' + document.querySelectorAll('.tool-field-error').length; note.role = 'alert'; note.textContent = message;
+    if (field.matches('input,select,textarea')) { field.setAttribute('aria-invalid', 'true'); field.setAttribute('aria-errormessage', note.id); field.closest('.api-field').append(note); }
+    else field.after(note);
+  };
   const baseUrl = isServerOpenAIProfile() ? openAIConfig.baseUrl : document.getElementById('openai-base-url').value.trim();
   const model = document.getElementById('openai-model').value.trim();
   const temperature = document.getElementById('openai-temperature').value;
@@ -3905,12 +3922,23 @@ function validateOpenAIDraft() {
   if (!error && (n === '' || !Number.isInteger(Number(n)) || Number(n) < 1 || Number(n) > 128)) error = t('openaiInvalidN');
   if (!error && document.getElementById('openai-tools-enabled').checked) {
     const cfg = readOpenAIForm();
-    if (!cfg.tools.length || cfg.tools.some(tool => !/^[A-Za-z0-9_-]{1,64}$/.test(tool.name)) || (cfg.toolChoice === 'function' && (!/^[A-Za-z0-9_-]{1,64}$/.test(cfg.forcedTool) || !cfg.tools.some(tool => tool.name === cfg.forcedTool)))) error = t('openaiInvalidToolName');
-    if (!error && new Set(cfg.tools.map(tool => tool.name)).size !== cfg.tools.length) error = t('openaiDuplicateToolName');
+    if (!cfg.tools.length) showToolError(document.querySelector('.tool-library-picker'), t('openaiNoTools'));
+    else {
+      const names = document.querySelectorAll('.tool-definition [data-tool-field="name"]');
+      cfg.tools.forEach((tool, index) => {
+        if (!/^[A-Za-z0-9_-]{1,64}$/.test(tool.name)) showToolError(names[index], t('openaiInvalidToolName'));
+        else if (cfg.tools.filter(item => item.name === tool.name).length > 1) showToolError(names[index], t('openaiDuplicateToolName'));
+      });
+      if (cfg.toolChoice === 'function') {
+        const forced = document.getElementById('openai-forced-tool');
+        if (!/^[A-Za-z0-9_-]{1,64}$/.test(cfg.forcedTool)) showToolError(forced, t('openaiInvalidToolName'));
+        else if (!cfg.tools.some(tool => tool.name === cfg.forcedTool)) showToolError(forced, t('openaiForcedToolMissing'));
+      }
+    }
     if (!error) try { if (cfg.tools.some(tool => { const schema = JSON.parse(tool.parameters); return !schema || Array.isArray(schema) || typeof schema !== 'object' || schema.type !== 'object' || !schema.properties || Array.isArray(schema.properties) || typeof schema.properties !== 'object'; })) error = t('openaiInvalidToolSchema'); } catch (_) { error = t('openaiInvalidToolSchema'); }
   }
   setAutosaveStatus('openai-autosave-status', error, error ? 'error' : 'saved');
-  return !error;
+  return !error && !toolError;
 }
 let openAIAutosaveTimer;
 function scheduleOpenAIAutosave() {
@@ -5111,7 +5139,7 @@ function formatDebugSummary(contract) {
   const lines = [];
   const logic = readableAgentLogic(contract.agent_logic ?? contract.trace?.agent_logic);
   lines.push(`${t('debugStatus')}: ${t(info.status === 'pending' ? 'debugPending' : info.status === 'error' ? 'debugError' : 'debugSuccess')}`);
-  if (info.model) lines.push(`${lang === 'ru' ? 'Модель' : 'Model'}: ${info.model}`);
+  if (info.model) lines.push(`${lang === 'ru' ? 'LLM Модель' : 'Model'}: ${info.model}`);
   if (contract.response?.http_status != null) lines.push(`HTTP: ${contract.response.http_status} ${contract.response.status_text || ''}`.trim());
   if (info.finish_reason) lines.push(`${t('debugFinish')}: ${info.finish_reason}`);
   const elapsed = contract.timing?.elapsed_ms;
@@ -5660,7 +5688,7 @@ function renderToolChainControls() {
   pause.title = resumable ? toolHttpText('Продолжить','Resume') : toolHttpText('Пауза','Pause');
   pause.setAttribute('aria-label',pause.title);
   const status = document.getElementById('tool-chain-status');
-  const text = toolChain.active ? toolHttpText('Цикл ','Cycle ') + toolChain.cycles + '/' + CFG_TOOL_CHAIN_MAX_CYCLES + ' · ' + (toolChain.paused ? toolHttpText('Пауза','Paused') : toolChain.message || toolHttpText('Ожидание модели','Waiting for model')) : toolChain.message;
+  const text = toolChain.active ? toolHttpText('Цикл ','Cycle ') + toolChain.cycles + '/' + CFG_TOOL_CHAIN_MAX_CYCLES + ' · ' + (toolChain.paused ? toolHttpText('Пауза','Paused') : toolChain.message || toolHttpText('Ожидание LLM модели','Waiting for model')) : toolChain.message;
   if (status.textContent !== text) status.textContent = text;
   controls.title = text;
   document.body.dataset.toolChainActive = String(toolChain.active);
@@ -5684,7 +5712,7 @@ function advanceToolChain() {
     label = toolHttpText('Вызов ', 'Calling ') + missing.function.name;
   } else {
     button = [...turn.returnButtons].find(button => button.isConnected && !button.disabled);
-    label = toolHttpText('Вызов модели с результатами','Calling model with results');
+    label = toolHttpText('Вызов LLM модели с результатами','Calling model with results');
   }
   if (!button || button.disabled) { stopToolChain(toolHttpText('Шаг недоступен. Проверьте настройки инструмента.','Step unavailable. Check tool settings.')); return; }
   if (toolChain.scheduled?.button !== button) {
@@ -5719,8 +5747,8 @@ function syncToolReturnButtons(turn) {
     button.disabled = !ready;
     const preview = button.closest('.bubble')?.querySelector('.tool-model-request pre');
     if (preview) renderChatData(preview,toolModelRequestPreview(turn));
-    button.textContent = turn.toolCalls.length > 1 ? toolHttpText('Вызвать модель с результатами функций', 'Call model with function results') : toolHttpText('Вызвать модель с результатом функции', 'Call model with function result');
-    button.title = ready ? toolHttpText('Модель получит результат инструмента и продолжит ответ на исходный вопрос.', 'The model will receive the tool result and continue answering the original question.') : toolHttpText('Дождитесь результатов всех вызовов инструмента.', 'Wait for all tool call results.');
+    button.textContent = turn.toolCalls.length > 1 ? toolHttpText('Вызвать LLM модель с результатами функций', 'Call model with function results') : toolHttpText('Вызвать LLM модель с результатом функции', 'Call model with function result');
+    button.title = ready ? toolHttpText('LLM Модель получит результат инструмента и продолжит ответ на исходный вопрос.', 'The model will receive the tool result and continue answering the original question.') : toolHttpText('Дождитесь результатов всех вызовов инструмента.', 'Wait for all tool call results.');
   });
 }
 function showOpenAIToolResults(toolCalls, payload, assistantMessage, chatRow, config = openAIConfig) {
@@ -5763,14 +5791,14 @@ function showOpenAIToolResults(toolCalls, payload, assistantMessage, chatRow, co
       const code = document.createElement('pre'); code.textContent = input.value;
       renderChatData(code,input.value);
       details.append(summary,code);
-      const note = document.createElement('div'); note.className = 'tool-http-status'; note.textContent = toolHttpText('Результат получен от инструмента. Обратно модели пока не отправлен.', 'Received from the tool. Not sent back to the model.');
+      const note = document.createElement('div'); note.className = 'tool-http-status'; note.textContent = toolHttpText('Результат получен от инструмента. Обратно LLM модели пока не отправлен.', 'Received from the tool. Not sent back to the model.');
       const send = document.createElement('button'); send.type = 'button'; send.className = 'cfg-btn tool-action-button tool-return-button';
-      send.textContent = toolHttpText('Вызвать модель с результатом функции', 'Call model with function result');
+      send.textContent = toolHttpText('Вызвать LLM модель с результатом функции', 'Call model with function result');
       send.onclick = () => { if (pendingOpenAIToolTurn === turn) continueOpenAIWithToolResults(); };
       turn.results.set(call.id, { row:resultRow, note, content:input.value }); turn.returnButtons.add(send);
       const actions = document.createElement('div'); actions.className = 'tool-result-actions'; actions.append(send);
       const modelRequest = document.createElement('details'); modelRequest.className = 'tool-model-request';
-      const requestLabel = document.createElement('summary'); requestLabel.textContent = toolHttpText('Показать запрос модели', 'Show model request');
+      const requestLabel = document.createElement('summary'); requestLabel.textContent = toolHttpText('Показать запрос к LLM модели', 'Show request to the LLM model');
       const requestCode = document.createElement('pre'); modelRequest.append(requestLabel,requestCode);
       bubble.replaceChildren(heading,requestInfo,details,note,modelRequest,actions); if (copy) bubble.append(copy);
       syncToolReturnButtons(turn);
@@ -5814,11 +5842,11 @@ async function continueOpenAIWithToolResults() {
   const siteRow = appendMessage('site', '', 'Site · OpenAI');
   siteRow.dataset.openaiMessages = '[]';
   const siteBubble = siteRow.querySelector('.bubble');
-  const siteTitle = document.createElement('strong'); siteTitle.textContent = toolHttpText('Сайт → модель', 'Site → model');
+  const siteTitle = document.createElement('strong'); siteTitle.textContent = toolHttpText('Сайт → LLM модель', 'Site → model');
   const siteText = document.createElement('div'); siteText.textContent = toolHttpText('Продолжить ответ с результатами функций: ', 'Continue the answer with function results: ') + turn.toolCalls.map(call => call.function.name).join(' · ');
   const siteStatus = document.createElement('div'); siteStatus.className = 'tool-http-status'; siteStatus.setAttribute('role','status'); siteStatus.textContent = toolHttpText('Запрос отправляется…', 'Sending request…');
   const siteDetails = document.createElement('details'); siteDetails.className = 'tool-model-request';
-  const siteSummary = document.createElement('summary'); siteSummary.textContent = toolHttpText('Показать запрос модели', 'Show model request');
+  const siteSummary = document.createElement('summary'); siteSummary.textContent = toolHttpText('Показать запрос к LLM модели', 'Show request to the LLM model');
   const siteCode = document.createElement('pre'); renderChatData(siteCode,toolModelRequestPreview(turn)); siteDetails.append(siteSummary,siteCode);
   siteBubble.replaceChildren(siteTitle,siteText,siteDetails,siteStatus);
   const siteAvatar = siteRow.querySelector('.avatar'); siteAvatar.classList.add('http-avatar'); siteAvatar.setAttribute('aria-label',toolHttpText('Запрос сайта', 'Site request'));
@@ -5838,13 +5866,13 @@ async function continueOpenAIWithToolResults() {
     const calls = choice?.message?.tool_calls || [];
     const reasoning = openAIReasoning(choice?.message);
     const rawReply = openAIMessageText(choice?.message) || (calls.length ? calls.map(call => `${call.function?.name || 'function'} · ${call.id}`).join('\n') : reasoning ? openAIReasoningNotice() : '');
-    if (!rawReply) { stopToolChain(toolHttpText('Пустой ответ модели','Empty model response')); appendError(t('errEmptyMsg'), 'errEmpty'); return; }
-    siteStatus.textContent = toolHttpText('Ответ модели получен.', 'Model response received.');
+    if (!rawReply) { stopToolChain(toolHttpText('Пустой ответ LLM модели','Empty model response')); appendError(t('errEmptyMsg'), 'errEmpty'); return; }
+    siteStatus.textContent = toolHttpText('Ответ LLM модели получен.', 'Model response received.');
     toolMessages.forEach(message => {
       const result = turn.results.get(message.tool_call_id);
       if (!result) return;
       result.row.dataset.openaiMessages = JSON.stringify([message]);
-      result.note.textContent = toolHttpText('Результат передан модели. Ответ показан ниже.', 'Result sent to the model. Its response is shown below.');
+      result.note.textContent = toolHttpText('Результат передан LLM модели. Ответ показан ниже.', 'Result sent to the model. Its response is shown below.');
     });
     const legacyPayload = extractLegacyReplyPayload(rawReply, true);
     const reply = legacyPayload?.reply_html || rawReply;
@@ -5855,7 +5883,7 @@ async function continueOpenAIWithToolResults() {
     appendDebug(row, adaptOpenAIDebug(data, { endpoint: openAIRequestEndpoint(requestConfig), payload, status: res.status, statusText: res.statusText, elapsed }));
     if (calls.length) showOpenAIToolResults(calls, payload, choice.message, row, requestConfig); else resetOpenAIToolTurn();
   } catch (err) {
-    if (toolChain.active) stopToolChain(toolHttpText('Ошибка модели. Повторите шаг вручную.', 'Model error. Retry the step manually.'));
+    if (toolChain.active) stopToolChain(toolHttpText('Ошибка LLM модели. Повторите шаг вручную.', 'Model error. Retry the step manually.'));
     clearTimeout(timeoutId); hideTyping();
     appendError(err.name === 'AbortError' ? t('errTimeoutMsg') : err.message, err.name === 'AbortError' ? 'errTimeout' : 'errNetwork');
   } finally { toolChain.controller = null; clearTimeout(timeoutId); if (siteStatus.textContent === toolHttpText('Запрос отправляется…', 'Sending request…')) siteStatus.textContent = toolHttpText('Ответ не получен. Можно повторить вызов.', 'No response received. You can retry the call.'); isThinking = false; syncToolReturnButtons(turn); updateSendState(); }
@@ -5904,7 +5932,7 @@ async function sendOpenAIMessage(text) {
     const rawReply = openAIMessageText(choice?.message) || (toolCalls?.length ? toolCalls.map(call => `${call.function?.name || 'function'} · ${call.id}`).join('\n') : reasoning ? openAIReasoningNotice() : '');
     const legacyPayload = extractLegacyReplyPayload(rawReply, true);
     const reply = legacyPayload ? legacyPayload.reply_html || legacyPayload.text || rawReply : rawReply;
-    if (!reply && !legacyPayload) { stopToolChain(toolHttpText('Пустой ответ модели','Empty model response')); appendError(t('errEmptyMsg'), 'errEmpty'); return; }
+    if (!reply && !legacyPayload) { stopToolChain(toolHttpText('Пустой ответ LLM модели','Empty model response')); appendError(t('errEmptyMsg'), 'errEmpty'); return; }
     const elapsed = Math.round(performance.now() - started);
     const row = appendMessage('agent', reply, `OpenAI · ${requestConfig.model}`);
     row.dataset.openaiMessage = JSON.stringify(choice.message);
@@ -5918,7 +5946,7 @@ async function sendOpenAIMessage(text) {
     document.getElementById('openai-status-dot').className = 'status-dot online';
     document.getElementById('connection-summary-dot').className = 'status-dot online';
   } catch (err) {
-    if (toolChain.active) stopToolChain(toolHttpText('Ошибка модели. Повторите шаг вручную.', 'Model error. Retry the step manually.'));
+    if (toolChain.active) stopToolChain(toolHttpText('Ошибка LLM модели. Повторите шаг вручную.', 'Model error. Retry the step manually.'));
     clearTimeout(timeoutId); hideTyping();
     const isTimeout = err.name === 'AbortError';
     appendError(isTimeout ? t('errTimeoutMsg') : err.message, isTimeout ? 'errTimeout' : 'errNetwork');

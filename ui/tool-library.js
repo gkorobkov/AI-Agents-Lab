@@ -31,8 +31,8 @@
     if (auth && auth.placement !== 'none' && (!auth.name?.trim() || !auth.secretId)) throw new Error('Set the API-key field name and credential slot.');
     return schema;
   }
-  function save(record) {
-    validate(record.tool);
+  function save(record, draftOnly = false) {
+    if (!draftOnly) validate(record.tool);
     const item = clone(record);
     if (!item.id || item.builtin || presets.some(preset => preset.id === item.id)) item.id = newId();
     item.builtin = false; item.schemaVersion = 1;

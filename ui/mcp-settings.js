@@ -42,7 +42,7 @@
         const result=await client.call(tool.mcp.toolName,JSON.parse(call.function.arguments||'{}'),controller.signal);
         if(pendingOpenAIToolTurn!==turn)return;
         input.value=McpLibrary.redact(result);input.dispatchEvent(new Event('input',{bubbles:true}));
-        if(result.isError&&toolChain.active)stopToolChain(text('Инструмент вернул ошибку.','The tool returned an error.'));status.textContent=result.isError?text('Инструмент вернул ошибку. Проверьте результат перед отправкой модели.','The tool returned an error. Review it before sending.'):text('Результат получен. Можно отправить модели.','Result received. Ready to send to the model.');
+        if(result.isError&&toolChain.active)stopToolChain(text('Инструмент вернул ошибку.','The tool returned an error.'));status.textContent=result.isError?text('Инструмент вернул ошибку. Проверьте результат перед отправкой LLM модели.','The tool returned an error. Review it before sending.'):text('Результат получен. Можно отправить LLM модели.','Result received. Ready to send to the model.');
       }catch(error){if(toolChain.active)stopToolChain(text('Ошибка инструмента. Повторите шаг вручную.','Tool error. Retry the step manually.'));if(pendingOpenAIToolTurn===turn)status.textContent=McpLibrary.redact(error.name==='AbortError'?text('Вызов отменён или истекло время ожидания.','Call cancelled or timed out.'):error.message);}
       finally{await client.close().catch(()=>{});turn.controllers.delete(controller);run.disabled=pendingOpenAIToolTurn!==turn;input.disabled=pendingOpenAIToolTurn!==turn;syncToolReturnButtons(turn);}
     };

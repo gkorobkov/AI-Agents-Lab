@@ -32,7 +32,7 @@
   };
   window.testLibraryTool = async (id, prompt, onRequest) => {
     const tool = ToolLibrary.snapshot(id), config = {...clone(openAIConfig), apiKey:openAIApiKey};
-    if (!config.baseUrl || !config.model || (!isServerOpenAIProfile(config) && !config.apiKey)) throw new Error(text('Заполните настройки LLM: адрес, модель и ключ доступа.', 'Set the LLM endpoint, model and API key.'));
+    if (!config.baseUrl || !config.model || (!isServerOpenAIProfile(config) && !config.apiKey)) throw new Error(text('Заполните настройки LLM: адрес, LLM модель и ключ доступа.', 'Set the LLM endpoint, model and API key.'));
     const requestConfig = {...config, systemPrompt:'', toolsEnabled:true, tools:[tool], toolChoice:'function', forcedTool:tool.name, parallelToolCalls:false, n:1};
     const payload = buildOpenAIRequest(requestConfig, [], prompt);
     const headers = isServerOpenAIProfile(config) ? {'Content-Type':'application/json'} : {'Content-Type':'application/json',Authorization:'Bearer ' + config.apiKey};
