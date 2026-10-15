@@ -59,4 +59,4 @@ ui-build.cmd --no-increment
 
 Ручная проверка: пример → свой инструмент → вызов → экспорт/импорт → подключение к агенту → выполнение из чата; отдельно запустить экспортированный server.mjs и подключиться к нему из библиотеки. Проверять также 640 и 390 px, светлую тему, отмену вызова и ошибки аргументов.
 
-Основание реализации: [MCP transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), [MCP tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools), [официальный TypeScript SDK](https://ts.sdk.modelcontextprotocol.io/server).
+Основание реализации: [MCP transport](https://modelcontextprotocol.io/specification/latest), [MCP tools](https://modelcontextprotocol.io/specification/latest), [официальный TypeScript SDK](https://ts.sdk.modelcontextprotocol.io/server).

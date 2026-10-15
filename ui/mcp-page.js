@@ -32,8 +32,9 @@
   function renderPicker() {
     $('mcp-list').replaceChildren();
     lib.list().forEach(record=>{
-      const button=action(record.title,()=>select(record));button.dataset.id=record.id;
-      button.setAttribute('aria-current',String(record.id===draft.id));button.append(el('small',record.mode==='workshop'?'Конструктор · '+record.tools.length+' инструмент(а)':'Streamable HTTP'));$('mcp-list').append(button);
+      const isCopy=!record.builtin&&lib.list().some(item=>item.builtin&&item.title===record.title);
+      const button=action(record.title+(isCopy?' · моя копия':''),()=>select(record));button.dataset.id=record.id;
+      button.setAttribute('aria-current',String(record.id===draft.id));button.append(el('small',record.mode==='workshop'?(record.builtin?'Учебный пример':'Мой MCP')+' · '+record.tools.length+' инструмент(а)':'Streamable HTTP'));$('mcp-list').append(button);
     });
     const previous=$('mcp-tool-source').value;$('mcp-tool-source').replaceChildren();
     ToolLibrary.list().forEach(record=>{const option=el('option',record.title);option.value=record.id;$('mcp-tool-source').append(option);});
@@ -151,7 +152,7 @@
   $('mcp-test-tool').onchange=testArgs;
   $('call-mcp').onclick=()=>operation(async()=>{if(!client)throw new Error('Сначала проверьте MCP.');const result=await client.call($('mcp-test-tool').value,JSON.parse($('mcp-test-args').value),controller.signal);$('mcp-result').textContent=lib.redact(result);status(result.isError?'Инструмент вернул ошибку. Проверьте аргументы и обработчик.':'Вызов выполнен.',Boolean(result.isError));});
   $('stop-mcp').onclick=()=>controller?.abort();
-  $('mcp-add-agent').onclick=async()=>{try{if(typeof parent.addMcpTools!=='function')throw new Error('Откройте библиотеку внутри AI Agents Lab для подключения к агенту.');const saved=save();if(!saved)return;await operation(async()=>{const result=await connect();const added=parent.addMcpTools(saved,result.tools);status(added?'Инструменты MCP подключены. Настройки агента открыты.':'Не удалось подключить инструменты.',!added);});}catch(error){status(lib.redact(error.message),true);}};
+  $('mcp-add-agent').onclick=async()=>{try{if(typeof parent.addMcpTools!=='function')throw new Error('Откройте библиотеку внутри AI Agents Lab для подключения к агенту.');const saved=draft.builtin&&JSON.stringify(read())===original?read():save();if(!saved)return;await operation(async()=>{const result=await connect();const added=parent.addMcpTools(saved,result.tools);status(added?'Инструменты MCP подключены. Настройки агента открыты.':'Не удалось подключить инструменты.',!added);});}catch(error){status(lib.redact(error.message),true);}};
   $('export-mcp').onclick=()=>{try{const record=read();lib.validate(record);download(record.name+'.json',JSON.stringify(lib.clean(record),null,2));status('Определение MCP скачано. Токен в файл не включён.');}catch(error){status(error.message,true);}};
   $('download-server').onclick=()=>operation(async()=>{const record=read();lib.validate(record);download('server.mjs',await McpExport.server(record),'text/javascript');status('Сервер скачан. Команды запуска — ниже.');});
   $('import-mcp').onclick=()=>$('mcp-file').click();

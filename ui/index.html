@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.3.14';
+const APP_VERSION = '1.3.15';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -54,7 +54,7 @@ const CFG_OPENAI_PROVIDERS = [
     "name": "NeuralDeep LLM Provider",
     "baseUrl": "https://api.neuraldeep.ru/v1",
     "model": "qwen3.6-35b-a3b",
-    "systemPrompt": "Ты — ИИ-агент для чата. Отвечай только в понятном Markdown/HTML-совместимом стиле, как в Telegram: короткие абзацы, ясные заголовки, списки и факты. Используй H2 для заголовков, короткие списки через \"-\" или \"1.\". Выделяй важное жирным **текстом**. Не используй JSON, таблицы и длинные блоки кода. Не пиши служебные комментарии и не повторяй шаблоны. Отвечай на русском языке, если не попросили иначе. Делай ответ компактным, читабельным и красиво оформленным для чата.",
+    "systemPrompt": "Ты — ИИ-агент для чата. Отвечай только в понятном Markdown/HTML-совместимом стиле, как в Telegram: короткие абзацы, ясные заголовки, списки и факты. Используй H2 для заголовков, короткие списки через \"-\" или \"1.\". Выделяй важное жирным **текстом**. Не используй JSON, таблицы и длинные блоки кода. Отвечай на русском языке, если не попросили иначе. Делай ответ компактным, читабельным и красиво оформленным для чата. Если у тебя спрашивают про возможности или что ты умеешь или расскажи о себе и если у тебя есть инструменты, то расскажи о них, но не используй их без запроса. Не придумывай факты и не давай медицинские, юридические или финансовые советы. Если для ответа на вопрос можно использовать инструмент то вызови его.",
     "temperature": 0.7,
     "topP": 1,
     "maxCompletionTokens": 10000,
@@ -451,6 +451,9 @@ const CFG_OPENAI_PROVIDERS = [
   .api-validation { min-height: 29px; padding: 7px 10px; border-left: 2px solid var(--border); background: var(--bg); color: var(--text-muted); font: 9px var(--font-mono); margin: 0; grid-column: 2 / 3; }
   .api-validation.ok { border-color: var(--accent); color: var(--accent); }
   .api-validation.error { border-color: var(--error); color: var(--error); }
+  #openai-tool-builder.has-error { border-color:var(--error); }
+  #composer-validation { flex:none; margin:0; padding:5px 14px; color:var(--error); background:var(--surface); font:11px/1.5 var(--font-ui); overflow-wrap:anywhere; }
+  body:not([data-transport="openai"]) #composer-validation { display:none; }
   .tool-field-error { color:var(--error); font:11px/1.5 var(--font-ui); margin-top:5px; }
   #openai-settings [aria-invalid="true"] { border-color:var(--error); }
   .api-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; grid-column: 3; }
@@ -2252,6 +2255,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
   </div>
 </div>
 
+<div id="composer-validation" role="alert" hidden></div>
 <div id="input-area">
   <div class="composer-destination" id="composer-destination" role="status" aria-live="polite"><span class="composer-destination-copy"><strong class="composer-destination-name" id="composer-destination-name">Webhook</strong><span class="composer-destination-detail" id="composer-destination-detail"></span></span></div>
   <textarea id="msg-input" rows="1" data-i18n-placeholder="inputPlaceholder"
@@ -2989,18 +2993,6 @@ CFG_TRANSPORT_ORDER.forEach(mode => {
   if (row) document.getElementById('transport-select-menu').appendChild(row);
 });
 const CFG_OPENAI_EMPTY_TOOL = { name: '', description: '', parameters: '{\n  "type": "object",\n  "properties": {},\n  "required": [],\n  "additionalProperties": false\n}', strict: false };
-const CFG_OPENAI_LEGACY_TOOL = { name: 'get_weather', description: 'Get the weather for a location', parameters: '{\n  "type": "object",\n  "properties": {}\n}', strict: false };
-function getOpenAIStarterTools() {
-  return [
-    { name: 'geocode_city', description: lang === 'ru' ? 'Найти город по названию и вернуть нормализованные город, страну, широту и долготу. Используйте перед запросом погоды или когда нужны координаты.' : 'Find a city by name and return the normalized city, country, latitude, and longitude. Use before weather or whenever coordinates are required.', parameters: JSON.stringify({ type: 'object', properties: { name: { type: 'string', description: lang === 'ru' ? 'Название города, который нужно найти.' : 'Name of the city to find.' } }, required: ['name'], additionalProperties: false }, null, 2), strict: true },
-    { name: 'get_current_weather', description: lang === 'ru' ? 'Вернуть текущую погоду по координатам: температуру, скорость ветра, код погоды и местное время наблюдения.' : 'Return current weather for coordinates, including temperature, wind speed, weather code, and local observation time.', parameters: JSON.stringify({ type: 'object', properties: { latitude: { type: 'number', description: lang === 'ru' ? 'Широта города в десятичных градусах.' : 'City latitude in decimal degrees.' }, longitude: { type: 'number', description: lang === 'ru' ? 'Долгота города в десятичных градусах.' : 'City longitude in decimal degrees.' } }, required: ['latitude', 'longitude'], additionalProperties: false }, null, 2), strict: true }
-  ];
-}
-function isLegacyOpenAITool(tool) {
-  if (!tool || tool.name !== CFG_OPENAI_LEGACY_TOOL.name || tool.description !== CFG_OPENAI_LEGACY_TOOL.description || Boolean(tool.strict)) return false;
-  try { const schema = JSON.parse(tool.parameters); return schema?.type === 'object' && schema.properties && !Object.keys(schema.properties).length && Object.keys(schema).every(key => ['type', 'properties'].includes(key)); }
-  catch (_) { return false; }
-}
 function normalizeOpenAIBaseUrl(baseUrl, serverProfile) {
   const value = String(baseUrl || '').trim().replace(/\/+$/, '');
   return value;
@@ -3149,10 +3141,8 @@ function normalizeOpenAIConfig(value = {}) {
     merged.parameterDefaults = Object.fromEntries(Object.keys(CFG_OPENAI_PARAMETER_FIELDS).map(key => [key, merged[key]]));
   }
   merged.baseUrl = normalizeOpenAIBaseUrl(merged.baseUrl);
-  if (!Array.isArray(merged.tools)) merged.tools = getOpenAIStarterTools();
-  else if (merged.tools.length === 1 && isLegacyOpenAITool(merged.tools[0])) merged.tools = getOpenAIStarterTools();
+  if (!Array.isArray(merged.tools)) merged.tools = [];
   else merged.tools = merged.tools.map(tool => ({ ...CFG_OPENAI_EMPTY_TOOL, ...tool }));
-  if (merged.forcedTool === 'get_weather' && merged.tools.some(tool => tool.name === 'geocode_city')) merged.forcedTool = 'geocode_city';
   return merged;
 }
 let openAIConfig = (() => {
@@ -3900,8 +3890,13 @@ function validateOpenAIDraft() {
   document.querySelectorAll('.tool-field-error').forEach(note => note.remove());
   document.querySelectorAll('#openai-settings [aria-invalid="true"]').forEach(field => { field.removeAttribute('aria-invalid'); field.removeAttribute('aria-errormessage'); });
   let toolError = false;
+  const toolMessages = [];
+  const builder = document.getElementById('openai-tool-builder');
   const showToolError = (field, message) => {
     toolError = true;
+    toolMessages.push(message);
+    const details = field.closest('.tool-definition');
+    if (details?.tagName === 'DETAILS') details.open = true;
     const note = document.createElement('div'); note.className = 'tool-field-error'; note.id = 'tool-field-error-' + document.querySelectorAll('.tool-field-error').length; note.role = 'alert'; note.textContent = message;
     if (field.matches('input,select,textarea')) { field.setAttribute('aria-invalid', 'true'); field.setAttribute('aria-errormessage', note.id); field.closest('.api-field').append(note); }
     else field.after(note);
@@ -3935,8 +3930,14 @@ function validateOpenAIDraft() {
         else if (!cfg.tools.some(tool => tool.name === cfg.forcedTool)) showToolError(forced, t('openaiForcedToolMissing'));
       }
     }
-    if (!error) try { if (cfg.tools.some(tool => { const schema = JSON.parse(tool.parameters); return !schema || Array.isArray(schema) || typeof schema !== 'object' || schema.type !== 'object' || !schema.properties || Array.isArray(schema.properties) || typeof schema.properties !== 'object'; })) error = t('openaiInvalidToolSchema'); } catch (_) { error = t('openaiInvalidToolSchema'); }
+    if (!error) try { if (cfg.tools.some(tool => { const schema = JSON.parse(tool.parameters); return !schema || Array.isArray(schema) || typeof schema !== 'object' || schema.type !== 'object' || !schema.properties || Array.isArray(schema.properties) || typeof schema.properties !== 'object'; })) showToolError(document.getElementById('openai-tool-definitions'), t('openaiInvalidToolSchema')); } catch (_) { showToolError(document.getElementById('openai-tool-definitions'), t('openaiInvalidToolSchema')); }
   }
+  builder.classList.toggle('has-error', toolError);
+  if (toolError) builder.open = true;
+  const composerError = document.getElementById('composer-validation');
+  const message = [error, ...new Set(toolMessages)].filter(Boolean).join(' ');
+  if (composerError.textContent !== message) composerError.textContent = message;
+  composerError.hidden = !message;
   setAutosaveStatus('openai-autosave-status', error, error ? 'error' : 'saved');
   return !error && !toolError;
 }

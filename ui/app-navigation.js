@@ -73,7 +73,7 @@
       content.append(frame); panels[id].frame = frame;
     }
   });
-  panels.chat.content.append(document.getElementById('messages'), document.getElementById('input-area'));
+  panels.chat.content.append(document.getElementById('messages'), document.getElementById('composer-validation'), document.getElementById('input-area'));
   document.querySelectorAll('.transport-settings-panel').forEach(panel => panels.settings.content.append(panel));
   const scrollable = [document.getElementById('messages'), ...document.querySelectorAll('.transport-settings-panel')];
   scrollable.forEach(el => el.addEventListener('scroll', () => {
