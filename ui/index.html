@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.3.15';
+const APP_VERSION = '1.4.0';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -1887,10 +1887,12 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
   <span class="app-nav-divider" aria-hidden="true"></span>
   <a class="app-nav-link" href="?page=help" data-app-page="help" data-i18n-aria-label="navHelp" aria-label="Помощь"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5a2.5 2.5 0 1 1 4 2c-1 .6-1.5 1-1.5 2"/><path d="M12 16h.01"/></svg><span data-i18n="navHelp">Помощь</span></a>
   <span class="app-nav-divider" aria-hidden="true"></span>
+  <a class="app-nav-link" href="?page=docs" data-app-page="docs" data-i18n-aria-label="navDocs" aria-label="Доки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v16M12 5C9 3 5 3 2 4v16c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z"/></svg><span data-i18n="navDocs">Доки</span></a>
+  <span class="app-nav-divider" aria-hidden="true"></span>
   <a class="app-nav-link" href="?page=labs" data-app-page="labs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v7l-6 9a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2l-6-9V3M8 15h8"/></svg><span data-i18n="navLabs">Лабы</span></a>
 <span class="app-nav-subpage" id="app-nav-documentation" hidden><span aria-hidden="true">›</span><span aria-current="page" data-i18n="drawerDocsSection">Documentation</span></span>
   <span class="app-nav-divider" aria-hidden="true"></span>
-  <a class="app-nav-link" id="tool-library-btn" href="?page=tools" data-app-page="tools" data-i18n-title="toolLibrary" title="Tool library"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m2 1 3 2 1 3 4.5 4.5-1 1L5 7 2 6 1 3Zm12 13 1.5-1.5 7 6.5a2.1 2.1 0 0 1-3 3L13 15.5Z"/><path fill-rule="evenodd" d="M22.5 2a6 6 0 0 0-8 7.5L2 19a2.4 2.4 0 0 0 3 3L16 11.5A6 6 0 0 0 23 4l-4 4-3-3 4-4a6 6 0 0 1 2.5 1ZM4.8 19.8a1 1 0 1 0-1.4 1.4 1 1 0 0 0 1.4-1.4Z"/></svg><span data-i18n="navTools">Инструменты</span></a>
+  <a class="app-nav-link" id="tool-library-btn" href="?page=tools" data-app-page="tools" data-i18n-title="toolLibrary" title="Tool library"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m2 1 3 2 1 3 4.5 4.5-1 1L5 7 2 6 1 3Zm12 13 1.5-1.5 7 6.5a2.1 2.1 0 0 1-3 3L13 15.5Z"/><path fill-rule="evenodd" d="M22.5 2a6 6 0 0 0-8 7.5L2 19a2.4 2.4 0 0 0 3 3L16 11.5A6 6 0 0 0 23 4l-4 4-3-3 4-4a6 6 0 0 1 2.5 1ZM4.8 19.8a1 1 0 1 0-1.4 1.4 1 1 0 0 0 1.4-1.4Z"/></svg><span data-i18n="navTools">Tools</span></a>
   <span class="app-nav-divider" aria-hidden="true"></span>
   <a class="app-nav-link" href="?page=mcp" data-app-page="mcp" title="Библиотека MCP"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="6" rx="1"/><rect x="2" y="16" width="7" height="6" rx="1"/><rect x="15" y="16" width="7" height="6" rx="1"/><path d="M12 8v4M5.5 16v-4h13v4"/></svg><span>MCP</span></a>
   <span class="app-nav-divider" aria-hidden="true"></span>
@@ -2041,7 +2043,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
     <button class="cfg-btn profile-action" id="openai-profile-delete" type="button" onclick="deleteOpenAIProfile()" data-i18n-title="profileDeleteAction" data-i18n-aria-label="profileDeleteAction" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg></button>
   </div>
   <div class="openai-section-label" data-i18n="openaiApiSection">OpenAI API request</div>
-  <a class="api-docs-link" href="documentation.html#openai-api" data-app-beside="settings" data-i18n="openaiDocsLink">OpenAI API: пояснения и справочник →</a>
+  <a class="api-docs-link" href="docs.html#openai-api" data-app-beside="settings" data-i18n="openaiDocsLink">OpenAI API: пояснения и справочник →</a>
   <label class="api-field"><span data-i18n="openaiBaseUrl">Base URL</span><input class="api-input" id="openai-base-url" type="text" inputmode="url" value="" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"></label>
   <label class="api-field"><span data-i18n="openaiApiKey">API key · saved in this browser</span><div class="api-secret-wrap"><input class="api-input credential-input" id="openai-api-key" type="text" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="api-eye" id="openai-eye-btn" type="button" onclick="toggleApiKeyVisibility()" data-i18n-title="openaiShowKey" data-i18n-aria-label="openaiShowKey" title="Show key" aria-label="Show key"><svg id="openai-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></label>
   <label class="api-field"><span data-i18n="openaiModel">Model</span><input class="api-input" id="openai-model" type="text" value="qwen3.8-27b" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true"></label>
@@ -2160,7 +2162,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
   <!-- About -->
   <div class="drawer-section">
     <div class="drawer-section-title" data-i18n="drawerDocsSection">Documentation</div>
-    <a href="/documentation.html" class="drawer-link">
+    <a href="docs.html" class="drawer-link" data-app-page="docs">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/>
       </svg>
@@ -2320,6 +2322,7 @@ const i18n = {
     toolsExpandAll: 'Expand all functions',
     openaiDocsLink: 'OpenAI API: explanation and reference →',
     navHelp: 'Help',
+    navDocs: 'Docs',
     navLabs: 'Labs',
     navChat: 'Chat',
     navTools: 'Tools',
@@ -2555,9 +2558,10 @@ const i18n = {
     toolsExpandAll: 'Развернуть все функции',
     openaiDocsLink: 'OpenAI API: пояснения и справочник →',
     navHelp: 'Помощь',
+    navDocs: 'Доки',
     navLabs: 'Лабы',
     navChat: 'Чат',
-    navTools: 'Инструменты',
+    navTools: 'Tools',
     btnNewSession:      'Новая сессия',
     btnNewSessionTitle: 'Начать новую сессию (новый ID разговора)',
     btnClear:           'Очистить',

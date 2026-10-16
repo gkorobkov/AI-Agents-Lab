@@ -13,10 +13,78 @@
   }
   function deleteAction(label, fn) { const button = action('', fn); button.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>'; button.title = label; button.setAttribute('aria-label', label); return button; }
   function action(text,fn) { const button=el('button',text);button.type='button';button.onclick=fn;return button; }
-  function invalidate() {
+  function messageDetails(label,message) {
+    const details=el('details'), summary=el('summary',label), pre=el('pre',lib.redact(message));
+    const copy=action('Скопировать JSON',async()=>{
+      try{await navigator.clipboard.writeText(pre.textContent);copy.textContent='Скопировано';}
+      catch(_){copy.textContent='Выделите и скопируйте текст ниже';details.open=true;}
+    });
+    copy.className='small';details.append(summary,copy,pre);return details;
+  }
+  function renderExchange() {
+    if(!draft)return;
+    const remote=draft.mode==='remote', name=$('mcp-edit-name').value.trim();
+    let destination='Локальный MCP-обработчик · в этой вкладке';
+    if(remote) {
+      try{const url=new URL($('mcp-url').value);url.username='';url.password='';url.search='';url.hash='';destination='HTTP POST → '+url.href;}
+      catch(_){destination='HTTP POST → укажите адрес MCP';}
+    }
+    $('mcp-route').textContent=lib.redact('MCP-клиент · AI Agents Lab → '+destination);
+    $('mcp-route-note').textContent=remote?'Каждое сообщение отправляется POST-запросом на адрес MCP из раздела 01. Ответ приходит в JSON или в потоке SSE. Параметры URL и данные авторизации здесь не отображаются.':'Обмен MCP выполняется внутри браузера: сетевого подключения к MCP-серверу нет. У HTTP-инструмента может быть отдельный реальный запрос к внешнему API.';
+    $('mcp-name-flow').replaceChildren();
+    const flow=$('mcp-name-flow');
+    if(remote)flow.append(el('span','Внешний сервер → ответ initialize →'),el('code','result.serverInfo.name'));
+    else flow.append(el('span','Настройка name'),el('code',lib.redact(name||'—')),el('span','→ ответ initialize →'),el('code','result.serverInfo.name'));
+    $('mcp-name-note').textContent=remote?'У внешнего сервера serverInfo.name приходит из его ответа и может отличаться от имени в библиотеке. Имя в библиотеке используется также для имени скачиваемого JSON-файла. Адрес назначения задаётся отдельно в поле «Адрес MCP».':'В учебном стенде имя из раздела 01 подставляется в result.serverInfo.name ответа initialize и показывается в статусе готовности. Оно также задаёт имя скачиваемого JSON-файла. Имя идентифицирует сервер; это не URL.';
+    const groups=[];
+    for(const entry of trace) {
+      if(entry.direction==='request')groups.push({request:entry.message});
+      else if(groups.length)groups[groups.length-1].response=entry.message;
+    }
+    const descriptions={
+      initialize:['Знакомство','Клиент сообщает свою версию протокола и возможности. Сервер возвращает согласованную версию, возможности и сведения о себе. Это начало подключения.'],
+      'notifications/initialized':['Готовность клиента','Клиент сообщает, что знакомство завершено. Это уведомление без id: JSON-RPC ответ на него не нужен.'],
+      'tools/list':['Каталог инструментов','Клиент запрашивает имена, описания и inputSchema аргументов. Сервер возвращает каталог; сами инструменты ещё не выполняются.'],
+      'tools/call':['Выполнение инструмента','Клиент передаёт имя выбранного инструмента и arguments. Сервер выполняет обработчик и возвращает content с результатом или ошибкой.']
+    };
+    const render=(host,items,methods)=>{
+      const opened=new Set([...host.querySelectorAll('details[open]')].map(details=>details.querySelector('summary').textContent));
+      host.replaceChildren();
+      if(!items.length) {
+        const hint=el('p','Схема до запуска · реальные сообщения появятся после нажатия кнопки.');hint.className='hint';host.append(hint);
+        methods.forEach((method,index)=>{
+          const step=el('article');step.className='mcp-step preview';
+          step.append(el('strong',(index+1)+'. '+method+' · '+descriptions[method][0]),el('p',descriptions[method][1]));host.append(step);
+        });return;
+      }
+      items.forEach((group,index)=>{
+        const {request,response}=group, method=request.method, info=descriptions[method]||[method,'Сообщение MCP.'];
+        const step=el('article');step.className='mcp-step'+(response?.error?' error':'');
+        step.append(el('strong',(index+1)+'. '+method+' · '+info[0]),el('p',info[1]));
+        step.append(messageDetails('Клиент → сервер · '+(request.id===undefined?'уведомление':'запрос #'+request.id),request));
+        if(request.id===undefined) {
+          step.append(el('p',response?(remote?'HTTP 202: сервер принял уведомление. Это подтверждение доставки, а не JSON-RPC ответ.':'Локальный обработчик принял уведомление. JSON-RPC ответа и HTTP-запроса нет.'):controller?'Уведомление отправлено; ожидаем завершения передачи.':'Доставка уведомления не подтверждена. Причина — в сообщении состояния ниже.'));
+        } else if(response) {
+          if(method==='initialize'&&response.result?.serverInfo) {
+            const identity=el('p');identity.className='mcp-server-identity';
+            identity.append(el('span','Сервер представился: result.serverInfo.name = '),el('code',lib.redact(response.result.serverInfo.name)));step.append(identity);
+          }
+          if(method==='tools/list'&&Array.isArray(response.result?.tools))step.append(el('p','Получено инструментов на этой странице: '+response.result.tools.length+'.'+(response.result.nextCursor?' Клиент запрашивает следующую страницу.':'')));
+          step.append(messageDetails('Сервер → клиент · '+(response.error?'ошибка':'ответ')+' #'+request.id,response));
+        } else step.append(el('p',controller?'Ответ ещё не получен…':'Ответ не получен. Причина — в сообщении состояния ниже; отправленный запрос сохранён.'));
+        step.querySelectorAll('details').forEach(details=>{details.open=opened.has(details.querySelector('summary').textContent);});
+        host.append(step);
+      });
+    };
+    render($('mcp-connect-exchange'),groups.filter(group=>group.request.method!=='tools/call'),['initialize','notifications/initialized','tools/list']);
+    render($('mcp-call-exchange'),groups.filter(group=>group.request.method==='tools/call'),['tools/call']);
+  }
+  function invalidate(changed=true) {
     if(client)client.close().catch(()=>{});client=null;
     $('call-mcp').disabled=true;$('mcp-test-tool').disabled=true;
-    $('connection-status').textContent='Настройки изменены. Проверьте MCP заново.';
+    $('mcp-test-tool').replaceChildren();
+    trace=[];$('mcp-trace').textContent='—';$('mcp-result').textContent='—';renderExchange();
+    $('connection-status').textContent=changed?'Настройки изменены. Нажмите «Получить инструменты», чтобы обновить список.':'Нажмите «Получить инструменты», чтобы выбрать инструмент для вызова.';
   }
   function read() {
     const record={...clone(draft),title:$('mcp-edit-title').value.trim(),name:$('mcp-edit-name').value.trim(),description:$('mcp-description').value.trim(),url:$('mcp-url').value.trim()};
@@ -47,8 +115,8 @@
     const description=input('Что делает инструмент',tool.description,'textarea');description.control.dataset.description='';description.control.required=true;description.control.rows=2;
     row.append(name.host,description.host);
     const args=el('div');args.className='mcp-arguments';row.append(el('strong','Аргументы'),args);
-    const advanced=el('details');advanced.append(el('summary','JSON Schema · расширенное редактирование'));
-    const schema=input('Схема аргументов',JSON.stringify(tool.inputSchema,null,2),'textarea','code');schema.control.dataset.schema='';schema.control.rows=8;advanced.append(schema.host);
+    const advanced=el('details');advanced.append(el('summary','Схема аргументов · JSON Schema'));
+    const schema=input('',JSON.stringify(tool.inputSchema,null,2),'textarea','code');schema.control.setAttribute('aria-label','Схема аргументов · JSON Schema');schema.control.dataset.schema='';schema.control.rows=8;advanced.append(schema.host);
     function syncSchema() {
       try {
         const properties={}, required=[];
@@ -97,15 +165,20 @@
   }
   function select(record,force=false) {
     if(!force&&$('mcp-dirty').classList.contains('dirty')&&!confirm('Перейти к другому MCP и отменить несохранённые изменения?'))return;
-    invalidate();draft=clone(record);$('mcp-tools').replaceChildren();
+    invalidate(false);draft=clone(record);$('mcp-tools').replaceChildren();
     $('mcp-title').textContent=draft.title;$('mcp-kind').textContent=draft.builtin?'УЧЕБНЫЙ ПРИМЕР':draft.mode==='remote'?'ПОДКЛЮЧЕНИЕ':'СВОЙ MCP';
     $('mcp-edit-title').value=draft.title;$('mcp-edit-name').value=draft.name;$('mcp-description').value=draft.description;$('mcp-url').value=draft.url||'';$('mcp-token').value='';
     $('remote-fields').hidden=draft.mode!=='remote';$('mcp-url').required=draft.mode==='remote';
     $('builder-section').hidden=draft.mode!=='workshop';$('server-export').hidden=draft.mode!=='workshop';
     $('mcp-mode-note').textContent=draft.mode==='workshop'?'Учебный стенд в браузере: обмен MCP и обработчики выполняются локально. Это не опубликованный сервер. Шаблон возвращает ваш текст; HTTP-инструменты делают реальные запросы.':'Настоящий MCP-сервер: браузер отправляет initialize, tools/list и tools/call по указанному адресу.';
-    (draft.tools||[]).forEach(toolEditor);$('delete-mcp').hidden=draft.builtin;$('save-mcp').textContent=draft.builtin?'Сохранить копию':'Сохранить MCP';
+    (draft.tools||[]).forEach(toolEditor);
+    $('mcp-editor').querySelectorAll('input,textarea').forEach(control=>{if(control.type==='checkbox')control.disabled=Boolean(draft.builtin);else control.readOnly=Boolean(draft.builtin);});
+    $('mcp-editor').querySelectorAll('select').forEach(control=>{control.disabled=Boolean(draft.builtin);});
+    $('mcp-editor').querySelectorAll('button').forEach(button=>{button.hidden=Boolean(draft.builtin);});
+    $('builder-section').querySelector('.hint').textContent=draft.builtin?'Учебный пример доступен только для чтения. Текст можно выделить и скопировать. Чтобы изменить настройки, сохраните копию.':'Задайте имя, аргументы и ответ. В шаблоне ответа {{name}} подставляет аргумент name. Для настоящего HTTP-запроса добавьте инструмент из библиотеки.';
+    $('delete-mcp').hidden=draft.builtin;$('save-mcp').textContent=draft.builtin?'Сохранить копию':'Сохранить MCP';
     $('mcp-trace').textContent='—';$('mcp-result').textContent='—';$('mcp-test-tool').replaceChildren();trace=[];
-    original=JSON.stringify(read());dirty();renderPicker();status('');
+    original=JSON.stringify(read());dirty();renderPicker();renderExchange();status('');
   }
   function save() {
     if(!$('mcp-form').reportValidity())return null;
@@ -123,7 +196,7 @@
     const record=read();lib.validate(record);
     if(record.mode==='remote'&&$('mcp-token').value){lib.setToken(record,$('mcp-token').value);$('mcp-token').value='';$('mcp-token').placeholder='Токен задан';}
     if(client)await client.close();trace=[];
-    client=new McpClient(record,(direction,message)=>{trace.push({direction,message});if(trace.length>40)trace.shift();$('mcp-trace').textContent=lib.redact(trace);});
+    client=new McpClient(record,(direction,message)=>{trace.push({direction,message});if(trace.length>40)trace.shift();$('mcp-trace').textContent=lib.redact(trace);renderExchange();});
     const result=await client.connect(controller.signal);
     $('mcp-test-tool').replaceChildren();result.tools.forEach(tool=>{const option=el('option',tool.name);option.value=tool.name;$('mcp-test-tool').append(option);});
     $('mcp-test-tool').disabled=!result.tools.length;
@@ -132,13 +205,13 @@
   }
   function testArgs() {
     const schema=client?.tools?.find(tool=>tool.name===$('mcp-test-tool').value)?.inputSchema;if(!schema)return;
-    const sample=spec=>spec.default??spec.enum?.[0]??(spec.type==='number'||spec.type==='integer'?Math.max(0,spec.minimum??0):spec.type==='boolean'?false:spec.type==='array'?[]:spec.type==='object'?{}:'Студент');
+    const sample=spec=>spec.default??spec.enum?.[0]??(spec.type==='number'||spec.type==='integer'?Math.max(0,spec.minimum??0):spec.type==='boolean'?false:spec.type==='array'?[]:spec.type==='object'?{}:'Пользователь');
     $('mcp-test-args').value=JSON.stringify(Object.fromEntries(Object.entries(schema.properties||{}).map(([key,spec])=>[key,sample(spec)])),null,2);
   }
   async function operation(fn) {
     if(controller)return;controller=new AbortController();busy(true);
     try{await fn();}catch(error){status(lib.redact(error.name==='AbortError'?'Вызов остановлен или превышено время ожидания.':error.message),true);if(client&&!client.initialized){await client.close().catch(()=>{});client=null;}}
-    finally{controller=null;busy(false);}
+    finally{controller=null;busy(false);renderExchange();}
   }
   $('mcp-editor').addEventListener('input',()=>{invalidate();dirty();});$('mcp-editor').addEventListener('change',dirty);
   $('mcp-form').onsubmit=event=>{event.preventDefault();try{save();}catch(error){status(lib.redact(error.message),true);}};
@@ -150,7 +223,7 @@
   $('delete-mcp').onclick=()=>{if(confirm('Удалить этот MCP из библиотеки?'))try{lib.remove(draft.id);select(lib.builtin(),true);}catch(error){status(error.message,true);}};
   $('connect-mcp').onclick=()=>operation(async()=>{if(!$('mcp-form').reportValidity())return;await connect();status('Получен список инструментов. Теперь выполните вызов.');});
   $('mcp-test-tool').onchange=testArgs;
-  $('call-mcp').onclick=()=>operation(async()=>{if(!client)throw new Error('Сначала проверьте MCP.');const result=await client.call($('mcp-test-tool').value,JSON.parse($('mcp-test-args').value),controller.signal);$('mcp-result').textContent=lib.redact(result);status(result.isError?'Инструмент вернул ошибку. Проверьте аргументы и обработчик.':'Вызов выполнен.',Boolean(result.isError));});
+  $('call-mcp').onclick=()=>operation(async()=>{if(!client)throw new Error('Сначала нажмите «Получить инструменты».');const result=await client.call($('mcp-test-tool').value,JSON.parse($('mcp-test-args').value),controller.signal);$('mcp-result').textContent=lib.redact(result);status(result.isError?'Инструмент вернул ошибку. Проверьте аргументы и обработчик.':'Вызов выполнен.',Boolean(result.isError));});
   $('stop-mcp').onclick=()=>controller?.abort();
   $('mcp-add-agent').onclick=async()=>{try{if(typeof parent.addMcpTools!=='function')throw new Error('Откройте библиотеку внутри AI Agents Lab для подключения к агенту.');const saved=draft.builtin&&JSON.stringify(read())===original?read():save();if(!saved)return;await operation(async()=>{const result=await connect();const added=parent.addMcpTools(saved,result.tools);status(added?'Инструменты MCP подключены. Настройки агента открыты.':'Не удалось подключить инструменты.',!added);});}catch(error){status(lib.redact(error.message),true);}};
   $('export-mcp').onclick=()=>{try{const record=read();lib.validate(record);download(record.name+'.json',JSON.stringify(lib.clean(record),null,2));status('Определение MCP скачано. Токен в файл не включён.');}catch(error){status(error.message,true);}};

@@ -21,7 +21,7 @@
       return;
     }
     const file = url.pathname.split('/').pop().replace(/\.html$/, '');
-    if (!['index', 'labs', 'documentation', 'tools', 'mcp', 'help', ''].includes(file) || url.pathname === location.pathname && url.hash) return;
+    if (!['index', 'labs', 'docs', 'documentation', 'tools', 'mcp', 'help', ''].includes(file) || url.pathname === location.pathname && url.hash) return;
     event.preventDefault();
     if (link.dataset.openBeside) {
       parent.appWorkspace.openBeside(link.dataset.openBeside, window);

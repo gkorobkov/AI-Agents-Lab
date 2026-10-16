@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Доки — AI Agents Lab</title>
+<meta name="description" content="Доки AI Agents Lab: OpenAI API Chat Completions и устройство MCP, запросы и ответы протоколов.">
+<link rel="canonical" href="https://ai-agents-lab.gkorobkov.ru/docs.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="documentation.css">
+<link rel="stylesheet" href="scrollbars.css">
+<script src="app-content.js"></script>
+<script src="docs-page.js" defer></script>
+</head>
+<body>
+<header><a class="brand" href="index.html"><span class="brand-mark">AI</span><span>Agents Lab</span><span class="page-label" data-ru="Доки" data-en="Docs">Доки</span></a><div class="controls"><button class="control" id="lang" type="button">EN</button><button class="control" id="theme" type="button" aria-label="Сменить тему">◐</button><a class="back" href="index.html" data-ru="← В лабу" data-en="← Back to lab">← В лабу</a></div></header>
+<div class="layout">
+<nav class="toc" aria-label="Содержание"><div class="toc-heading"><strong data-ru="Доки" data-en="Docs">Доки</strong><button id="toggle-all-sections" type="button" aria-label="Раскрыть все разделы" title="Раскрыть все разделы" aria-expanded="false">▸</button></div><a href="#openai-api">OpenAI API · Chat Completions</a><a href="#mcp">MCP · Model Context Protocol</a></nav>
+<main>
+<section class="section" id="openai-api">
+  <p class="eyebrow">OpenAI API · Chat Completions</p>
+  <h2><span class="api-doc-ru">Как устроен запрос к LLM модели</span><span class="api-doc-en">How a request to the LLM model works</span></h2>
+  <div class="api-doc-ru">
+    <p>API — интерфейс, через который приложение обращается к LLM модели. Этот чат отправляет JSON на <code>POST /chat/completions</code>: <code>model</code> выбирает LLM модель, а <code>messages[]</code> содержит инструкции и реплики. OpenAI-совместимый сервер использует похожий формат, но набор поддерживаемых параметров может отличаться.</p>
+    <p><code>temperature</code> и <code>top_p</code> регулируют выбор следующего токена; меняйте один из них за раз. <code>max_completion_tokens</code> ограничивает ответ, <code>n</code> запрашивает варианты. Доступные значения и ограничения зависят от LLM модели; кнопки «?» у полей показывают справку и границы этой формы.</p>
+    <p><code>tools</code> описывает функции. LLM Модель возвращает имя и аргументы; приложение выполняет действие или вы вводите результат вручную. Затем результат отправляется LLM модели для продолжения. Сворачивание карточки скрывает только редактор и не удаляет функцию из запроса.</p>
+    <p>Перед отправкой проверьте предпросмотр JSON. После ответа сравните <code>choices</code>, <code>finish_reason</code> и <code>usage</code> в полном ответе провайдера.</p>
+  </div>
+  <div class="api-doc-en">
+    <p>The API lets an app communicate with a model. This chat posts JSON to <code>/chat/completions</code>: <code>model</code> selects the model and <code>messages[]</code> carries instructions and conversation turns. Compatible providers can support different subsets of parameters.</p>
+    <p><code>temperature</code> and <code>top_p</code> affect token selection; adjust one at a time. <code>max_completion_tokens</code> limits output and <code>n</code> requests alternatives. The question marks beside fields explain the form limits and effects.</p>
+    <p><code>tools</code> defines functions. The model requests a function and arguments; the app executes it or you enter its result, then send that result back for continuation. Collapsing a function hides its editor without removing it from the request.</p>
+    <p>Inspect the JSON preview before sending, then compare <code>choices</code>, <code>finish_reason</code> and <code>usage</code> in the provider response.</p>
+  </div>
+  <p><a href="https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create" target="_blank" rel="noopener noreferrer" class="external-source">OpenAI · Chat Completions reference</a><br><a href="https://developers.openai.com/api/docs/guides/function-calling" target="_blank" rel="noopener noreferrer" class="external-source">OpenAI · Function calling</a></p>
+</section>
+<section class="section" id="mcp">
+<p class="eyebrow">MCP · Model Context Protocol</p>
+<p><a href="https://modelcontextprotocol.io/specification/latest/schema" target="_blank" rel="noopener noreferrer">MCP · Schema Reference</a></p>
+<p><a href="mcp.html" data-ru="Открыть учебный стенд MCP →" data-en="Open the MCP workshop →">Открыть учебный стенд MCP →</a></p>
+<div class="mcp-guide">
+          <h3>Как работать с MCP: от первого вызова до ответа агента</h3>
+          <p><strong>MCP — общий язык общения приложения с инструментами.</strong> Один сервер предоставляет набор функций. Сначала приложение узнаёт, какие функции доступны и какие данные им нужны, затем вызывает выбранную функцию. Здесь вы можете проверить весь путь вручную и подключить инструменты к чату.</p>
+          <p class="note"><strong>Маршрут в чате:</strong> пользователь → приложение → LLM предлагает вызов → MCP-клиент приложения → MCP-сервер → инструмент → результат в приложении → LLM → ответ пользователю.</p>
+          <details>
+            <summary>1. Кто участвует и куда идут запросы</summary>
+            <ul>
+              <li><strong>Пользователь</strong> пишет задачу в чате или вручную выбирает инструмент и вводит аргументы в библиотеке.</li>
+              <li><strong>Приложение AI Agents Lab</strong> отправляет запросы модели, показывает вызовы и результаты. Его <strong>MCP-клиент</strong> — часть кода, которая общается с MCP-сервером.</li>
+              <li><strong>LLM модель</strong> получает имя, описание и схему аргументов функции. Она может предложить вызов: имя функции и значения аргументов. Само действие выполняет приложение через MCP-клиент.</li>
+              <li><strong>MCP-сервер</strong> сообщает список инструментов и принимает команды на их выполнение. Обработчик функции возвращает подготовленный ответ или обращается к внешнему API.</li>
+              <li><strong>Внешний API</strong>, если нужен инструменту, получает обычный HTTP-запрос — например, название города для поиска координат. Ответ возвращается обработчику, затем MCP-клиенту.</li>
+            </ul>
+            <p>Здесь есть два отдельных обмена: <strong>приложение ↔ API модели</strong> и <strong>MCP-клиент ↔ MCP-сервер</strong>. В этой лаборатории модель напрямую к адресу MCP не подключается. При ручной проверке в библиотеке LLM не участвует.</p>
+          </details>
+          <details>
+            <summary>2. Первый эксперимент без LLM: приветствие пользователя</summary>
+            <ol>
+              <li>В списке слева выберите <strong>«Учебный помощник»</strong>. В нём есть функция <code>greet_student</code>.</li>
+              <li>В разделе 03 нажмите <strong>«Получить инструменты»</strong>. Клиент знакомится с сервером и получает список функций. В поле «Инструмент» появится <code>greet_student</code>. Приветствие на этом шаге ещё не выполняется.</li>
+              <li>Выберите функцию. В «Аргументы · JSON» введите <code>{"name":"Анна"}</code>. Это конкретное значение. Схема лишь описывает правило: поле <code>name</code> обязательно и должно быть строкой.</li>
+              <li>Нажмите <strong>«Вызвать инструмент»</strong>. Клиент отправит <code>tools/call</code> с именем функции и аргументами. Обработчик подставит «Анна» вместо <code>{{name}}</code> в шаблоне.</li>
+              <li>В «Результат tools/call» найдите приветствие и следующий шаг. В карточках обмена раскройте запрос и ответ. Все сообщения также доступны в <strong>«Полный журнал сообщений · JSON»</strong>.</li>
+              <li>Замените имя на «Иван» и повторите вызов. Приветствие изменится. Попробуйте <code>{}</code>: обязательное имя отсутствует, поэтому ожидается ошибка проверки аргументов.</li>
+            </ol>
+            <p><strong>Путь:</strong> кнопка в браузере → MCP-клиент → учебный обработчик в том же браузере → результат на странице. Для этого шаблона не нужны сеть или модель.</p>
+            <pre aria-label="Пример приветствия">Аргументы:
+{"name":"Анна"}
+
+Данные ответа внутри MCP-результата:
+{
+  "message": "Привет, Анна!",
+  "next_step": "Откройте Лабы и начните первый эксперимент."
+}</pre>
+            <p class="hint">Полный MCP-ответ содержит оболочку протокола. Сравните эти данные с результатом и журналом на странице.</p>
+          </details>
+          <details>
+            <summary>3. Что означают initialize, tools/list и tools/call</summary>
+            <p>В журнале видны сообщения JSON-RPC: у запроса есть метод, параметры и идентификатор <code>id</code>. Ответ с тем же id относится к этому запросу. У уведомления ответа нет. В лаборатории реализована такая последовательность:</p>
+            <ol>
+              <li><code>initialize</code> — клиент и сервер обмениваются сведениями о себе, возможностях и согласуют поддерживаемую версию протокола.</li>
+              <li><code>notifications/initialized</code> — клиент уведомляет сервер, что готов к работе.</li>
+              <li><code>tools/list</code> — клиент запрашивает каталог. Сервер возвращает имена, описания и <code>inputSchema</code> — правила для входных данных. Получение каталога не запускает функции.</li>
+              <li><code>tools/call</code> — клиент просит выполнить одну функцию с конкретными аргументами. Сервер возвращает результат или ошибку.</li>
+            </ol>
+            <pre aria-label="Пример запроса tools/call">{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "tools/call",
+  "params": {
+    "name": "greet_student",
+    "arguments": {"name": "Анна"}
+  }
+}</pre>
+            <p class="hint">Число id — пример. Реальные сообщения смотрите в журнале обмена после проверки и вызова.</p>
+          </details>
+          <details>
+            <summary>4. Подключение к агенту: как результат доходит до модели</summary>
+            <ol>
+              <li>Откройте библиотеку <strong>внутри AI Agents Lab</strong> через пункт MCP. Проверьте пример и нажмите <strong>«Подключить к агенту →»</strong>. Приложение сохранит копию определения, добавит функции в настройки OpenAI API и включит Tools.</li>
+              <li>Настройте доступного провайдера и модель с поддержкой tools. Проверьте, что в Tools появилась функция MCP. Её имя будет начинаться с <code>mcp_</code>: приложение различает функции разных серверов.</li>
+              <li>В чате напишите: <strong>«Вызови инструмент приветствия пользователя для Анны и передай мне результат»</strong>. Приложение отправит модели задачу и определения подключённых функций.</li>
+              <li>Если модель выберет инструмент, она вернёт <code>tool_calls</code>: имя функции и аргументы, например <code>{"name":"Анна"}</code>. Это предложение выполнить действие; результата инструмента ещё нет. Наличие Tools само по себе не гарантирует вызов.</li>
+              <li>В карточке вызова проверьте аргументы и нажмите <strong>«Выполнить MCP-вызов»</strong>. Приложение найдёт подключённый сервер и отправит ему <code>tools/call</code> с исходным именем <code>greet_student</code>.</li>
+              <li>Сервер выполнит функцию. MCP-клиент получит ответ и заполнит поле результата в чате. Теперь данные есть у приложения, но ещё не отправлены модели.</li>
+              <li>Нажмите <strong>«Продолжить с tool results»</strong>. Приложение отправит данные в API модели сообщением роли <code>tool</code>, связанным с нужным вызовом. Если вызовов несколько, сначала заполните результат каждого.</li>
+              <li>Модель прочитает результат и ответит пользователю либо запросит следующий инструмент. Для следующего вызова последовательность повторяется.</li>
+            </ol>
+            <p class="note"><strong>Два действия:</strong> «Выполнить MCP-вызов» получает данные от инструмента; «Продолжить с tool results» передаёт их модели для продолжения ответа.</p>
+            <p class="hint">Агент получает отдельную копию MCP. После изменения библиотеки удалите старую копию из настроек агента и подключите обновлённую.</p>
+          </details>
+          <details>
+            <summary>5. Наглядный пример с HTTP API: координаты города</summary>
+            <ol>
+              <li>Нажмите <strong>«+ Собрать свой MCP»</strong>. В разделе 02 выберите <strong>Open-Meteo · Geocoding</strong> из библиотеки Tools и нажмите «Добавить HTTP-инструмент».</li>
+              <li>Нажмите «Получить инструменты», выберите добавленную функцию и передайте <code>{"name":"Москва"}</code>. Нажмите «Вызвать инструмент».</li>
+              <li>Обработчик подставит город в параметры HTTP-запроса к API геокодирования. В результате ищите найденные города, широту и долготу. Если совпадений несколько, сравните страну и другие данные.</li>
+              <li>Подключите MCP к агенту и попросите: <strong>«Найди координаты Москвы с помощью инструмента геокодирования»</strong>. Выполните предложенный MCP-вызов и передайте результат модели кнопкой продолжения.</li>
+            </ol>
+            <p><strong>В учебном стенде:</strong> браузер → локальный MCP-обработчик → HTTP API Open-Meteo → обработчик → браузер. Обмен MCP локальный, но запрос к API настоящий. API должен разрешать запросы из браузера (CORS).</p>
+            <p><strong>На отдельном сервере:</strong> браузер → адрес MCP-сервера → обработчик на сервере → HTTP API → MCP-сервер → браузер. Внешний API вызывает сервер. Браузеру требуется разрешение CORS от MCP-сервера.</p>
+            <p class="hint">Настройки HTTP-инструмента копируются из Tools при добавлении. Чтобы изменить URL или параметры, отредактируйте инструмент в Tools и добавьте обновлённую копию в MCP.</p>
+          </details>
+          <details>
+            <summary>6. Где находится сервер: сохранение, JSON и запуск Node.js</summary>
+            <ul>
+              <li><strong>Учебный стенд</strong> выполняет обмен MCP и обработчики в браузере. Для шаблонного приветствия не нужны Node.js или URL.</li>
+              <li><strong>«Сохранить копию»</strong> сохраняет определение в библиотеке этого браузера. <strong>«Скачать JSON»</strong> переносит настройки для импорта. Эти действия не запускают и не публикуют сервер.</li>
+              <li><strong>«Скачать server.mjs»</strong> в разделе 04 создаёт программу из конструктора. Выполните приведённые там команды в папке с файлом. Пока процесс Node.js запущен, он принимает запросы по адресу <code>http://127.0.0.1:3100/mcp</code>. Адрес 127.0.0.1 означает компьютер, на котором работает браузер.</li>
+              <li>Нажмите <strong>«Подключить сервер»</strong>, введите этот адрес и нажмите «Получить инструменты». Сообщения пойдут по HTTP к отдельному процессу. Совместимый внешний MCP-сервер подключается по его адресу.</li>
+              <li>Если MCP-сервер защищён, укажите выданный владельцем Bearer token. Это доступ к MCP-серверу; ключ внешнего API относится к HTTP-инструменту и настраивается отдельно.</li>
+            </ul>
+            <p class="hint">Библиотека поддерживает инструменты через учебный стенд и Streamable HTTP. Другие возможности MCP, например resources и prompts, здесь не реализованы. Подробнее: <a href="https://modelcontextprotocol.io/specification/latest" target="_blank" rel="noopener noreferrer">официальная спецификация MCP</a>.</p>
+          </details>
+          <details>
+            <summary>7. Если вызов не получился: где искать причину</summary>
+            <ul>
+              <li><strong>Нет списка функций:</strong> нажмите «Получить инструменты». После изменения настроек получите список заново.</li>
+              <li><strong>Ошибка JSON или аргументов:</strong> используйте двойные кавычки, проверьте имена полей, типы и обязательные значения по схеме функции.</li>
+              <li><strong>Нет подключения:</strong> проверьте URL, запущен ли сервер, нужен ли токен и разрешён ли CORS. Для локального сервера браузер может запросить доступ к локальной сети.</li>
+              <li><strong>Ошибка в результате инструмента:</strong> соединение могло сработать, но обработчик или внешний API не выполнили задачу. Прочитайте результат и журнал обмена; исправьте причину перед повторным вызовом.</li>
+              <li><strong>Модель отвечает без инструмента:</strong> проверьте его подключение в Tools, поддержку tools у модели и формулировку задачи. Сначала убедитесь, что ручной вызов в библиотеке работает.</li>
+              <li><strong>Результат есть, ответа модели нет:</strong> проверьте, нажали ли «Продолжить с tool results» и заполнены ли результаты всех вызовов.</li>
+            </ul>
+          </details>
+        </div>
+</section>
+</main></div>
+</body></html>

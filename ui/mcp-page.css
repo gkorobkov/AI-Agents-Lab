@@ -1,3 +1,15 @@
+.mcp-route, .mcp-name-flow { display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:8px 10px; border-left:2px solid var(--cyan); background:var(--tint); font-size:12px; overflow-wrap:anywhere; }
+.mcp-name-flow code, .mcp-server-identity code { color:var(--cyan); font-family:var(--mono); }
+.mcp-exchange { margin:10px 0 14px; min-width:0; }
+.mcp-step { border-left:2px solid var(--cyan); padding:7px 10px; margin:6px 0; background:var(--tint); font-size:12px; overflow-wrap:anywhere; }
+.mcp-step.preview { border-left-color:var(--border); }
+.mcp-step p { margin:5px 0; }
+.mcp-step strong { font-size:12px; }
+.mcp-step details { margin-top:6px; }
+.mcp-step summary { padding:4px 0; }
+.mcp-step pre { max-height:240px; overflow:auto; user-select:text; }
+.mcp-step .small { margin-top:6px; min-height:30px; }
+.mcp-call-heading { font-size:14px; margin:16px 0 6px; }
 .mcp-guide { font-size:12px; overflow-wrap:anywhere; }
 .mcp-guide > h3 { margin:14px 0 8px; }
 .mcp-guide p { margin:8px 0; }
