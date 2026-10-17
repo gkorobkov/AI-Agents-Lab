@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.4.1';
+const APP_VERSION = '1.4.2';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -38,8 +38,8 @@ const CFG_HELP_HIGHLIGHT_ALTERNATE_COLOR = '--accent2';
 // Show "Check" button in webhook history dropdown
 const CFG_SHOW_CHECK_BTN = false;
 
-// Transport order and defaults for users without saved preferences.
-const CFG_TRANSPORT_ORDER = ['webhook', 'openai', 'demo'];
+// Transport order and defaults for users without saved preferences. -- ['webhook', 'openai', 'demo']
+const CFG_TRANSPORT_ORDER = ['webhook', 'openai'];
 const CFG_TRANSPORT_DEFAULT = 'openai';
 
 const CFG_OPENAI_PRESETS = [];
@@ -361,7 +361,8 @@ const CFG_OPENAI_PROVIDERS = [
   .environment-switch-label[aria-pressed="true"] { color: color-mix(in srgb, var(--accent2) 75%, var(--text-muted)); }
   .environment-switch-test[aria-pressed="true"] { color: color-mix(in srgb, var(--accent) 75%, var(--text-muted)); }
   .environment-switch-label:focus-visible { outline: 1px solid currentColor; outline-offset: -1px; }
-  .transport-option-row { display: grid; grid-template-columns: minmax(0, 1fr) var(--transport-gear-width, 30px); align-items: stretch; }
+  .transport-option-row[hidden] { display: none; }
+.transport-option-row { display: grid; grid-template-columns: minmax(0, 1fr) var(--transport-gear-width, 30px); align-items: stretch; }
   .transport-option-row + .transport-option-row { border-top: 1px solid rgba(136,152,184,.12); }
   .transport-option-row .compact-select-option { min-width: 0; }
   .transport-option-gear { border: 0; border-radius: 3px; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 12px; }
@@ -825,6 +826,7 @@ const CFG_OPENAI_PROVIDERS = [
   #messages::-webkit-scrollbar { width: 4px; }
   #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
   #msg-spacer { flex: 1; }
+  #messages:not(.has-chat) #msg-spacer { display: none; }
 
   .msg-row { display:flex; gap:10px; animation:fadeIn 0.2s ease; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
@@ -1125,13 +1127,12 @@ const CFG_OPENAI_PROVIDERS = [
 
   .welcome {
     text-align: center;
-    padding: 28px 20px 40px;
+    padding: 36px 20px 12px;
     opacity: .85;
-    position: absolute;
-    top: 50%;
-    left: 50%;
+    position: relative;
+    flex-shrink: 0;
+    margin: 0 auto auto;
     width: min(calc(100% - 40px), 540px);
-    transform: translate(-50%, -50%);
     pointer-events: none;
   }
   .welcome-dialog-icon {
@@ -1144,24 +1145,30 @@ const CFG_OPENAI_PROVIDERS = [
   }
   .welcome h2 { font-size:16px; font-weight:600; margin-bottom:4px; }
   .welcome p { font-size:12px; color:var(--text-muted); font-family:var(--font-mono); }
-  .welcome-transport {
+  .welcome-transport, .welcome-agent-label {
     display: inline-flex; align-items: center; gap: 7px; margin: 3px 0 13px; padding: 5px 9px;
     border: 1px solid rgba(79,255,176,.3); color: var(--accent); border-radius: var(--radius-sm);
     background: var(--accent-dim); font: 9px var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
   }
-  .welcome-transport::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 7px currentColor; }
-  .welcome .project-intro { margin:14px auto 8px; max-width:520px; font:12px/1.6 var(--font-ui); }
+  .welcome-transport::before, .welcome-agent-label::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 7px currentColor; }
+  .welcome .project-intro { margin:10px auto 6px; max-width:520px; font:12px/1.5 var(--font-ui); }
   .project-guide { color:var(--accent2); font:12px/1.5 var(--font-ui); pointer-events:auto; }
-  .welcome-detail { display: block; margin: 11px auto 0; max-width: 440px; color: var(--text-muted); font: 10px/1.55 var(--font-mono); opacity: .75; }
-  .welcome-lab { margin-bottom: 22px; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  .welcome-detail { display: block; margin: 4px auto 0; color: var(--text-muted); font: 10px/1.55 var(--font-mono); opacity: .75; }
+  @media (min-width: 900px) {
+    .welcome-detail { width: max-content; max-width: none; position: relative; left: 50%; transform: translateX(-50%); white-space: nowrap; margin-left: 0; }
+  }
+  .welcome-lab { margin-bottom: 14px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
   .welcome-lab strong { display: block; color: var(--text); font-size: 16px; line-height: 1.4; }
   .welcome .welcome-lab p { margin: 8px 0 14px; font: 12px/1.65 var(--font-ui); }
   .welcome-lab a { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 9px 16px; border: 1px solid var(--accent2); border-radius: var(--radius-sm); background: var(--accent-dim); color: var(--accent2); font: 600 12px/1.5 var(--font-ui); text-decoration: none; pointer-events: auto; }
   .welcome-lab-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
   .welcome-lab a:hover { color: var(--text); border-color: var(--accent); }
   .welcome-lab a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-  @media (max-height: 760px) { #messages .welcome { position: relative; top: auto; left: auto; transform: none; margin: auto; flex-shrink: 0; } }
-  body[data-transport="openai"] .welcome { padding: 30px 28px 34px; background: linear-gradient(100deg, transparent, rgba(0,200,255,.035), transparent); }
+  @media (max-height: 760px) { #messages .welcome { position: relative; top: auto; left: auto; transform: none; margin: 0 auto auto; flex-shrink: 0; } }
+  .welcome > h2 { margin: 0 0 56px; line-height: 1.4; }
+  .welcome-agent-label { margin-right: 8px; vertical-align: middle; }
+  .welcome-transport { vertical-align: middle; }
+  .welcome-agent-label[hidden] { display: none; }
   body[data-transport="openai"] .welcome-dialog-icon { filter: drop-shadow(0 0 18px rgba(0,200,255,.42)); }
   body[data-transport="openai"] .welcome-transport { color: var(--accent2); border-color: rgba(0,200,255,.34); background: rgba(0,200,255,.07); }
   #messages.has-chat #msg-spacer { display: none; }
@@ -1299,11 +1306,11 @@ const CFG_OPENAI_PROVIDERS = [
     transform: translateX(-50%) translateY(-6px);
     background: var(--surface2); border: 1px solid var(--accent);
     color: var(--accent); font-family: var(--font-mono); font-size: 11px;
-    padding: 10px 14px; border-radius: 20px; white-space: normal; overflow-wrap: anywhere;
+    padding: 6px 12px; border-radius: 10px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere;
     opacity: 0; transition: opacity .2s, transform .2s; z-index: 200;
     box-shadow: 0 4px 16px rgba(0,0,0,0.3);
     display: flex; align-items: center; gap: 10px;
-    justify-content: center; min-width: 220px; max-width: 340px;
+    justify-content: center; min-width: 0; max-width: min(340px, calc(100vw - 24px));
     pointer-events: none;
   }
   #toast.with-url { width: max-content; max-width: calc(100vw - 24px); box-sizing: border-box; }
@@ -1464,6 +1471,7 @@ const CFG_OPENAI_PROVIDERS = [
     .webhook-panel-actions { margin-inline: -10px; padding: 8px 10px max(8px, env(safe-area-inset-bottom)); }
     .webhook-panel-actions .cfg-btn { min-height: 40px; flex: 1; }
     .welcome { width: calc(100% - 24px); padding-inline: 14px; }
+    .welcome > h2 { margin-bottom: 46px; }
     .welcome-detail { font-size: 9px; }
     #webhook-settings #webhook-wrap { grid-template-columns: auto auto minmax(72px, 1fr) auto; padding: 7px; }
     .demo-controls { grid-template-columns: 1fr 1fr; gap: 7px; }
@@ -1871,7 +1879,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
 #messages .chat-data .json-number { color:#c5af91; }
 #messages .chat-data .json-literal { color:#b4a3c7; }
 </style>
-<link rel="stylesheet" href="app-navigation.css">
+<link rel="stylesheet" href="app-navigation.css?v=welcome-spacing">
 <link rel="stylesheet" href="field-help.css">
 <!-- Yandex.Metrika 112561962: consent-aware loader -->
 <script src="metrika.js" defer></script>
@@ -2243,7 +2251,6 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
     <img class="welcome-dialog-icon" src="icons/ai-agent-icon-1.png" width="58" height="58" alt="AI agent">
     <div class="welcome-transport" id="welcome-transport">Webhook transport</div>
     <h2 data-i18n="welcomeTitle">AI Agents Lab</h2>
-    <p data-i18n="welcomeSub">Вставь Webhook URL и начинай</p>
     <span class="welcome-detail" id="welcome-detail"></span>
     <p class="project-intro" data-i18n="projectIntro">AI Agents Lab — Лаборатория ИИ Агентов. Изучайте AI агентов на практике: чат с LLM моделями, лабораторные работы, OpenAI API и вызовы функций.</p>
     <a class="project-guide" href="documentation.html#about-lab" data-i18n="projectGuide">ИИ Агенты: как устроена лаборатория →</a>
@@ -2492,15 +2499,15 @@ const i18n = {
     toastNoOpenAI:      'Open OpenAI API settings and add a valid URL, key and model',
     openaiToolsUnsupported: 'The model requested a tool call. Tool execution will be added in a later stage.',
     openaiWelcomeSub:  'Configure OpenAI API, then send a message',
-    webhookWelcomeTitle: 'Webhook Agent',
+    webhookWelcomeTitle: 'AI Agent via Webhook',
     openaiWelcomeTitle:  'AI Agents Lab',
     webhookTransport:  'Webhook transport',
     openaiTransport:   'Direct model transport',
     webhookWelcomeDetail: 'Works with n8n, Make, Activepieces and custom endpoints · message + sessionId',
-    openaiWelcomeDetail:  'OpenAI-compatible /chat/completions · one chat, configurable model and context',
+    openaiWelcomeDetail:  'OpenAI API-compatible call · one chat, configurable model and context',
     projectIntro:       'AI Agents Lab is a hands-on laboratory for AI agents: model chat, practical exercises, OpenAI API and function calling.',
     projectGuide:       'AI agents: explore the laboratory →',
-    welcomeTitle:       'AI Agents Lab',
+    welcomeTitle:       'AI Agents Lab — AI Agents Laboratory',
     welcomeLabTitle:    'What makes AI answer differently?',
     welcomeLabText:     'Experiment with AI: change one setting at a time — observe the outcome and record your results in Labs. Explore conversation memory, creativity and function calls with step-by-step exercises right in this chat.',
     welcomeLabAction:   'Start your AI research in Labs →',
@@ -2728,15 +2735,15 @@ const i18n = {
     toastNoOpenAI:      'Откройте настройки OpenAI API и заполните URL, ключ и LLM модель',
     openaiToolsUnsupported: 'LLM Модель запросила вызов инструмента. Выполнение tools появится на следующем этапе.',
     openaiWelcomeSub:  'Настройте OpenAI API и отправьте сообщение',
-    webhookWelcomeTitle: 'Webhook-агент',
+    webhookWelcomeTitle: 'ИИ Агент через Webhook',
     openaiWelcomeTitle:  'Лаборатория ИИ Агентов',
     webhookTransport:  'Webhook-транспорт',
     openaiTransport:   'Прямой вызов LLM модели',
     webhookWelcomeDetail: 'Работает с n8n, Make, Activepieces и своими endpoint · message + sessionId',
-    openaiWelcomeDetail:  'OpenAI-совместимый /chat/completions · единый чат, LLM модель и контекст под вашим контролем',
+    openaiWelcomeDetail:  'OpenAI API-совместимый вызов · единый чат, LLM модель и контекст под вашим контролем',
     projectIntro:       'AI Agents Lab — Лаборатория ИИ Агентов. Изучайте AI агентов на практике: чат с LLM моделями, лабораторные работы, OpenAI API и вызовы функций.',
     projectGuide:       'ИИ Агенты: как устроена лаборатория →',
-    welcomeTitle:       'Лаборатория ИИ Агентов',
+    welcomeTitle:       'AI Agents Lab — Лаборатория ИИ Агентов',
     welcomeLabTitle:    'Почему ИИ отвечает по-разному?',
     welcomeLabText:     'Проведи ИИследование: меняй настройки по одной — смотри на результат и фиксируй результаты в Лабах. Исследуй память диалога, креативность и вызовы функций по пошаговым заданиям прямо в этом чате.',
     welcomeLabAction:   'Начани ИИследование в Лабе →',
@@ -2828,12 +2835,46 @@ function applyLang(l, silent) {
 
 function toggleLang() { applyLang(lang === 'ru' ? 'en' : 'ru'); }
 
+function updateWelcomeActions(welcome) {
+  const transport = welcome?.querySelector('#welcome-transport');
+  if (transport) {
+    let label = welcome.querySelector('.welcome-agent-label');
+    if (!label) { label = document.createElement('span'); label.className = 'welcome-agent-label'; transport.before(label); }
+    label.textContent = lang === 'ru' ? 'ИИ Агент в Чате' : 'AI Agent in Chat';
+    label.hidden = document.body.dataset.transport !== 'openai';
+  }
+  const actions = welcome?.querySelector('.welcome-lab-actions');
+  if (!actions) return;
+  if (document.body.dataset.transport === 'webhook') {
+    actions.innerHTML = '<a href="#webhook-url" data-welcome-target="url">' + (lang === 'ru' ? 'Вставь Webhook URL →' : 'Paste Webhook URL →') + '</a><a href="#msg-input" data-welcome-target="chat">' + (lang === 'ru' ? 'Напиши сообщение в чате →' : 'Write a message in chat →') + '</a>';
+    actions.querySelectorAll('[data-welcome-target]').forEach(link => link.addEventListener('click', event => {
+      event.preventDefault();
+      if (link.dataset.welcomeTarget === 'url') window.appWorkspace?.highlightField('header-webhook-url');
+      else {
+        window.appWorkspace?.highlightField('msg-input');
+        window.appWorkspace?.highlightField('send-btn');
+        const suggestion = document.querySelector('.suggestions-row[data-initial] .suggestion-chip');
+        if (suggestion) {
+          suggestion.id = 'welcome-capabilities-suggestion';
+          window.appWorkspace?.highlightField(suggestion.id);
+        }
+        document.getElementById('msg-input').focus({ preventScroll: true });
+      }
+    }));
+  } else {
+    actions.innerHTML = '<a href="documentation.html#connect-neuraldeep" data-app-page="help" data-i18n="welcomeProviderAction">' + t('welcomeProviderAction') + '</a><a href="labs.html" data-i18n="welcomeLabAction">' + t('welcomeLabAction') + '</a>';
+  }
+}
 function addWelcomeLab(welcome) {
   if (!welcome || welcome.querySelector('.welcome-lab')) return;
   const card = document.createElement('div');
   card.className = 'welcome-lab';
   card.innerHTML = `<strong data-i18n="welcomeLabTitle">${t('welcomeLabTitle')}</strong><p data-i18n="welcomeLabText">${t('welcomeLabText')}</p><div class="welcome-lab-actions"><a href="documentation.html#connect-neuraldeep" data-app-page="help" data-i18n="welcomeProviderAction">${t('welcomeProviderAction')}</a><a href="labs.html" data-i18n="welcomeLabAction">${t('welcomeLabAction')}</a></div>`;
-  welcome.prepend(card);
+  const title = welcome.querySelector('h2');
+  title.textContent = t('welcomeTitle');
+  title.dataset.i18n = 'welcomeTitle';
+  welcome.prepend(title, card);
+  updateWelcomeActions(welcome);
   if (!welcome.querySelector('.project-intro')) {
     const intro = document.createElement('p'); intro.className = 'project-intro'; intro.dataset.i18n = 'projectIntro'; intro.textContent = t('projectIntro');
     const link = document.createElement('a'); link.className = 'project-guide'; link.href = 'documentation.html#about-lab'; link.dataset.i18n = 'projectGuide'; link.textContent = t('projectGuide');
@@ -2984,7 +3025,11 @@ let sessionId = localStorage.getItem('n8n_session') || generateSessionId();
 let webhookUrl = localStorage.getItem('n8n_webhook') || '';
 let httpMethod = localStorage.getItem('n8n_method') || 'post';
 let transportMode = localStorage.getItem('ai_transport');
-if (!CFG_TRANSPORT_ORDER.includes(transportMode)) transportMode = CFG_TRANSPORT_DEFAULT;
+if (!CFG_TRANSPORT_ORDER.includes(transportMode)) transportMode = CFG_TRANSPORT_ORDER.includes(CFG_TRANSPORT_DEFAULT) ? CFG_TRANSPORT_DEFAULT : CFG_TRANSPORT_ORDER[0];
+document.querySelectorAll('#transport-select-menu .transport-option-row').forEach(row => {
+  const mode = row.querySelector('[id^="transport-btn-"]').id.replace('transport-btn-', '');
+  row.hidden = !CFG_TRANSPORT_ORDER.includes(mode);
+});
 CFG_TRANSPORT_ORDER.forEach(mode => {
   const row = document.getElementById('transport-btn-' + mode)?.closest('.transport-option-row');
   if (row) document.getElementById('transport-select-menu').appendChild(row);
@@ -3280,7 +3325,7 @@ function setTransport(mode, openSettings = false) {
     closeDemoSettings(true);
   }
   panels.forEach(panel => { void panel.offsetHeight; panel.style.transition = ''; });
-  transportMode = CFG_TRANSPORT_ORDER.includes(mode) ? mode : CFG_TRANSPORT_DEFAULT;
+  transportMode = CFG_TRANSPORT_ORDER.includes(mode) ? mode : (CFG_TRANSPORT_ORDER.includes(CFG_TRANSPORT_DEFAULT) ? CFG_TRANSPORT_DEFAULT : CFG_TRANSPORT_ORDER[0]);
   localStorage.setItem('ai_transport', transportMode);
   updateTransportUI();
   renderToolChainControls();
@@ -3352,12 +3397,11 @@ function updateTransportUI() {
   const gear = document.getElementById('mode-settings-btn');
   gear.setAttribute('aria-controls', transportMode + '-settings');
   gear.setAttribute('aria-expanded', String(document.getElementById(transportMode + '-settings').classList.contains('open')));
-  const welcomeSub = document.querySelector('#welcome-msg > p');
-  if (welcomeSub) welcomeSub.textContent = transportMode === 'demo' ? t('demoWelcomeSub') : transportMode === 'openai' ? t('openaiWelcomeSub') : t('welcomeSub');
   const welcomeTitle = document.querySelector('#welcome-msg h2');
-  if (welcomeTitle) welcomeTitle.textContent = transportMode === 'demo' ? t('demoWelcomeTitle') : transportMode === 'openai' ? t('openaiWelcomeTitle') : t('webhookWelcomeTitle');
+  if (welcomeTitle) welcomeTitle.textContent = t('welcomeTitle');
+  updateWelcomeActions(document.getElementById('welcome-msg'));
   const welcomeTransport = document.getElementById('welcome-transport');
-  if (welcomeTransport) welcomeTransport.textContent = transportMode === 'demo' ? t('demoTransport') : transportMode === 'openai' ? t('openaiTransport') : t('webhookTransport');
+  if (welcomeTransport) welcomeTransport.textContent = transportMode === 'demo' ? t('demoTransport') : transportMode === 'openai' ? t('openaiTransport') : t('webhookWelcomeTitle');
   const welcomeDetail = document.getElementById('welcome-detail');
   if (welcomeDetail) welcomeDetail.textContent = transportMode === 'demo' ? t('demoWelcomeDetail') : transportMode === 'openai' ? t('openaiWelcomeDetail') : t('webhookWelcomeDetail');
   syncHeaderWebhook();
@@ -6140,7 +6184,6 @@ function clearChat(anchor) {
   w.innerHTML = `<img class="welcome-dialog-icon" src="icons/ai-agent-icon-1.png" width="58" height="58" alt="AI agent">
     <div class="welcome-transport" id="welcome-transport">${t(transportMode === 'demo' ? 'demoTransport' : transportMode === 'openai' ? 'openaiTransport' : 'webhookTransport')}</div>
     <h2>${t(transportMode === 'demo' ? 'demoWelcomeTitle' : transportMode === 'openai' ? 'openaiWelcomeTitle' : 'webhookWelcomeTitle')}</h2>
-    <p>${t(transportMode === 'demo' ? 'demoWelcomeSub' : transportMode === 'openai' ? 'openaiWelcomeSub' : 'welcomeSub')}</p>
     <span class="welcome-detail" id="welcome-detail">${t(transportMode === 'demo' ? 'demoWelcomeDetail' : transportMode === 'openai' ? 'openaiWelcomeDetail' : 'webhookWelcomeDetail')}</span>`;
   messagesEl.appendChild(w);
   addWelcomeLab(w);
@@ -6520,7 +6563,7 @@ function acceptConsent() {
 <script src="mcp-library.js"></script>
 <script src="mcp-client.js"></script>
 <script src="mcp-settings.js"></script>
-<script src="app-navigation.js"></script>
+<script src="app-navigation.js?v=welcome-webhook"></script>
 <script src="field-help.js"></script>
 <script src="openai-field-help.js"></script>
 </body>

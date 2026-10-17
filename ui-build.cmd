@@ -54,7 +54,7 @@ if "%NO_INCREMENT%"=="1" (
 
 if "%QUIET%"=="0" echo [OK] Version: v%APP_VER%
 
-xcopy /Y /Q "%UI_DIR%\*" "%UI_DST%\" >nul
+xcopy /Y /Q /E /I "%UI_DIR%\*" "%UI_DST%\" >nul
 if errorlevel 1 (
     echo ERROR: Failed to copy UI files
     exit /b 1
