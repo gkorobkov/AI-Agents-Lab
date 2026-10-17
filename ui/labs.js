@@ -235,7 +235,7 @@
         const list = node(block.ordered ? 'ol' : 'ul'); block.items.forEach(item => list.append(node('li', item))); container.append(list);
       }
       if (block.type === 'details') {
-        const details = node('details'); details.append(node('summary', block.title)); renderBlocks(details, block.blocks); container.append(details);
+        const details = node('details'); details.open = true; details.append(node('summary', block.title)); renderBlocks(details, block.blocks); container.append(details);
       }
       if (block.type === 'code') {
         const box = node('div', undefined, 'copybox'); const bar = node('div', block.label || labText('example'), 'copybar');
@@ -322,7 +322,7 @@
       const question = node('p', labText('answerHint'), 'question');
       form.append(question);
       form.append(field(labText('conclusion'), 'conclusion-' + experiment.id, answer.conclusion, value => changed('conclusion', value)));
-      const answers = node('details', undefined, 'answer-details');
+      const answers = node('details', undefined, 'answer-details'); answers.open = true;
       const answerSummary = node('summary'); answerSummary.id = 'answer-summary-' + experiment.id;
       answers.append(answerSummary, form); article.append(answers); experiments.append(article);
     });

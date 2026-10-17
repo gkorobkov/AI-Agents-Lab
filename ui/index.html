@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.4.2';
+const APP_VERSION = '1.4.3';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -15,6 +15,8 @@ const APP_VERSION = '1.4.2';
 const CFG_DEBUG_DEFAULT_MODE = 'collapsed';
 
 // New-panel layout cycle: 'right' | 'left' | 'single' (each once).
+// Maximum number of page entries kept per panel (UI override is saved in this browser).
+const CFG_PANEL_HISTORY_LIMIT = 10;
 const CFG_PANEL_LAYOUT_ORDER = ['right', 'left', 'single'];
 
 // Initial suggestion chips shown before first message
@@ -650,6 +652,8 @@ const CFG_OPENAI_PROVIDERS = [
     justify-content: space-between;
     margin-bottom: 14px;
   }
+  .d-setting-row { margin-bottom: 8px; gap: 8px; min-height: 26px; }
+  #panel-history-limit { width: 52px; height: 26px; padding: 2px 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface2); color: var(--text); font: 11px var(--font-mono); }
   .d-setting-row:last-child { margin-bottom: 0; }
   .d-setting-label {
     font-size: 13px;
@@ -2139,6 +2143,10 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
   <!-- Settings -->
   <div class="drawer-section">
     <div class="drawer-section-title" data-i18n="drawerSettings">Settings</div>
+    <div class="d-setting-row">
+      <label class="d-setting-label" for="panel-history-limit" data-i18n="drawerPanelHistory">Panel history</label>
+      <input id="panel-history-limit" type="number" min="1" max="50" step="1" onchange="window.appWorkspace?.setHistoryLimit(this.value)">
+    </div>
 
     <div class="d-setting-row">
       <div class="d-setting-label" data-i18n="drawerLang">Language</div>
@@ -2330,6 +2338,7 @@ const i18n = {
     btnNewSessionTitle: 'Start a new session (new conversation ID)',
     btnClear:           'Clear',
     btnClearTitle:      'Clear ALL chat messages',
+    drawerPanelHistory: 'Panel history · entries',
     drawerSettings:     'Settings',
     drawerLang:         'Language',
     drawerTheme:        'Theme',
@@ -2566,6 +2575,7 @@ const i18n = {
     btnNewSessionTitle: 'Начать новую сессию (новый ID разговора)',
     btnClear:           'Очистить',
     btnClearTitle:      'Очистить ВСЕ сообщения чата',
+    drawerPanelHistory: 'История панелей · окон',
     drawerSettings:     'Настройки',
     drawerLang:         'Язык',
     drawerTheme:        'Тема',
@@ -6563,7 +6573,7 @@ function acceptConsent() {
 <script src="mcp-library.js"></script>
 <script src="mcp-client.js"></script>
 <script src="mcp-settings.js"></script>
-<script src="app-navigation.js?v=welcome-webhook"></script>
+<script src="app-navigation.js?v=panel-history"></script>
 <script src="field-help.js"></script>
 <script src="openai-field-help.js"></script>
 </body>

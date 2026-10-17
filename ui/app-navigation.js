@@ -9,6 +9,46 @@
   };
   const panels = {};
   let slots = ['chat', null];
+  let panelHistories = [{ entries: [], cursor: -1 }, { entries: [], cursor: -1 }];
+  const normalizeHistoryLimit = value => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 50 ? Number(value) : CFG_PANEL_HISTORY_LIMIT;
+  let panelHistoryLimit = normalizeHistoryLimit(localStorage.getItem('ai_panel_history_limit') || CFG_PANEL_HISTORY_LIMIT);
+  const historyInput = document.getElementById('panel-history-limit');
+  historyInput.value = panelHistoryLimit;
+  function trimPanelHistory(state) {
+    const excess = state.entries.length - panelHistoryLimit;
+    if (excess <= 0) return;
+    const before = Math.min(excess, state.cursor);
+    state.entries.splice(0, before); state.cursor -= before;
+    state.entries.splice(panelHistoryLimit);
+  }
+  function recordPanelHistory() {
+    slots.forEach((id, index) => {
+      if (!id) return;
+      const state = panelHistories[index];
+      const entry = { id, mode: id === 'settings' ? transportMode : '' };
+      const current = state.entries[state.cursor];
+      if (current?.id === entry.id && current.mode === entry.mode) return;
+      state.entries.splice(state.cursor + 1);
+      state.entries.push(entry); state.cursor = state.entries.length - 1;
+      trimPanelHistory(state);
+    });
+  }
+  function navigatePanelHistory(index, direction) {
+    const state = panelHistories[index];
+    const cursor = state.cursor + direction;
+    const entry = state.entries[cursor];
+    if (!entry) return;
+    const previous = slots[index];
+    const other = 1 - index;
+    if (slots[other] === entry.id) slots[other] = previous;
+    state.cursor = cursor;
+    slots[index] = entry.id; activePanel = entry.id;
+    if (entry.id === 'settings') {
+      if (entry.mode !== transportMode) setTransport(entry.mode);
+      prepareSettings(entry.mode);
+    }
+    render(); panels[entry.id].head.querySelector(direction < 0 ? '.workspace-back' : '.workspace-forward')?.focus();
+  }
   let side = localStorage.getItem('ai_panel_side') === 'start' ? 'start' : 'end';
   const layoutNames = ['left', 'right', 'single'];
   const configuredOrder = typeof CFG_PANEL_LAYOUT_ORDER !== 'undefined' ? CFG_PANEL_LAYOUT_ORDER : [];
@@ -117,6 +157,15 @@
       const caption = document.createElement('span'); caption.textContent = label(id);
       title.append(caption); title.title = label(id); head.append(title);
       panel.setAttribute('aria-label', label(id));
+      const historyIndex = slots.indexOf(id);
+      const state = panelHistories[historyIndex];
+      [-1, 1].forEach(direction => {
+        const caption = direction < 0 ? text('Назад в этой панели', 'Back in this panel') : text('Вперёд в этой панели', 'Forward in this panel');
+        const markup = icon(direction < 0 ? '<path d="M19 12H5m7-7-7 7 7 7"/>' : '<path d="M5 12h14m-7-7 7 7-7 7"/>');
+        const control = iconButton(markup, caption, () => navigatePanelHistory(historyIndex, direction), direction < 0 ? 'workspace-back' : 'workspace-forward');
+        control.disabled = !state || !state.entries[state.cursor + direction];
+        head.append(control);
+      });
       ['help', 'docs', 'labs', 'tools', 'mcp', 'chat', 'settings'].forEach(candidate => {
         const split = slots.filter(Boolean).length > 1;
         const target = split ? slots.indexOf(id) : undefined;
@@ -139,11 +188,11 @@
       });
       const split = slots.filter(Boolean).length > 1;
       const swap = iconButton(actionIcons.swap, text('Поменять панели местами', 'Swap panels'), () => {
-        slots.reverse(); ratio = 100 - ratio; render(); head.focus();
+        slots.reverse(); panelHistories.reverse(); ratio = 100 - ratio; render(); head.focus();
       }, 'workspace-swap');
       swap.disabled = !split;
       const maximize = iconButton(actionIcons.maximize, text('На всю рабочую область: ', 'Fill workspace: ') + label(id), () => {
-        activePanel = id; slots = [id, null]; render(); head.focus();
+        activePanel = id; panelHistories = [panelHistories[slots.indexOf(id)], { entries: [], cursor: -1 }]; slots = [id, null]; render(); head.focus();
       }, 'workspace-maximize');
       maximize.disabled = !split;
       const collapse = iconButton(actionIcons.close, text('Закрыть панель: ', 'Close panel: ') + label(id), () => {
@@ -173,6 +222,7 @@
     } finally { api.preparing = false; }
   }
   function render() {
+    recordPanelHistory();
     Object.values(panels).forEach(({ panel, frame }) => {
       if (frame?.contentWindow && !panel.hidden && frame.clientHeight) frameScrollPositions.set(frame, [frame.contentWindow.scrollX, frame.contentWindow.scrollY]);
     });
@@ -216,18 +266,30 @@
     else if (target === undefined || target < 0) {
       target = side === 'start' ? 0 : 1;
       if (slots.filter(Boolean).length === 1) {
-        const current = slots.find(Boolean); slots = target === 0 ? [id, current] : [current, id];
+        const current = slots.find(Boolean);
+        const currentHistory = panelHistories[slots.indexOf(current)];
+        const newHistory = { entries: [], cursor: -1 };
+        panelHistories = target === 0 ? [newHistory, currentHistory] : [currentHistory, newHistory];
+        slots = target === 0 ? [id, current] : [current, id];
       } else slots[target] = id;
     } else slots[target] = id;
     render();
   }
   function close(id) {
     if (!slots.includes(id) || slots.filter(Boolean).length < 2) return;
-    slots = [slots.find(candidate => candidate && candidate !== id) || null, null];
+    const remaining = slots.find(candidate => candidate && candidate !== id) || null;
+    panelHistories = [panelHistories[slots.indexOf(remaining)], { entries: [], cursor: -1 }];
+    slots = [remaining, null];
     render();
   }
   const api = window.appWorkspace = {
     preparing: false, open, refreshLabels,
+    setHistoryLimit(value) {
+      panelHistoryLimit = normalizeHistoryLimit(value);
+      historyInput.value = panelHistoryLimit;
+      localStorage.setItem('ai_panel_history_limit', String(panelHistoryLimit));
+      panelHistories.forEach(trimPanelHistory); refreshLabels();
+    },
     openBeside(id, sourceWindow) {
       if (!definitions[id]) return;
       const sourceId = typeof sourceWindow === 'string' ? sourceWindow : Object.keys(panels).find(key => panels[key].frame?.contentWindow === sourceWindow);

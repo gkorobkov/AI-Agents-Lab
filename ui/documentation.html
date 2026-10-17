@@ -221,6 +221,7 @@ function applyLang(l){lang=l;localStorage.setItem('n8n_lang',l);document.documen
 function renderRoute(){const names={n8n:'n8n webhook',direct:'Direct LLM API',demo:'Stub'};document.getElementById('route-panel').innerHTML='<small>'+(lang==='ru'?'Выбранный маршрут':'Selected route')+'</small><h3>'+names[activeRoute]+'</h3><p>'+routeText[lang][activeRoute]+'</p>'}
 const sectionToggle = document.getElementById('toggle-all-sections');
 const collapsibleSections = [...document.querySelectorAll('main details')];
+collapsibleSections.forEach(section => { section.open = true; });
 function syncSectionToggle() {
   const expanded = collapsibleSections.every(section => section.open);
   const caption = lang === 'ru' ? (expanded ? 'Свернуть все разделы' : 'Раскрыть все разделы') : (expanded ? 'Collapse all sections' : 'Expand all sections');

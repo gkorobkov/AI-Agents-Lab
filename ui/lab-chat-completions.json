@@ -38,7 +38,7 @@
     "blocks": [
       {
         "type": "link",
-        "text": "Настройка LLM провайдера →",
+        "text": "Получение URL, API-ключа и имя модели у LLM провайдера",
         "href": "documentation.html#connect-neuraldeep",
         "openBeside": "help",
         "icon": "help"
