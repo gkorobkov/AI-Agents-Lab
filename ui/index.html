@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.4.3';
+const APP_VERSION = '1.4.4';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -1033,6 +1033,7 @@ const CFG_OPENAI_PROVIDERS = [
   .debug-section > summary { min-width: 0; padding: 7px 9px; border: 0; border-radius: 0; background: rgba(136,152,184,.05); color: var(--text-muted); }
   .debug-section[open] > summary { color: var(--accent2); border-bottom: 1px solid var(--border); }
   .debug-outer-title { min-width: 0; white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
+  .debug-title-label { color: var(--accent2); }
   .debug-section-title { overflow: hidden; text-overflow: ellipsis; }
   .debug-section-badge { margin-left: 3px; padding: 2px 5px; border: 1px solid rgba(0,200,255,.2); border-radius: 9px; color: var(--accent2); font-size: 8px; letter-spacing: .03em; }
   .debug-section .dbg-copy { margin-left: auto; width: 24px; height: 24px; display: grid; place-items: center; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; }
@@ -1040,6 +1041,7 @@ const CFG_OPENAI_PROVIDERS = [
   .debug-section pre { max-height: 320px; overflow: auto; border: 0; border-radius: 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; }
   .debug-section[data-section="summary"] .debug-summary-text { display: flex; flex-wrap: wrap; gap: 3px 18px; padding: 5px 2px; white-space: normal; color: var(--text); }
   .debug-summary-field { min-width: 0; overflow-wrap: anywhere; }
+  .debug-request-metadata { flex-basis: 100%; font: 11px/1.7 var(--font-mono); overflow-wrap: anywhere; }
   .debug-server-trace-content { padding: 5px 2px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-muted); font: 11px/1.6 var(--font-mono); }
   .debug-server-trace-content b, .debug-server-trace-content strong { color: var(--accent2); font-weight: 600; }
   .debug-server-trace-content code, .debug-server-trace-content pre { color: var(--text); font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -2607,7 +2609,7 @@ const i18n = {
     debugBackend:       'Debug бэкенда',
     debugTiming:        'Время и токены',
     debugUiGenerated:   'Сформировано UI',
-    debugUiSent:        'Отправлено UI',
+    debugUiSent:        'Отправлено с UI',
     debugServerProvided:'Получено от сервера',
     debugLocalProvided: 'Локальный пресет',
     debugCopySection:   'Копировать раздел',
@@ -5203,11 +5205,14 @@ function formatDebugSummary(contract) {
   const lines = [];
   const logic = readableAgentLogic(contract.agent_logic ?? contract.trace?.agent_logic);
   lines.push(`${t('debugStatus')}: ${t(info.status === 'pending' ? 'debugPending' : info.status === 'error' ? 'debugError' : 'debugSuccess')}`);
-  if (info.model) lines.push(`${lang === 'ru' ? 'LLM Модель' : 'Model'}: ${info.model}`);
   if (contract.response?.http_status != null) lines.push(`HTTP: ${contract.response.http_status} ${contract.response.status_text || ''}`.trim());
-  if (info.finish_reason) lines.push(`${t('debugFinish')}: ${info.finish_reason}`);
   const elapsed = contract.timing?.elapsed_ms;
   lines.push(`${t('debugElapsed')}: ${formatResponseTime(elapsed)}`);
+  Object.entries(contract.request?.headers || {}).forEach(([name, value]) => {
+    lines.push(`${name}: ${typeof value === 'string' ? value : JSON.stringify(value)}`);
+  });
+  if (info.model) lines.push(`${lang === 'ru' ? 'LLM Модель' : 'Model'}: ${info.model}`);
+  if (info.finish_reason) lines.push(`${t('debugFinish')}: ${info.finish_reason}`);
   const usage = contract.usage || {};
   const count = value => value == null ? t('debugUnavailable') : String(value);
   const total = usage.total_tokens ?? (usage.input_tokens != null && usage.output_tokens != null ? usage.input_tokens + usage.output_tokens : null);
@@ -5246,11 +5251,9 @@ function renderServerDebug(container, value) {
 function debugContractSections(contract, responseBadge = 'debugServerProvided') {
   const sections = [];
   sections.push({ id: 'summary', titleKey: 'debugSummary', badgeKey: 'debugUiGenerated', data: formatDebugSummary(contract) });
-  sections.push({ id: 'request', titleKey: 'debugRequest', badgeKey: 'debugUiSent', data: contract.request, open: contract.summary.status === 'pending' });
+  sections.push({ id: 'request', titleKey: 'debugRequest', badgeKey: 'debugUiSent', data: contract.request?.body_text ?? contract.request?.body ?? '', open: contract.summary.status === 'pending' });
   sections.push({ id: 'response', titleKey: 'debugResponse', badgeKey: responseBadge, data: contract.raw_response_text ?? contract.raw_response });
-  if (contract.summary.status === 'error' || contract.raw_response == null || contract.raw_response === '') {
-    sections.push({ id: 'headers', titleKey: 'debugResponseHeaders', badgeKey: responseBadge, data: contract.response?.headers ?? t('debugHeadersUnavailable') });
-  }
+
   return sections;
 }
 function renderDebugJson(container, content, format = true) {
@@ -5351,6 +5354,7 @@ function debugText(value) { return typeof value === 'string' ? value : JSON.stri
 let pendingNetworkDebug = null;
 async function fetchWithRequestDebug(endpoint, options) {
   const request = { method: options.method, endpoint, headers: { ...options.headers } };
+  if (typeof options.body === 'string') request.body_text = options.body;
   if (request.headers.Authorization) request.headers.Authorization = 'Bearer $OPENAI_API_KEY';
   if (options.body) { try { request.body = JSON.parse(options.body); } catch (_) { request.body = options.body; } }
   const row = appendMessage('agent', '', transportMode === 'openai' ? 'OpenAI API' : 'Webhook');
@@ -5422,8 +5426,10 @@ function appendDebug(row, debugData) {
   const statusClass = info.status === 'pending' ? 'thinking' : info.status === 'error' ? 'error' : info.status === 'ok' ? 'online' : 'warn';
   statusDot.className = 'status-dot ' + statusClass;
   const transportLabel = info.transport === 'openai' ? 'OpenAI API' : info.transport === 'webhook' ? 'Webhook' : info.transport === 'demo' ? 'Stub' : info.transport;
-  const connection = ['Debug', transportLabel, safeContract.request?.endpoint || safeContract.request?.url].filter(Boolean);
-  summary.querySelector('.debug-outer-title').textContent = connection.join(' · ');
+  const connection = [transportLabel, safeContract.request?.method?.toUpperCase(), safeContract.request?.endpoint || safeContract.request?.url].filter(Boolean);
+  const debugLabel = document.createElement('span');
+  debugLabel.className = 'debug-title-label'; debugLabel.textContent = 'Debug';
+  summary.querySelector('.debug-outer-title').append(debugLabel, document.createTextNode(connection.length ? ' · ' + connection.join(' · ') : ''));
   const outerCopy = summary.querySelector('.dbg-copy');
   outerCopy.title = t('debugCopyPackage');
   outerCopy.setAttribute('aria-label', t('debugCopyPackage'));
@@ -5468,7 +5474,21 @@ function appendDebug(row, debugData) {
         field.append(label, value);
       });
     } else renderDebugJson(pre, content);
-    if (safeSection.id !== 'summary') section.appendChild(heading);
+    if (safeSection.id === 'response') {
+      const headers = document.createElement('div');
+      headers.className = 'debug-request-metadata';
+      Object.entries(safeContract.response?.headers || {}).forEach(([name, text]) => {
+        const field = document.createElement('div'); field.className = 'debug-summary-field';
+        const label = document.createElement('span'); label.className = 'debug-field-name'; label.textContent = name + ': ';
+        const value = document.createElement('span'); value.className = 'debug-field-value'; value.textContent = typeof text === 'string' ? text : JSON.stringify(text);
+        field.append(label, value); headers.appendChild(field);
+      });
+      if (headers.childElementCount) {
+        headers.style.padding = '5px 10px';
+        section.append(heading, headers);
+      }
+    }
+    if (safeSection.id !== 'summary' && !heading.parentNode) section.appendChild(heading);
     section.appendChild(pre);
     if (safeSection.id === 'request' || safeSection.id === 'response') {
       const toggle = document.createElement('span'); toggle.className = 'debug-view-toggle';
