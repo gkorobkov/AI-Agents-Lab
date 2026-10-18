@@ -1042,6 +1042,9 @@ const CFG_OPENAI_PROVIDERS = [
   .debug-section[data-section="summary"] .debug-summary-text { display: flex; flex-wrap: wrap; gap: 3px 18px; padding: 5px 2px; white-space: normal; color: var(--text); }
   .debug-summary-field { min-width: 0; overflow-wrap: anywhere; }
   .debug-request-metadata { flex-basis: 100%; font: 11px/1.7 var(--font-mono); overflow-wrap: anywhere; }
+  .debug-response-headers { margin: 5px 10px; border-bottom: 1px solid var(--border); }
+  .debug-section .debug-response-headers > summary { min-height: 24px; padding: 2px 0; color: #89b6cb; font: 11px/1.7 var(--font-mono); cursor: pointer; }
+  .debug-response-headers .debug-request-metadata { padding: 2px 0 5px; }
   .debug-server-trace-content { padding: 5px 2px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-muted); font: 11px/1.6 var(--font-mono); }
   .debug-server-trace-content b, .debug-server-trace-content strong { color: var(--accent2); font-weight: 600; }
   .debug-server-trace-content code, .debug-server-trace-content pre { color: var(--text); font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -4302,6 +4305,11 @@ function clearCompactSelectCloseTimer(select) {
   compactSelectCloseTimers.delete(select);
 }
 
+function scheduleCompactSelectClose(select) {
+  clearCompactSelectCloseTimer(select);
+  compactSelectCloseTimers.set(select, setTimeout(() => closeCompactSelect(select), COMPACT_SELECT_HOVER_CLOSE_MS));
+}
+
 function closeCompactSelect(select) {
   clearCompactSelectCloseTimer(select);
   select.classList.remove('open');
@@ -4367,13 +4375,9 @@ document.querySelectorAll('.compact-select').forEach(select => {
     select.classList.add('open');
     trigger.setAttribute('aria-expanded', 'true');
   };
-  const scheduleHoverClose = () => {
-    clearCompactSelectCloseTimer(select);
-    compactSelectCloseTimers.set(select, setTimeout(() => {
-      closeCompactSelect(select);
-    }, COMPACT_SELECT_HOVER_CLOSE_MS));
-  };
+  const scheduleHoverClose = () => scheduleCompactSelectClose(select);
   if (finePointer.matches) {
+    select.addEventListener('mouseenter', () => clearCompactSelectCloseTimer(select));
     select.addEventListener('mouseleave', scheduleHoverClose);
   }
   trigger.addEventListener('click', e => {
@@ -5484,8 +5488,12 @@ function appendDebug(row, debugData) {
         field.append(label, value); headers.appendChild(field);
       });
       if (headers.childElementCount) {
-        headers.style.padding = '5px 10px';
-        section.append(heading, headers);
+        const headerBlock = document.createElement('details');
+        headerBlock.className = 'debug-response-headers';
+        const headerLabel = document.createElement('summary');
+        headerLabel.textContent = lang === 'ru' ? 'HTTP-заголовки ответа' : 'HTTP response headers';
+        headerBlock.append(headerLabel, headers);
+        section.append(heading, headerBlock);
       }
     }
     if (safeSection.id !== 'summary' && !heading.parentNode) section.appendChild(heading);

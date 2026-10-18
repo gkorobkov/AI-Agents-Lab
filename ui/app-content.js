@@ -9,10 +9,25 @@
   const style = document.createElement('style');
   style.textContent = '.app-embedded body > header { display:none!important } .app-embedded nav.toc, .app-embedded .layout > nav { top:24px }';
   document.head.appendChild(style);
+  const syncHelpIconColors = () => {
+    const settings = parent.document.getElementById('mode-settings-btn');
+    document.querySelectorAll('[data-help-highlight="settings"] .help-element-icon').forEach(icon => {
+      if (settings) icon.style.color = parent.getComputedStyle(settings).color;
+    });
+  };
+  document.addEventListener('DOMContentLoaded', syncHelpIconColors);
+  new MutationObserver(syncHelpIconColors).observe(parent.document.body, { attributes: true, attributeFilter: ['data-transport'] });
+  new MutationObserver(syncHelpIconColors).observe(parent.document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   document.addEventListener('click', event => {
+    parent.closeCompactSelects();
     const link = event.target.closest('a');
     if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     if (link.dataset.labId) return;
+    if (link.dataset.helpHighlight) {
+      event.preventDefault();
+      parent.appWorkspace.highlightHelp(link.dataset.helpHighlight);
+      return;
+    }
     const url = new URL(link.href, location.href);
     if (url.origin !== location.origin) return;
     if (url.searchParams.get('page') === 'settings') {

@@ -17,6 +17,7 @@ html[lang="en"] .api-doc-ru, html:not([lang="en"]) .api-doc-en { display:none; }
 
 .guide-panel-link{display:inline-flex;align-items:center;gap:5px;vertical-align:baseline}.guide-panel-link svg{width:17px;height:17px;flex-shrink:0;color:var(--accent2)}
 a[target="_blank"]::after{content:" ↗";white-space:nowrap}.modes .mode{min-height:32px;padding:6px 10px}.section>p{margin:8px 0}details summary{padding:8px 4px;width:fit-content;max-width:100%}details li{margin:6px 0}
+.help-ui-name{color:color-mix(in srgb,var(--accent) 45%,var(--text));font-weight:600}.help-ui-name .help-element-icon{color:var(--accent2)}.help-action-link{display:inline-block;padding:1px 7px;border:1px solid var(--border);border-radius:4px;text-decoration:none;font-size:12px}.help-action-link:hover{border-color:var(--accent)}
 .help-element-icon{display:inline-block;width:17px;height:17px;margin-right:5px;vertical-align:-3px;color:var(--accent2);flex-shrink:0}.help-element-icon[fill="none"]:not([stroke]){stroke:currentColor}.help-element-icon[viewBox="0 0 24 16"]{height:13px;vertical-align:-1px}
 /* Compact help sections and a contents rail that remains visible when scrolling. */
 header{height:34px;min-height:34px;padding:2px 12px}

@@ -127,7 +127,7 @@
     localStorage.setItem('ai_panel_layout_v2', String(layoutStep));
     localStorage.setItem('ai_panel_side', side);
     refreshLabels();
-    toast(singlePanel ? text('Новая панель на весь экран', 'New full-screen panel') : side === 'start' ? text('Новая панель СЛЕВА', 'New panel on the LEFT') : text('Новая панель СПРАВА', 'New panel on the RIGHT'));
+    toast(singlePanel ? text('Новое окно на ВЕСЬ экран', 'New window FULL SCREEN') : side === 'start' ? text('Новое окно СЛЕВА', 'New window on the LEFT') : text('Новое окно СПРАВА', 'New window on the RIGHT'));
   });
   sideButton.id = 'panel-side-btn'; sideButton.className = 'icon-btn';
   document.getElementById('btn-debug-toggle').before(sideButton);
@@ -144,8 +144,9 @@
   function refreshLabels() {
     const position = mobile.matches ? (side === 'start' ? text('сверху', 'above') : text('снизу', 'below')) : (side === 'start' ? text('слева', 'on the left') : text('справа', 'on the right'));
     const nextLayout = nextLayoutStep();
-    const nextCaption = nextLayout === 2 ? text('новая панель на весь экран', 'new full-screen panel') : nextLayout === 0 ? text('новая панель СЛЕВА', 'new panel on the LEFT') : text('новая панель СПРАВА', 'new panel on the RIGHT');
-    sideButton.title = text('Переключить: ', 'Switch to: ') + nextCaption;
+    const nextCaption = nextLayout === 2 ? text('новое окно на ВЕСЬ экран', 'new window FULL SCREEN') : nextLayout === 0 ? text('новое окно СЛЕВА', 'new window on the LEFT') : text('новое окно СПРАВА', 'new window on the RIGHT');
+    const currentCaption = singlePanel ? text('новое окно на ВЕСЬ экран', 'new window FULL SCREEN') : side === 'start' ? text('новое окно СЛЕВА', 'new window on the LEFT') : text('новое окно СПРАВА', 'new window on the RIGHT');
+    sideButton.title = text('Режим окон: ', 'Window mode: ') + currentCaption + '\n' + text('Переключить на: ', 'Switch to: ') + nextCaption;
     sideButton.dataset.layout = singlePanel ? 'single' : side;
     sideButton.setAttribute('aria-label', sideButton.title);
     const fill = singlePanel ? '' : `<rect x="${side === 'start' ? 4 : 14}" y="4" width="6" height="8" fill="currentColor" stroke="none"/><path d="M12 2v12"/>`;
@@ -320,15 +321,30 @@
       } else open('settings');
       if (options.field) api.highlightField(options.field);
     },
-    highlightField(id) {
-      const field = document.getElementById(id);
-      if (!field || (!workspace.contains(field) && !['transport-select-trigger', 'header-webhook-url'].includes(id))) return;
-      for (let parent = field.parentElement; parent && parent !== workspace; parent = parent.parentElement) {
+    highlightHelp(action) {
+      const targets = {
+        modes: '#transport-select-trigger, #transport-select-menu',
+        settings: '#mode-settings-btn, .workspace-switch[data-page="settings"]',
+        webhook: '#header-webhook-url',
+        layout: '#panel-side-btn, .workspace-layout'
+      };
+      if (!targets[action]) return;
+      if (action === 'modes') {
+        const trigger = document.getElementById('transport-select-trigger');
+        if (trigger.getAttribute('aria-expanded') !== 'true') trigger.click();
+        scheduleCompactSelectClose(document.getElementById('transport-toggle'));
+      }
+      document.querySelectorAll(targets[action]).forEach(field => api.highlightField(field, { reveal: false, focus: false }));
+    },
+    highlightField(id, options = {}) {
+      const field = typeof id === 'string' ? document.getElementById(id) : id;
+      if (!field || (!workspace.contains(field) && !['transport-select-trigger', 'transport-select-menu', 'mode-settings-btn', 'header-webhook-url', 'panel-side-btn'].includes(field.id))) return;
+      for (let parent = options.reveal === false ? null : field.parentElement; parent && parent !== workspace; parent = parent.parentElement) {
         if (parent.tagName === 'DETAILS') parent.open = true;
       }
       if (!field.getClientRects().length) return;
-      field.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
-      field.focus({ preventScroll: true });
+      if (options.reveal !== false) field.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+      if (options.focus !== false) field.focus({ preventScroll: true });
       field._helpAnimation?.cancel();
       const theme = getComputedStyle(document.documentElement);
       const isGreen = value => {
