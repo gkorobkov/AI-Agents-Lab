@@ -17,6 +17,10 @@ There is no package manifest or automated browser test suite in this repository.
 
 On a fresh site load, the consent overlay is expected. Accept the agreement yourself before testing the page; never wait for the user to click the consent button. Then verify mouse, keyboard, and touch-oriented interactions as relevant. Preserve consent behavior and its localStorage state unless the requested task explicitly changes it.
 
+## Configuration
+
+All configurable settings and defaults must be declared only in the `CONFIGURABLE DEFAULTS` block at the top of `ui/index.html`. Other files consume these settings and must not introduce independent configurable defaults. `CFG_PANEL_LAYOUT_ORDER` defines both the initial window mode (first entry, unless a saved browser preference exists) and the switching order.
+
 ## Coding Style & Naming Conventions
 
 Keep the site's UI vertically compact. Match navigation and lab bars to the standard 34px application header; use small headings, buttons, progress indicators, and form fields with modest spacing. Avoid oversized hero titles and tall cards or controls. Prefer collapsible detail/answer sections for long content, while retaining readable text and usable controls on mobile.

@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.4.4';
+const APP_VERSION = '1.4.5';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -17,7 +17,8 @@ const CFG_DEBUG_DEFAULT_MODE = 'collapsed';
 // New-panel layout cycle: 'right' | 'left' | 'single' (each once).
 // Maximum number of page entries kept per panel (UI override is saved in this browser).
 const CFG_PANEL_HISTORY_LIMIT = 10;
-const CFG_PANEL_LAYOUT_ORDER = ['right', 'left', 'single'];
+// First entry is the initial window mode (unless saved in this browser); array order controls switching.
+const CFG_PANEL_LAYOUT_ORDER = ['single', 'right', 'left'];
 
 // Initial suggestion chips shown before first message
 const CFG_INITIAL_SUGGESTIONS = ['Что ты умеешь?', 'Расскажи о себе', 'Расскажи про Москву'];

@@ -59,7 +59,9 @@
   const legacyLayout = localStorage.getItem('ai_panel_layout');
   let layoutStep = /^[0-2]$/.test(savedLayout || '') ? Number(savedLayout)
     : /^[0-3]$/.test(legacyLayout || '') ? (Number(legacyLayout) % 2 ? 2 : Number(legacyLayout) === 2 ? 0 : 1)
-    : side === 'start' ? 0 : 1;
+    : localStorage.getItem('ai_panel_side') === 'start' ? 0
+    : localStorage.getItem('ai_panel_side') === 'end' ? 1
+    : layoutNames.indexOf(layoutOrder[0]);
   let singlePanel = layoutStep === 2;
   if (!singlePanel) side = layoutStep === 0 ? 'start' : 'end';
   let activePanel = 'chat';
