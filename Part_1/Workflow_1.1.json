@@ -1,0 +1,207 @@
+{
+  "name": "Workflow_1.1",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "be202e40-7c47-4fa5-829c-cef7b2e6b223",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        528,
+        0
+      ],
+      "id": "120e078f-603d-4559-bcb7-54bc69091fc3",
+      "name": "Webhook",
+      "webhookId": "be202e40-7c47-4fa5-829c-cef7b2e6b223"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  text: $json.output_clean\n    || (($json.body?.message || $json.user_message_text)\n      ? `Вы ввели: \"${$json.body?.message || $json.user_message_text}\". Ваша сессия: ${$json.body?.sessionId || $json.sessionId || \"\"}`\n      : \"\"),\n  error: $json.error ?? null,\n  debug: $json.full_debug ?? \"\"\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1616,
+        0
+      ],
+      "id": "1efa8d09-6ed6-4818-bced-d9742978db3d",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ts_start_ms = Date.now();\nconst trace_id =\n`trc_${ts_start_ms}_${Math.floor(Math.random() *\n100000)}`;\nconst ts = new Date(ts_start_ms).toISOString();\n\n// n8n Webhook node wraps the full request:\n//   $json.headers  — HTTP headers\n//   $json.body     — POST JSON body\n//   $json.query    — GET query string params\n//   $json.webhookUrl — the webhook URL itself (provided by n8n)\nconst headers = $json.headers || {};\nconst body    = $json.body   || {};\nconst query   = $json.query  || {};\n\n// message_source: WH = webhook, TG = Telegram (future)\n// Determined by the presence of webhookUrl in the n8n data\nconst webhookUrlN8n = $json.webhookUrl || '';\nconst message_source = webhookUrlN8n ? 'WH' : '';\n\nconst executionMode = $json.executionMode || '';\n\n// x-request-id injected by nginx (present in both GET and POST automatically)\nconst request_id = headers['x-request-id'] || '';\n\n// message and sessionId come from body (POST) or query string (GET)\nconst user_message_text = body.message || body.user_message_text\n                       || query.message || query.user_message_text || '';\nconst sessionId = body.sessionId || query.sessionId || '';\n\nreturn [{ json: {\n sessionId,\n message_source,\n executionMode,\n user_message_text,\n trace_id,\n ts,\n ts_start_ms,\n request_id } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "d319dbf5-4032-46b9-b664-23d9772a6a99",
+      "name": "Get sessionId"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst nodeSession = $('Get sessionId').first().json;\nconst user_message_text = nodeSession['user_message_text'];\nconst message_source = nodeSession['message_source'];\nconst sessionId = nodeSession['sessionId'];\nconst byKey = new Map();\nfor (const it of items) {\n const keyRaw = it.json.field_key;\n if (keyRaw == null) continue;\n const key = String(keyRaw).trim();\n if (!key) continue;\n const tsRaw = it.json.updatedAt ?? it.json.createdAt ?? null;\n const tsMs = tsRaw ? new Date(tsRaw).getTime() : 0;\n const prev = byKey.get(key);\n if (!prev || tsMs > prev.updatedAtMs) {\n byKey.set(key, {\n value: it.json.field_value ?? \"\",\n updatedAtMs: Number.isFinite(tsMs) ? tsMs : 0,\n });\n }\n}\nconst chat_history = {};\nfor (const [key, rec] of byKey.entries()) {\n chat_history[key] = String(rec.value ?? \"\");\n}\nconst ts_start_ms = Date.now();\nconst trace_id = `trc_${ts_start_ms}_${Math.floor(Math.random() * 100000)}`;\nconst ts = new Date(ts_start_ms).toISOString();\nreturn [{ json: {\n chat_history,\n sessionId : sessionId,\n user_message_text,\n message_source,\n trace_id, ts, ts_start_ms } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        0
+      ],
+      "id": "c01eca98-2a40-43e9-90fa-17b50bb18dd7",
+      "name": "JSON Chat Memory"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_message_text }}",
+        "options": {
+          "systemMessage": "=# РОЛЬ\n\nТы — AI-агент.\n\n# ФОРМАТ ФИНАЛЬНОГО ОТВЕТА\n\n- Всегда возвращай JSON без markdown и без ```json.\n- Никаких дополнительных полей не добавляй, кроме `reply_html` и `agent_logic`.\n- Формат ответа всегда такой:\n{\n  \"reply_html\": \"<готовый HTML-ответ для Telegram>\",\n  \"agent_logic\": \"<строка со всей отладкой по режиму, intent, логике, reasoning, Chain-of-Thought, пониманию chat_history и проверкам условий>\"\n}\n\n- Поле `reply_html` предназначено только для финального ответа пользователю.\n- В `reply_html` используй только HTML-теги: <b>, <i>, <u>, <code>, <pre>.\n- В `reply_html` НЕ используй Markdown.\n- В `reply_html` НЕ используй **жирный текст**, _курсив_, списки Markdown и другие markdown-конструкции.\n- Перенос строки в `reply_html` делай обычным переводом строки.\n",
+          "returnIntermediateSteps": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1088,
+        0
+      ],
+      "id": "e432c64d-463a-47a6-a357-cf47fd948a4b",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "alwaysOutputData": true,
+      "notesInFlow": false,
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const DEBUG_ENABLED = true;\nconst TELEGRAM_SOFT_LIMIT = 3500;\nconst DEBUG_JSON_MAX_LEN = 1800;\nconst DEBUG_JSON_MID_LEN = 1200;\nconst DEBUG_JSON_MIN_LEN = 700;\n\n// ─── Debug section order ───────────────────────────────────────────────────────\n// Remove or reorder entries to control what appears and in what order.\n// Available: \"agent_logic\" | \"tools_used\" | \"chat_history\" | \"latency\" | \"errors\"\nconst DEBUG_SECTIONS_ORDER = [\n  \"chat_history\",\n  \"tools_used\",\n  \"agent_logic\",\n  \"latency\",\n];\n\n// ─── HTML utils ───────────────────────────────────────────────────────────────\n\nfunction escHtml(s) {\n  return String(s).replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\n}\n\nfunction sanitizeTelegramHtml(input) {\n  const allowedTags = [];\n  const protected_ = String(input ?? \"\").replace(/<\\/?(b|i|u|code|pre)>|<a\\b[^>]*>|<\\/a>/gi, (m) => {\n    allowedTags.push(m);\n    return `___TG_${allowedTags.length - 1}___`;\n  });\n  let out = escHtml(protected_);\n  allowedTags.forEach((tag, i) => { out = out.replace(`___TG_${i}___`, tag); });\n  return out;\n}\n\nfunction safeStringify(v) {\n  try { return JSON.stringify(v, null, 2); }\n  catch (e) { return `[stringify_error] ${e}\\n\\n${v}`; }\n}\n\nfunction shortenText(text, maxLen, suffix = \"\\n... [truncated]\") {\n  const s = String(text ?? \"\");\n  if (!maxLen || s.length <= maxLen) return s;\n  return s.slice(0, Math.max(0, maxLen - suffix.length)) + suffix;\n}\n\nfunction withFormat(title, value, maxLen = 0) {\n  const text = typeof value === \"string\" ? value : safeStringify(value);\n  const shortened = maxLen > 0 ? shortenText(text, maxLen) : text;\n  const titlePart = title ? `<b>${escHtml(title)}</b>\\n` : \"\";\n  return `${titlePart}<code>${escHtml(shortened)}</code>`;\n}\n\n// ─── JSON utils ───────────────────────────────────────────────────────────────\n\nfunction parseJsonMaybe(value) {\n  if (value == null || typeof value !== \"string\") return value ?? null;\n  try { return JSON.parse(value.trim()); } catch { return null; }\n}\n\n// ─── Intermediate steps ───────────────────────────────────────────────────────\n\nfunction buildStepsSummary(steps) {\n  if (!steps.length) return \"No intermediate steps\";\n  const seen = new Set();\n  const lines = [];\n  for (const step of steps) {\n    const callId = step?.action?.toolCallId || '';\n    const key = callId || `step_${lines.length}`;\n    if (seen.has(key)) continue;\n    seen.add(key);\n\n    const toolCall = step?.action?.messageLog?.[0]?.kwargs?.tool_calls?.[0];\n    const toolName = toolCall?.name || step?.action?.tool || \"Unknown Tool\";\n    const args = Object.fromEntries(\n      Object.entries(toolCall?.args || {}).filter(([k]) => k !== \"id\")\n    );\n    lines.push(`${lines.length + 1}. tool=${toolName} | args=${JSON.stringify(args)}`);\n  }\n  return lines.join(\"\\n\");\n}\n\n// ─── Parse model output ───────────────────────────────────────────────────────\n\nconst raw = String($json.output ?? \"\").trim();\nconst agentError = $json.error ? String($json.error).trim() : null;\nlet obj = null, parse_error = \"\", schema_warning = \"\", reply_html = \"\", agent_logic = \"\", body = \"\", response_type = \"text\";\n\nif (agentError) {\n  response_type = \"agent_error\";\n  body = sanitizeTelegramHtml(agentError);\n} else if (!raw) {\n  response_type = \"empty\";\n  body = \"<b>Ошибка</b>\\n\\nПустой ответ от модели.\";\n} else {\n  const first = raw.indexOf(\"{\"), last = raw.lastIndexOf(\"}\");\n  const jsonText = first !== -1 && last > first ? raw.slice(first, last + 1) : \"\";\n\n  if (!jsonText) {\n    response_type = \"text\";\n    body = sanitizeTelegramHtml(raw);\n  } else {\n    try {\n      obj = JSON.parse(jsonText);\n      response_type = \"json\";\n      reply_html = String(obj.reply_html ?? \"\").trim();\n      body = reply_html ? sanitizeTelegramHtml(reply_html) : (schema_warning = \"reply_html_empty\", sanitizeTelegramHtml(raw));\n      agent_logic = sanitizeTelegramHtml(String(obj.agent_logic ?? \"\").trim());\n    } catch (e) {\n      response_type = \"json_parse_failed\";\n      parse_error = String(e);\n      body = sanitizeTelegramHtml(raw);\n    }\n  }\n}\n\n// ─── Metrics ──────────────────────────────────────────────────────────────────\n\nconst chatMemory = $('Get sessionId').first().json;\nconst now = Date.now();\nconst latency_ms = Math.max(0, now - Number(chatMemory.ts_start_ms || now));\nconst intermediateSteps = (() => { const p = parseJsonMaybe($json.intermediateSteps); return Array.isArray(p) ? p : []; })();\nconst intermediate_steps_summary = buildStepsSummary(intermediateSteps);\nconst chatHistory = $('JSON Chat Memory').first().json.chat_history || {};\nconst success = response_type === \"json\" && !parse_error && Boolean(reply_html);\nconst is_agent_error = response_type === \"agent_error\";\n\nconst isWebhook = String(chatMemory.message_source ?? $json.message_source ?? \"\").toUpperCase() === \"WH\";\n\n// ─── Build functions ──────────────────────────────────────────────────────────\n\nfunction withDebugFormat(title, value, maxLen = 0) {\n  const text = typeof value === \"string\" ? value : safeStringify(value);\n  const shortened = maxLen > 0 ? shortenText(text, maxLen) : text;\n  const titlePart = title ? `<b>${escHtml(title)}</b>\\n` : \"\";\n  return `${titlePart}<code>${escHtml(shortened)}</code>`;\n}\n\n// Debug-only section (без body) — используется для full_debug (WH) и inline TG\nfunction buildDebugSection(maxLen = 0, forTg = false) {\n  if (!DEBUG_ENABLED) return \"\";\n  const noInfoTag = (text) => `<code>${text}</code>`;\n  const blocks = [];\n\n  if (parse_error)    blocks.push(withDebugFormat(\"[debug] parse_error\", parse_error));\n  if (schema_warning) blocks.push(withDebugFormat(\"[debug] schema_warning\", schema_warning));\n\n  for (const section of DEBUG_SECTIONS_ORDER) {\n    if (section === \"agent_logic\") {\n      blocks.push(withDebugFormat(\"LLM Logic\", agent_logic, maxLen));\n\n    } else if (section === \"tools_used\") {\n      if (intermediateSteps.length > 0) {\n        const stepsText = maxLen > 0 ? shortenText(intermediate_steps_summary, maxLen) : intermediate_steps_summary;\n        blocks.push(`<b>Agent Tools used</b>\\n<code>${escHtml(stepsText)}</code>`);\n      } else {\n        blocks.push(`<b>Agent Tools used</b>\\n${noInfoTag(\"No intermediate steps\")}`);\n      }\n\n    } else if (section === \"chat_history\") {\n      if (Object.keys(chatHistory).length > 0) {\n        blocks.push(withDebugFormat(\"Agent Chat History for LLM\", chatHistory, maxLen));\n      } else {\n        blocks.push(`<b>Agent Chat History for LLM</b>\\n${noInfoTag(\"No chat history\")}`);\n      }\n\n    } else if (section === \"latency\") {\n      const latencyStr = latency_ms < 1000\n        ? `${latency_ms} ms`\n        : `${(latency_ms / 1000).toFixed(1)} s`;\n      blocks.push(`<b>Latency</b>\\n<code>${latencyStr}</code>`);\n    }\n  }\n\n  return blocks.filter(Boolean).join(\"\\n\\n\");\n}\n\n// TG: body + debug inline, с каскадным сокращением\nfunction buildTgOutput(maxLen = 0, includeDebug = true) {\n  if (!includeDebug || !DEBUG_ENABLED) return body;\n  return [body, buildDebugSection(maxLen, true)].filter(Boolean).join(\"\\n\\n\");\n}\n\n// ─── Compute outputs ──────────────────────────────────────────────────────────\n\nlet output_clean, full_debug;\n\nif (is_agent_error) {\n  output_clean = \"\";\n  full_debug = \"\";\n} else if (isWebhook) {\n  // WH: output_clean = только ответ модели; full_debug = отдельный debug-блок\n  output_clean = body;\n  full_debug = buildDebugSection(0, false);\n} else {\n  // TG: output_clean = body + debug inline, каскадное сокращение\n  const candidates = [\n    [DEBUG_JSON_MAX_LEN, true],\n    [DEBUG_JSON_MID_LEN, true],\n    [DEBUG_JSON_MIN_LEN, true],\n    [0, false],\n    null,\n  ];\n  output_clean = candidates.reduce((acc, p) =>\n    acc.length <= TELEGRAM_SOFT_LIMIT ? acc : (p ? buildTgOutput(...p) : body),\n    buildTgOutput(DEBUG_JSON_MAX_LEN, true)\n  );\n  full_debug = \"\";\n}\n\n// ─── Return ───────────────────────────────────────────────────────────────────\n\nconst output_short = shortenText(output_clean, 300);\n\nreturn [{\n  json: {\n    ...$json,\n    user_message_text: chatMemory.user_message_text,\n    sessionId: chatMemory.sessionId,\n    output_short,\n    output_clean,\n    full_debug,\n    latency_ms,\n    intermediate_steps_summary,\n    chat_history: chatHistory,\n    is_agent_error,\n    success,\n    agent_logic,\n    parsed_object: obj,\n    parse_error,\n    schema_warning,\n    response_type,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        0
+      ],
+      "id": "0ae02512-a983-4a94-8aaf-f0a5051f950a",
+      "name": "AI Agent Output Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "qwen3.6-35b-a3b",
+          "mode": "list",
+          "cachedResultName": "qwen3.6-35b-a3b"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1088,
+        160
+      ],
+      "id": "d6085526-c3ba-4d1d-9a9b-01f96ad130f2",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "NcGkQ1PbewWxs3WN",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get sessionId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get sessionId": {
+      "main": [
+        [
+          {
+            "node": "JSON Chat Memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON Chat Memory": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Output Parser",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "AI Agent Output Parser": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1f974cf8-90b8-41cb-bb11-606dac83ea4a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b8eeb1831eb27b7871bd2f6fcc91319459ad171d2bea96678bcc488373027f70"
+  },
+  "id": "KeKFypz10lVEiVZ9",
+  "tags": []
+}

@@ -1044,7 +1044,9 @@ const CFG_OPENAI_PROVIDERS = [
   .debug-summary-field { min-width: 0; overflow-wrap: anywhere; }
   .debug-request-metadata { flex-basis: 100%; font: 11px/1.7 var(--font-mono); overflow-wrap: anywhere; }
   .debug-response-headers { margin: 5px 10px; border-bottom: 1px solid var(--border); }
-  .debug-section .debug-response-headers > summary { min-height: 24px; padding: 2px 0; color: #89b6cb; font: 11px/1.7 var(--font-mono); cursor: pointer; }
+  .debug-response-headers-toggle { padding: 2px 0; border: 0; background: transparent; color: #89b6cb; font: 11px/1.7 var(--font-mono); cursor: pointer; }
+  .debug-response-headers-toggle::before { content: '▸'; margin-right: 6px; color: var(--accent2); }
+  .debug-response-headers-toggle[aria-expanded="true"]::before { content: '▾'; }
   .debug-response-headers .debug-request-metadata { padding: 2px 0 5px; }
   .debug-server-trace-content { padding: 5px 2px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-muted); font: 11px/1.6 var(--font-mono); }
   .debug-server-trace-content b, .debug-server-trace-content strong { color: var(--accent2); font-weight: 600; }
@@ -1153,7 +1155,7 @@ const CFG_OPENAI_PROVIDERS = [
     margin: 0 auto 12px;
     filter: drop-shadow(0 0 12px rgba(79,255,176,0.28));
   }
-  .welcome h2 { font-size:16px; font-weight:600; margin-bottom:4px; }
+  .welcome h2 { font-size:16px; font-weight:600; margin-bottom:4px; color:color-mix(in srgb, var(--accent) 70%, transparent); text-shadow:0 0 8px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 22px color-mix(in srgb, var(--accent) 20%, transparent), 0 0 40px color-mix(in srgb, var(--accent) 10%, transparent); }
   .welcome p { font-size:12px; color:var(--text-muted); font-family:var(--font-mono); }
   .welcome-transport, .welcome-agent-label {
     display: inline-flex; align-items: center; gap: 7px; margin: 3px 0 13px; padding: 5px 9px;
@@ -4251,6 +4253,8 @@ function saveOpenAISettings() {
   if (paramUrl) {
     webhookUrl = paramUrl;
     localStorage.setItem('n8n_webhook', webhookUrl);
+    transportMode = 'webhook';
+    localStorage.setItem('ai_transport', transportMode);
     params.delete('webhookurl');
     const newSearch = params.toString();
     const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
@@ -5391,9 +5395,7 @@ async function fetchWithRequestDebug(endpoint, options) {
     contract.summary.status = 'error';
     contract.error = error.message;
     contract.timing.elapsed_ms = Math.round(performance.now() - started);
-    row.querySelector('.debug-block-wrap')?.remove();
-    appendDebug(row, contract);
-    pendingNetworkDebug = null;
+    // appendError attaches this request's Debug below the error message.
     throw error;
   }
 }
@@ -5489,11 +5491,22 @@ function appendDebug(row, debugData) {
         field.append(label, value); headers.appendChild(field);
       });
       if (headers.childElementCount) {
-        const headerBlock = document.createElement('details');
+        const headerBlock = document.createElement('div');
         headerBlock.className = 'debug-response-headers';
-        const headerLabel = document.createElement('summary');
+        headerBlock.hidden = true;
+        const headerLabel = document.createElement('button');
+        headerLabel.type = 'button';
+        headerLabel.className = 'debug-response-headers-toggle';
         headerLabel.textContent = lang === 'ru' ? 'HTTP-заголовки ответа' : 'HTTP response headers';
-        headerBlock.append(headerLabel, headers);
+        headerLabel.setAttribute('aria-expanded', 'false');
+        headerLabel.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          headerBlock.hidden = !headerBlock.hidden;
+          headerLabel.setAttribute('aria-expanded', String(!headerBlock.hidden));
+        });
+        heading.querySelector('.debug-section-badge').after(headerLabel);
+        headerBlock.append(headers);
         section.append(heading, headerBlock);
       }
     }
@@ -5592,9 +5605,13 @@ function appendError(msg, labelKey, hint) {
     const contract = requestRow.debugContract;
     contract.summary.status = 'error';
     contract.error = msg;
-    requestRow.querySelector('.debug-block-wrap')?.remove();
-    appendDebug(requestRow, contract);
-    pendingNetworkDebug = null;
+    if (!showErrors) {
+      const wasOpen = requestRow.querySelector('.debug-block')?.open;
+      requestRow.querySelector('.debug-block-wrap')?.remove();
+      appendDebug(requestRow, contract);
+      if (wasOpen != null) requestRow.querySelector('.debug-block').open = wasOpen;
+      pendingNetworkDebug = null;
+    }
   }
   if (!showErrors) return;
   messagesEl.classList.add('has-chat');
@@ -5636,6 +5653,7 @@ function appendError(msg, labelKey, hint) {
   wrap.appendChild(makeMsgMeta('agent', safeMsg, row, b));
   row.appendChild(av); row.appendChild(wrap);
   messagesEl.appendChild(row);
+  if (pendingNetworkDebug) appendDebug(row, pendingNetworkDebug.debugContract);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
