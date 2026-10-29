@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG · базы знаний — AI Agents Lab</title>
+  <script>if (window === window.parent) location.replace('./?page=rag');</script>
+  <link rel="stylesheet" href="tools-page.css">
+  <link rel="stylesheet" href="rag-page.css?v=file-import">
+  <link rel="stylesheet" href="scrollbars.css">
+  <link rel="stylesheet" href="credential-fields.css">
+  <script src="app-content.js?v=rag-workbench"></script>
+  <script src="rag-page.js?v=file-import" defer></script>
+</head>
+<body>
+  <header><a href="./?page=rag">AI Agents Lab · RAG →</a></header>
+  <main class="rag-layout">
+    <div class="rag-heading"><div><div class="eyebrow">БАЗЫ ЗНАНИЙ</div><h1>RAG <span>/ документы и векторный поиск</span></h1></div><span class="rag-badge">Qdrant × NeuralDeep</span></div>
+    <p class="hint rag-intro">Текст → эмбеддинг NeuralDeep → коллекция Qdrant. Хранение и CRUD выполняет Qdrant, векторизацию — NeuralDeep.</p>
+    <div id="rag-status" role="status" aria-live="polite">Укажите адрес кластера и ключи, затем получите список коллекций.</div>
+    <fieldset id="rag-workbench">
+      <div class="rag-columns">
+        <aside>
+          <details class="rag-connection" open>
+            <summary>01 · Подключение и векторизация</summary>
+            <label>RAG-система<select id="rag-provider"><option value="qdrant">Qdrant</option></select></label>
+            <label>REST URL кластера Qdrant<input id="rag-qdrant-url" type="url" placeholder="https://your-cluster.cloud.qdrant.io:6333" autocomplete="off" spellcheck="false"></label>
+            <label>API key Qdrant<input id="rag-qdrant-key" type="password" class="credential-input ym-disable-keys ym-hide-content" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
+            <label>Base URL NeuralDeep<input id="rag-neuraldeep-url" type="url" autocomplete="off" spellcheck="false"></label>
+            <label>API key NeuralDeep<input id="rag-neuraldeep-key" type="password" class="credential-input ym-disable-keys ym-hide-content" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
+            <button id="rag-clear-keys" type="button" class="small">Очистить ключи</button>
+            <p class="hint">Ключи остаются только в памяти этой страницы. Адреса и параметры сохраняются в этом браузере. Для Qdrant нужен адрес кластера, а не cloud.qdrant.io.</p>
+            <label>Модель эмбеддингов<input id="rag-model" spellcheck="false" list="rag-models"></label>
+            <datalist id="rag-models"><option value="bge-m3"></option><option value="e5-large"></option><option value="frida"></option></datalist>
+            <div class="rag-pair"><label>Размерность<input id="rag-dimensions" type="number" min="1" step="1"></label><label>Имя вектора<input id="rag-vector-name" placeholder="Без имени" spellcheck="false"></label></div>
+            <details><summary>Префиксы модели</summary><label>Префикс документа<input id="rag-document-prefix" spellcheck="false"></label><label>Префикс запроса<input id="rag-query-prefix" spellcheck="false"></label><p class="hint">Для bge-m3 оставьте пустыми. Для e5-large: «passage: » и «query: ». Для frida: «search_document: » и «search_query: ». Пробел в конце важен. Для других моделей укажите префиксы из документации.</p></details>
+            <div class="official-links"><a href="https://cloud.qdrant.io/" target="_blank" rel="noopener noreferrer">Qdrant Cloud ↗</a><a href="https://neuraldeep.ru/docs#vector" target="_blank" rel="noopener noreferrer">NeuralDeep API ↗</a></div>
+          </details>
+          <section>
+            <h2>02 · Коллекция</h2>
+            <label>Имя коллекции<input id="rag-collection" list="rag-collections" placeholder="Выберите или введите имя" autocomplete="off" spellcheck="false"></label><datalist id="rag-collections"></datalist>
+            <div class="actions"><button id="rag-connect" type="button">Получить коллекции</button><button id="rag-create-collection" type="button">Создать коллекцию</button></div>
+            <p class="hint">Новая коллекция использует выбранную размерность и метрику Cosine. Для существующей коллекции выберите ту же модель, которой индексировали документы.</p>
+          </section>
+        </aside>
+        <div class="rag-workspace">
+          <section class="rag-editor ym-hide-content">
+            <div class="rag-section-head"><h2>03 · Документ</h2><button id="rag-new" type="button" class="small">Новый / очистить</button></div>
+            <label>ID документа<input id="rag-id" autocomplete="off" placeholder="UUID или целое число · пусто для нового UUID" spellcheck="false"></label>
+            <div class="actions"><button id="rag-read" type="button">Прочитать по ID</button></div>
+            <label>Текст документа<textarea id="rag-text" rows="5" placeholder="Текст для базы знаний"></textarea></label>
+            <details><summary>Метаданные · JSON-объект</summary><label class="sr-only" for="rag-metadata">Метаданные документа</label><textarea id="rag-metadata" class="code" rows="4" spellcheck="false"></textarea><p class="hint" id="rag-text-field-note"></p></details>
+            <div class="actions rag-editor-actions"><button id="rag-create" type="button" class="primary">Создать документ</button><button id="rag-update" type="button">Обновить по ID</button><button id="rag-delete" type="button" class="danger">Удалить по ID</button></div>
+            <p class="hint">Создание проверяет свободный ID. Обновление заменяет текст, вектор и метаданные существующего документа. Перед редактированием прочитайте документ по ID.</p>
+          </section>
+          <section>
+            <h2 id="rag-files-heading">04 · Загрузка файлов</h2>
+            <label>Текстовые файлы<input id="rag-files" type="file" multiple aria-describedby="rag-files-hint"></label>
+            <p class="hint" id="rag-files-hint"></p>
+            <div id="rag-file-list" class="hint ym-hide-content" aria-live="polite">Файлы не выбраны.</div>
+            <div class="actions"><button id="rag-upload" type="button" class="primary">Загрузить в коллекцию</button><button id="rag-clear-files" type="button">Очистить список</button></div>
+            <p class="hint">Каждый файл разбивается на фрагменты с отдельными UUID. Имя файла, номер фрагмента и ID импорта сохраняются в метаданных. Повторная загрузка создаёт новые записи. PDF, DOCX и изображения предварительно сохраните как текст UTF-8.</p>
+          </section>
+          <section>
+            <div class="rag-section-head"><h2>05 · Документы коллекции</h2><button id="rag-browse" type="button" class="small">Загрузить / обновить</button></div>
+            <div id="rag-records" class="rag-records ym-hide-content"><p class="hint">Документы ещё не загружены.</p></div>
+            <button id="rag-next" type="button" class="small" hidden>Следующая страница →</button>
+          </section>
+          <section class="ym-hide-content">
+            <h2>06 · Семантический поиск</h2>
+            <label>Поисковый запрос<textarea id="rag-query" rows="2" placeholder="Что найти в базе знаний?"></textarea></label>
+            <div class="rag-search-actions"><label>Top K<input id="rag-top-k" type="number" min="1" max="100" step="1"></label><button id="rag-search" type="button" class="primary">Найти по смыслу</button></div>
+            <div id="rag-results" class="rag-records"><p class="hint">Результаты поиска появятся здесь.</p></div>
+          </section>
+        </div>
+      </div>
+    </fieldset>
+  </main>
+</body>
+</html>

@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.4.5';
+const APP_VERSION = '1.5.0';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -27,7 +27,7 @@ const CFG_INITIAL_SUGGESTIONS = ['Что ты умеешь?', 'Расскажи 
 const CFG_WEBHOOK_HISTORY_MAX = 20;
 
 // Request timeout for webhook POST (milliseconds)
-const CFG_REQUEST_TIMEOUT_MS = 60 * 1000; // 1 minute
+const CFG_REQUEST_TIMEOUT_MS = 3 * 60 * 1000; // 2 minutes
 
 // How long the "Undo delete" popup stays visible (milliseconds)
 const CFG_UNDO_TIMEOUT_MS = 10 * 1000; // 10 seconds
@@ -46,6 +46,18 @@ const CFG_TRANSPORT_ORDER = ['webhook', 'openai'];
 const CFG_TRANSPORT_DEFAULT = 'openai';
 
 const CFG_OPENAI_PRESETS = [];
+
+// RAG workbench defaults. API keys are entered in the page and never persisted.
+const CFG_RAG_DEFAULTS = {
+  provider: 'qdrant', qdrantUrl: '', neuraldeepUrl: 'https://api.neuraldeep.ru/v1',
+  model: 'bge-m3', dimensions: 1024, collection: '', vectorName: '',
+  pageSize: 10, topK: 5, timeoutMs: 60000, textField: 'text', metadata: '{}',
+  queryPrefix: '', documentPrefix: '',
+  fileExtensions: ['txt', 'md', 'markdown', 'csv', 'json', 'jsonl', 'log'],
+  fileMaxBytes: 512 * 1024, fileTotalMaxBytes: 1024 * 1024, fileMaxCount: 10, fileChunkChars: 2000, fileChunkOverlap: 200,
+  fileEmbeddingBatchSize: 8, fileUploadTimeoutMs: 180000
+};
+window.ragDefaults = Object.freeze(CFG_RAG_DEFAULTS);
 
 // Public OpenAI-compatible providers. Add one JSON object per provider.
 // Keep all provider request settings together in each entry. No API keys here.
@@ -1918,6 +1930,8 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
   <a class="app-nav-link" id="tool-library-btn" href="?page=tools" data-app-page="tools" data-i18n-title="toolLibrary" title="Tool library"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m2 1 3 2 1 3 4.5 4.5-1 1L5 7 2 6 1 3Zm12 13 1.5-1.5 7 6.5a2.1 2.1 0 0 1-3 3L13 15.5Z"/><path fill-rule="evenodd" d="M22.5 2a6 6 0 0 0-8 7.5L2 19a2.4 2.4 0 0 0 3 3L16 11.5A6 6 0 0 0 23 4l-4 4-3-3 4-4a6 6 0 0 1 2.5 1ZM4.8 19.8a1 1 0 1 0-1.4 1.4 1 1 0 0 0 1.4-1.4Z"/></svg><span data-i18n="navTools">Tools</span></a>
   <span class="app-nav-divider" aria-hidden="true"></span>
   <a class="app-nav-link" href="?page=mcp" data-app-page="mcp" title="Библиотека MCP"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="6" rx="1"/><rect x="2" y="16" width="7" height="6" rx="1"/><rect x="15" y="16" width="7" height="6" rx="1"/><path d="M12 8v4M5.5 16v-4h13v4"/></svg><span>MCP</span></a>
+  <span class="app-nav-divider" aria-hidden="true"></span>
+  <a class="app-nav-link" href="?page=rag" data-app-page="rag" title="RAG · базы знаний"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="9" cy="5" rx="6" ry="3"/><path d="M3 5v12c0 1.7 2.7 3 6 3M15 5v5M3 11c0 1.7 2.7 3 6 3"/><circle cx="16" cy="16" r="4"/><path d="m19 19 3 3"/></svg><span>RAG</span></a>
   <span class="app-nav-divider" aria-hidden="true"></span>
   <a class="app-nav-link" href="?page=chat" data-app-page="chat" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-2 2V11.5a9.5 9.5 0 0 1 19 0Z"/><path d="M7 10h10M7 14h6"/></svg><span data-i18n="navChat">Чат</span></a>
   <div class="compact-select" id="transport-toggle" data-value="webhook">
@@ -6620,7 +6634,7 @@ function acceptConsent() {
 <script src="mcp-library.js"></script>
 <script src="mcp-client.js"></script>
 <script src="mcp-settings.js"></script>
-<script src="app-navigation.js?v=panel-history"></script>
+<script src="app-navigation.js?v=rag-workbench"></script>
 <script src="field-help.js"></script>
 <script src="openai-field-help.js"></script>
 </body>

@@ -85,14 +85,6 @@ LLM_RUN_CHAIN-OF-THOUGHT: Chain-of-Thought и reasoning без пропуска 
 
 # ИНСТРУМЕНТЫ
 Если есть инструменты, то бери их описание из соответствующего места из запроса. 
-## 1) Geocode HTTP Request
-- вход: name
-- выход: results[0].latitude / longitude / name / country
-
-## 2) Weather HTTP Request
-- вход: latitude / longitude
-- выход: current_weather.temperature / windspeed / weathercode / time
-
 
 ### ПРАВИЛА ВРЕМЕНИ ДЛЯ ПОГОДЫ
 - Время для погоды выводи как:
