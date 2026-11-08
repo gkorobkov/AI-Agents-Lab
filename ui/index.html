@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.5.1';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -26,8 +26,9 @@ const CFG_INITIAL_SUGGESTIONS = ['Что ты умеешь?', 'Расскажи 
 // Max webhook URL entries kept in history dropdown
 const CFG_WEBHOOK_HISTORY_MAX = 20;
 
-// Request timeout for webhook POST (milliseconds)
-const CFG_REQUEST_TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes
+// Request waiting warning for webhook; hard timeout for OpenAI (milliseconds)
+const CFG_REQUEST_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const CFG_REQUEST_WAIT_TICK_MS = 1000;
 
 // How long the "Undo delete" popup stays visible (milliseconds)
 const CFG_UNDO_TIMEOUT_MS = 10 * 1000; // 10 seconds
@@ -429,6 +430,11 @@ const CFG_OPENAI_PROVIDERS = [
   .json-literal { color: #b4a3c7; }
   .debug-summary-text { padding: 10px; white-space: pre-wrap; overflow-wrap: anywhere; color: #dff7ff; font: 11px/1.7 var(--font-mono); }
   .response-view { display: flex; align-items: center; gap: 8px; margin: 6px 12px 8px; min-height: 24px; font: 11px var(--font-ui); color: var(--text-muted); }
+  .bubble-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .bubble-meta .response-view { margin: 0 0 0 4px; min-height: 20px; }
+  .request-wait-timer { white-space: nowrap; color: var(--accent2); }
+  .bubble-meta:has(.request-wait-timer) > * + * { border-left: 1px solid var(--border); padding-left: 8px; margin-left: 2px; }
+  .bubble-meta:has(.request-wait-timer) .response-view { margin-left: 2px; }
   .response-view .switch { width: 26px; height: 14px; }
   .response-view .slider::before { width: 10px; height: 10px; left: 2px; top: 2px; background: #d2dde2; }
   .response-view .switch input:checked + .slider { background: #527f88; }
@@ -1111,7 +1117,7 @@ const CFG_OPENAI_PROVIDERS = [
   .bubble a:hover { opacity: 0.8; }
 
   /* typing */
-  .typing-bubble { display:flex; align-items:center; gap:5px; padding:14px 16px; }
+  .typing-bubble { display:flex; align-self:flex-start; align-items:center; gap:5px; padding:14px 16px; }
   .dot { width:7px; height:7px; border-radius:50%; background:var(--accent); animation:blink 1.2s infinite; }
   .dot:nth-child(2){ animation-delay:.2s; background:var(--accent2); }
   .dot:nth-child(3){ animation-delay:.4s; }
@@ -3333,6 +3339,7 @@ let demoLoadPromise = null;
 let demoLoadError = '';
 let demoLoadedFilename = '';
 let isThinking = false;
+const webhookWaits = new Set();
 const INITIAL_SUGGESTIONS = CFG_INITIAL_SUGGESTIONS;
 let recentSuggestions = [];
 let suggestionCloseTimer;
@@ -5079,7 +5086,9 @@ function addResponseView(row, rawReply, parsed = null) {
     localStorage.setItem('ai_response_parse_reply', String(toggle.checked));
     render();
   });
-  bubble.after(control);
+  const meta = row.querySelector('.bubble-meta');
+  if (meta) meta.appendChild(control);
+  else bubble.after(control);
   render();
 }
 
@@ -5135,7 +5144,7 @@ function appendDebugLegacy(row, debugData) {
   dbgWrap.dataset.mode = debugMode;
   if (debugMode === 'hidden') dbgWrap.style.display = 'none';
   dbgWrap.appendChild(details);
-  wrap.insertBefore(dbgWrap, wrap.querySelector('.bubble-meta'));
+  wrap.appendChild(dbgWrap);
 }
 
 const SVG_DEBUG_COPY = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
@@ -5379,7 +5388,7 @@ function renderDebugTree(container, content) {
 function debugText(value) { return typeof value === 'string' ? value : JSON.stringify(value, null, 2); }
 
 let pendingNetworkDebug = null;
-async function fetchWithRequestDebug(endpoint, options) {
+async function fetchWithRequestDebug(endpoint, options, owner = null) {
   const request = { method: options.method, endpoint, headers: { ...options.headers } };
   if (typeof options.body === 'string') request.body_text = options.body;
   if (request.headers.Authorization) request.headers.Authorization = 'Bearer $OPENAI_API_KEY';
@@ -5389,8 +5398,13 @@ async function fetchWithRequestDebug(endpoint, options) {
   const contract = createDebugContract({ summary: { status: 'pending', transport: transportMode, model: request.body?.model }, request });
   row.debugContract = contract;
   row.dataset.requestDebug = 'true';
-  pendingNetworkDebug = row;
+  if (owner) { owner.debugRow = row; owner.row.after(row); row.querySelector('.bubble-meta')?.remove(); }
+  else pendingNetworkDebug = row;
   appendDebug(row, contract);
+  if (owner) {
+    owner.row.querySelector('.bubble-wrap').appendChild(row.querySelector('.debug-block-wrap'));
+    row.remove();
+  }
   const started = performance.now();
   try {
     const response = await fetch(endpoint, options);
@@ -5579,7 +5593,7 @@ function appendDebug(row, debugData) {
   dbgWrap.dataset.mode = debugMode;
   if (debugMode === 'hidden') dbgWrap.style.display = 'none';
   dbgWrap.appendChild(details);
-  wrap.insertBefore(dbgWrap, wrap.querySelector('.bubble-meta'));
+  wrap.appendChild(dbgWrap);
 }
 
 function editMessage(idx) {
@@ -6090,9 +6104,52 @@ async function sendOpenAIMessage(text) {
 
 // ── SEND ──
 function webhookProvenance() { return `Webhook · ${httpMethod.toUpperCase()} · ${shortHost(webhookUrl)}`; }
+function webhookSendBlocked() { return transportMode === 'webhook' && [...webhookWaits].some(request => !request.expired); }
+function beginWebhookWait(userRow, text) {
+  const row = appendMessage('agent', '', 'Webhook');
+  userRow.after(row);
+  const bubble = row.querySelector('.bubble');
+  bubble.classList.add('typing-bubble');
+  bubble.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+  const timer = document.createElement('span');
+  timer.className = 'request-wait-timer';
+  row.querySelector('.bubble-meta').prepend(timer);
+  const request = { row, bubble, timerEl: timer, url: webhookUrl, method: httpMethod, sessionId, controller: new AbortController(), started: performance.now(), expired: false };
+  webhookWaits.add(request);
+  const render = () => {
+    const elapsed = performance.now() - request.started;
+    if (elapsed >= CFG_REQUEST_TIMEOUT_MS && !request.expired) {
+      request.expired = true;
+      updateSendState();
+    }
+    const seconds = Math.floor(elapsed / 1000);
+    timer.textContent = toolHttpText('Ожидание', 'Waiting') + ' ' + Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
+    timer.title = request.expired ? toolHttpText('Время ожидания превышено. Продолжаем ждать: ответ ещё может прийти. Можно отправить сообщение снова, но запрос может выполниться повторно.', 'Waiting limit exceeded. Still waiting: a response may arrive. You can send again, but the request may run twice.') : toolHttpText('Ожидание ответа', 'Waiting for response');
+    if (request.expired) {
+      bubble.classList.remove('typing-bubble');
+      bubble.textContent = timer.title;
+    }
+  };
+  render(); request.timer = setInterval(render, CFG_REQUEST_WAIT_TICK_MS);
+  return request;
+}
+function finishWebhookWait(request) {
+  clearInterval(request.timer);
+  const seconds = Math.floor((performance.now() - request.started) / 1000);
+  const duration = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
+  request.timerEl.textContent = (request.failed ? toolHttpText('Ошибка через ', 'Failed after ') : toolHttpText('Выполнено за ', 'Completed in ')) + duration;
+  request.timerEl.title = request.timerEl.textContent;
+  webhookWaits.delete(request); request.row.remove();
+}
+function cancelWebhookWaits() {
+  for (const request of webhookWaits) {
+    request.cancelled = true; request.controller.abort(); clearInterval(request.timer); request.row.remove();
+  }
+  webhookWaits.clear(); updateSendState();
+}
 async function sendMessage() {
   updateSendState();
-  if (isThinking || localStorage.getItem('n8n_consent') !== '1') return;
+  if (isThinking || webhookSendBlocked() || localStorage.getItem('n8n_consent') !== '1') return;
   const input = document.getElementById('msg-input');
   const text = input.value.trim();
   if (!text) return;
@@ -6103,31 +6160,42 @@ async function sendMessage() {
   saveUrlToHistory(webhookUrl);
 
   input.value = ''; resizeTextarea(input);
-  appendMessage('user', text);
+  const userRow = appendMessage('user', text);
+  const request = beginWebhookWait(userRow, text);
+  const replyMessage = (...args) => { pendingNetworkDebug = request.debugRow || null; const row = appendMessage(...args); if (request.row.isConnected) request.row.before(row); row.querySelector('.bubble-meta')?.prepend(request.timerEl); return row; };
+  const replyError = (...args) => {
+    request.failed = true;
+    if (!request.row.isConnected) return;
+    pendingNetworkDebug = request.debugRow || null;
+    const previous = messagesEl.lastElementChild;
+    appendError(...args);
+    const row = messagesEl.lastElementChild;
+    if (row !== previous) { request.row.before(row); row.querySelector('.bubble-meta')?.prepend(request.timerEl); }
+  };
 
-  isThinking = true;
   updateSendState();
   document.getElementById('status-dot').className = 'status-dot thinking';
   document.getElementById('connection-summary-dot').className = 'status-dot thinking';
-  showTyping();
 
-  const inlineJson = webhookUrl.trimStart().startsWith('{') ? webhookUrl.trim() : null;
+
+  const inlineJson = request.url.trimStart().startsWith('{') ? request.url.trim() : null;
 
   if (inlineJson) {
     try {
       const started = performance.now();
       await new Promise(r => setTimeout(r, 300));
-      hideTyping();
+      if (request.cancelled) return;
+
       let rawData;
       try { rawData = JSON.parse(inlineJson); } catch(e) {
-        appendError('Inline JSON parse error: ' + e.message, 'errParse');
+        replyError('Inline JSON parse error: ' + e.message, 'errParse');
         return;
       }
       let data = rawData;
       if (Array.isArray(data)) data = data[0];
       const reply = data?.message || data?.text || data?.output;
       if (reply) {
-        const row = appendMessage('agent', reply, requestProvenance);
+        const row = replyMessage('agent', reply, requestProvenance);
         addResponseView(row, reply);
         showSuggestions(data.suggestions);
         const elapsed = Math.round(performance.now() - started);
@@ -6136,47 +6204,46 @@ async function sendMessage() {
           elapsed, inline: true
         }));
       } else {
-        appendError(t('errEmptyMsg'), 'errEmpty');
+        replyError(t('errEmptyMsg'), 'errEmpty');
       }
       urlDotState = 'online';
     } finally {
-      hideTyping();
-      isThinking = false;
+
+      finishWebhookWait(request);
       updateSendState();
       updateStatus();
     }
     return;
   }
 
-  const abortCtrl = new AbortController();
-  const timeoutId = setTimeout(() => abortCtrl.abort(), CFG_REQUEST_TIMEOUT_MS);
+  const abortCtrl = request.controller;
   const started = performance.now();
 
   try {
     let res;
     let requestMeta;
-    if (httpMethod === 'get') {
-      const params = new URLSearchParams({ sessionId, message: text,  });
-      const getUrl = webhookUrl + (webhookUrl.includes('?') ? '&' : '?') + params.toString();
+    if (request.method === 'get') {
+      const params = new URLSearchParams({ sessionId: request.sessionId, message: text,  });
+      const getUrl = request.url + (request.url.includes('?') ? '&' : '?') + params.toString();
       requestMeta = { method: 'GET', endpoint: getUrl, headers: {} };
       res = await fetchWithRequestDebug(getUrl, {
         method: 'GET',
         signal: abortCtrl.signal
-      });
+      }, request);
     } else {
-      requestMeta = { method: 'POST', endpoint: webhookUrl, headers: { 'Content-Type': 'application/json' }, body: { message: text, sessionId } };
-      res = await fetchWithRequestDebug(webhookUrl, {
+      requestMeta = { method: 'POST', endpoint: request.url, headers: { 'Content-Type': 'application/json' }, body: { message: text, sessionId: request.sessionId } };
+      res = await fetchWithRequestDebug(request.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, sessionId }),
+        body: JSON.stringify({ message: text, sessionId: request.sessionId }),
         signal: abortCtrl.signal
-      });
+      }, request);
     }
-    clearTimeout(timeoutId);
-    hideTyping();
+
+
 
     if (!res.ok) {
-      appendError(`HTTP ${res.status}: ${res.statusText}`, 'errHttp');
+      replyError(`HTTP ${res.status}: ${res.statusText}`, 'errHttp');
       return;
     }
     urlDotState = 'online';
@@ -6186,19 +6253,20 @@ async function sendMessage() {
       const ct = res.headers.get('content-type') || '';
       rawData = ct.includes('application/json') ? await res.json() : JSON.parse(await res.text());
     } catch {
-      appendError(t('errParseMsg'), 'errParse');
+      replyError(t('errParseMsg'), 'errParse');
       return;
     }
 
+    if (request.cancelled) return;
     let data = rawData;
     if (Array.isArray(data)) data = data[0];
 
-    if (data.error) {
-      appendError(String(data.error), 'errAgent');
+    if (data?.error) {
+      replyError(String(data.error), 'errAgent');
     } else {
       const reply = data?.message || data?.text || data?.output;
       if (reply) {
-        const row = appendMessage('agent', reply, requestProvenance);
+        const row = replyMessage('agent', reply, requestProvenance);
         addResponseView(row, reply);
         showSuggestions(data.suggestions);
         const elapsed = Math.round(performance.now() - started);
@@ -6208,24 +6276,25 @@ async function sendMessage() {
       } else if (data && typeof data === 'object' && Object.keys(data).length > 0) {
         const jsonStr = JSON.stringify(data, null, 2)
           .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const row = appendMessage('agent', `<pre>${jsonStr}</pre>`, requestProvenance);
+        const row = replyMessage('agent', `<pre>${jsonStr}</pre>`, requestProvenance);
         addResponseView(row, JSON.stringify(data, null, 2));
         const elapsed = Math.round(performance.now() - started);
         appendDebug(row, adaptWebhookDebug(rawData, {
           request: requestMeta, status: res.status, statusText: res.statusText, elapsed
         }));
       } else {
-        appendError(t('errEmptyMsg'), 'errEmpty');
+        replyError(t('errEmptyMsg'), 'errEmpty');
       }
     }
 
   } catch(err) {
-    clearTimeout(timeoutId);
-    hideTyping();
+    if (request.cancelled) return;
+
+
     const isTimeout = err.name === 'AbortError';
     let networkHint;
-    if (!isTimeout && err.message === 'Failed to fetch' && /\/webhook(-test)?\//.test(webhookUrl)) {
-      const isProd = !/\/webhook-test\//.test(webhookUrl);
+    if (!isTimeout && err.message === 'Failed to fetch' && /\/webhook(-test)?\//.test(request.url)) {
+      const isProd = !/\/webhook-test\//.test(request.url);
       networkHint = {
         text: isProd ? 'Возможно, нужен TEST webhook?' : 'Возможно, нужен PROD webhook?',
         actions: isProd
@@ -6233,9 +6302,9 @@ async function sendMessage() {
           : [['→ PROD', () => setUrlType('prod')]]
       };
     }
-    appendError(isTimeout ? t('errTimeoutMsg') : err.message, isTimeout ? 'errTimeout' : 'errNetwork', networkHint);
+    replyError((isTimeout ? t('errTimeoutMsg') : err.message) + '\n' + toolHttpText('Соединение прервано. Сервер мог принять запрос, но получить ответ по этому соединению уже нельзя. Повторная отправка может выполнить запрос ещё раз.', 'Connection closed. The server may have accepted the request, but this connection can no longer receive its response. Retrying may run it again.'), isTimeout ? 'errTimeout' : 'errNetwork', networkHint);
   } finally {
-    isThinking = false;
+    finishWebhookWait(request);
     updateSendState();
     updateStatus();
   }
@@ -6243,6 +6312,7 @@ async function sendMessage() {
 }
 
 function clearChat(anchor) {
+  cancelWebhookWaits();
   stopToolChain('', true);
   resetOpenAIToolTurn();
   cancelDemoRequest();
@@ -6271,8 +6341,8 @@ function clearChat(anchor) {
 
 function updateSendState() {
   const locked = localStorage.getItem('n8n_consent') !== '1';
-  document.getElementById('send-btn').disabled = locked || isThinking || !document.getElementById('msg-input').value.trim();
-  document.querySelectorAll('.suggestion-send').forEach(btn => { btn.disabled = locked || isThinking; });
+  document.getElementById('send-btn').disabled = locked || isThinking || webhookSendBlocked() || !document.getElementById('msg-input').value.trim();
+  document.querySelectorAll('.suggestion-send').forEach(btn => { btn.disabled = locked || isThinking || webhookSendBlocked(); });
 }
 
 function positionSuggestionMenu() {
@@ -6390,7 +6460,7 @@ function showSuggestions(chips, scroll = true) {
 function hideSuggestions() {}
 
 function sendSuggestion(text) {
-  if (isThinking || localStorage.getItem('n8n_consent') !== '1') return;
+  if (isThinking || webhookSendBlocked() || localStorage.getItem('n8n_consent') !== '1') return;
   editSuggestion(text);
   sendMessage();
 }
