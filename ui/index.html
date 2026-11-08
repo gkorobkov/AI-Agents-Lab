@@ -27,7 +27,7 @@ const CFG_INITIAL_SUGGESTIONS = ['Что ты умеешь?', 'Расскажи 
 const CFG_WEBHOOK_HISTORY_MAX = 20;
 
 // Request timeout for webhook POST (milliseconds)
-const CFG_REQUEST_TIMEOUT_MS = 3 * 60 * 1000; // 2 minutes
+const CFG_REQUEST_TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes
 
 // How long the "Undo delete" popup stays visible (milliseconds)
 const CFG_UNDO_TIMEOUT_MS = 10 * 1000; // 10 seconds
@@ -369,12 +369,12 @@ const CFG_OPENAI_PROVIDERS = [
   #mode-settings-btn svg { width: 18px; height: 18px; }
   #transport-select-menu { min-width: 0; left: 0; right: auto; }
   .environment-switch { position: relative; display: grid; grid-template-columns: 1fr 1fr; width: 72px; min-width: 72px; padding: 2px; font: 9px var(--font-mono); }
-  .environment-switch::before { content: ''; position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc((100% - 4px) / 2); border-radius: 2px; background: color-mix(in srgb, var(--accent2) 6%, transparent); transform: translateX(100%); transition: transform .18s ease, background .18s ease; }
-  .environment-switch[data-value="test"]::before { transform: translateX(0); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+  .environment-switch::before { content: ''; position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc((100% - 4px) / 2); border-radius: 2px; background: color-mix(in srgb, var(--accent2) 22%, transparent); transform: translateX(100%); transition: transform .18s ease, background .18s ease; }
+  .environment-switch[data-value="test"]::before { transform: translateX(0); background: color-mix(in srgb, var(--accent) 22%, transparent); }
   .environment-switch-label { position: relative; z-index: 1; padding: 3px 2px; border: 0; border-radius: 2px; background: transparent; color: color-mix(in srgb, var(--accent2) 45%, var(--text-muted)); font: inherit; cursor: pointer; }
   .environment-switch-test { color: color-mix(in srgb, var(--accent) 45%, var(--text-muted)); }
-  .environment-switch-label[aria-pressed="true"] { color: color-mix(in srgb, var(--accent2) 75%, var(--text-muted)); }
-  .environment-switch-test[aria-pressed="true"] { color: color-mix(in srgb, var(--accent) 75%, var(--text-muted)); }
+  .environment-switch-label[aria-pressed="true"] { color: var(--accent2); font-weight: 700; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent2) 55%, transparent); }
+  .environment-switch-test[aria-pressed="true"] { color: var(--accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
   .environment-switch-label:focus-visible { outline: 1px solid currentColor; outline-offset: -1px; }
   .transport-option-row[hidden] { display: none; }
 .transport-option-row { display: grid; grid-template-columns: minmax(0, 1fr) var(--transport-gear-width, 30px); align-items: stretch; }
@@ -388,8 +388,12 @@ const CFG_OPENAI_PROVIDERS = [
   header > #webhook-wrap, header > #openai-wrap, header > #session-id-box { display: none !important; }
   #webhook-settings #webhook-wrap { display: flex; width: 100%; grid-column: 1 / -1; align-self: center; }
   #webhook-settings #session-id-box { display: block; grid-column: 1; align-self: center; }
-  #webhook-controls-slot, #webhook-session-slot { display: contents; }
-  .webhook-panel-copy { grid-column: 1 / 3; color: var(--text-muted); font: 10px/1.55 var(--font-mono); }
+  #webhook-controls-slot { display: contents; }
+#webhook-session-slot { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+#webhook-session-slot #session-id-box { min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
+#webhook-session-slot #btn-new-session { flex: 0 1 auto; min-width: 0; }
+#webhook-session-slot #btn-new-session span { min-width: 0; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+  .webhook-panel-copy { grid-column: 1 / 3; padding-block: 6px; color: var(--text-muted); font: 10px/1.55 var(--font-mono); }
   .webhook-panel-actions { grid-column: 3; display: flex; justify-content: flex-end; gap: 8px; align-items: center; }
   .demo-local-capsule { display: inline-flex; align-items: center; gap: 6px; color: #f5a623; border: 1px solid rgba(245,158,11,.32); background: rgba(245,158,11,.07); border-radius: 4px; padding: 5px 8px; font: 9px var(--font-mono); letter-spacing: .12em; }
   .demo-local-capsule::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #f5a623; box-shadow: 0 0 7px #f5a623; }
@@ -2048,7 +2052,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
   <div id="webhook-history-slot"></div>
   <p class="webhook-panel-copy" data-i18n="webhookCompatibility">Compatible with n8n, Make, Activepieces and custom webhooks. Default payload: message + sessionId.</p>
   <div id="webhook-session-slot"></div>
-  <div class="webhook-panel-actions"><span class="autosave-status" id="webhook-autosave-status"></span><button class="cfg-btn" type="button" onclick="startUrlCheck(webhookUrl)" data-i18n="webhookCheck">Check URL</button></div>
+  <div class="webhook-panel-actions"><span class="autosave-status" id="webhook-autosave-status"></span></div>
 </aside>
 
 <aside id="demo-settings" class="transport-settings-panel" role="region" aria-hidden="true" aria-labelledby="demo-settings-title">
