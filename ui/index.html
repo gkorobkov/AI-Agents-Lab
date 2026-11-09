@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.5.2';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -29,6 +29,8 @@ const CFG_WEBHOOK_HISTORY_MAX = 20;
 // Request waiting warning for webhook; hard timeout for OpenAI (milliseconds)
 const CFG_REQUEST_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const CFG_REQUEST_WAIT_TICK_MS = 1000;
+const CFG_REQUEST_LOG_MAX = 5;
+const CFG_REQUEST_LOG_BODY_MAX_CHARS = 200000;
 
 // How long the "Undo delete" popup stays visible (milliseconds)
 const CFG_UNDO_TIMEOUT_MS = 10 * 1000; // 10 seconds
@@ -1640,7 +1642,15 @@ const CFG_OPENAI_PROVIDERS = [
   #btn-debug-toggle.mode-collapsed { color: var(--accent2); border-color: var(--border); box-shadow: none; }
   #btn-debug-toggle.mode-hidden    { color: var(--text-muted); border-color: var(--border); box-shadow: none; opacity: 0.5; }
   #btn-debug-toggle svg { width: 18px; height: 18px; }
-  .debug-mode-options { display: flex; gap: 6px; flex-shrink: 0; }
+  .debug-mode-options { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+  #request-log-dialog { margin: auto; width: min(900px, 94vw); max-height: 85vh; box-sizing: border-box; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); }
+  #request-log-dialog::backdrop { background: rgba(0,0,0,.6); }
+  .request-log-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .request-log-head strong { margin-right: auto; }
+  #request-log-dialog p { font-size: 12px; color: var(--text-muted); margin-block: 10px; }
+  #request-log-list details { border-top: 1px solid var(--border); padding-block: 8px; }
+  #request-log-list summary { cursor: pointer; font: 11px var(--font-mono); overflow-wrap: anywhere; }
+  #request-log-list pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.5 var(--font-mono); max-height: 50vh; overflow-y: auto; }
   .debug-mode-options .icon-btn[aria-pressed="true"] { color: var(--accent2); border-color: var(--accent2); }
 
   :is(#webhook-hist-btn, #header-webhook-hist-btn) {
@@ -2206,6 +2216,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
         <button class="icon-btn" type="button" data-debug-mode="hidden" onclick="applyDebugMode('hidden')"></button>
         <button class="icon-btn" type="button" data-debug-mode="collapsed" onclick="applyDebugMode('collapsed')"></button>
         <button class="icon-btn" type="button" data-debug-mode="expanded" onclick="applyDebugMode('expanded')"></button>
+        <button class="cfg-btn" type="button" onclick="openRequestLog()" data-i18n="requestLogTitle">Request log</button>
       </div>
     </div>
   </div>
@@ -2581,7 +2592,11 @@ const i18n = {
     btnCopy:            'Copy',
     btnDelete:          'Delete',
     errHttp:            'HTTP Error',
+    requestLogTitle:    'Request log',
     errNetwork:         'Network Error',
+    errConnectionLost:  'Connection lost · execution result unknown',
+    webhookResultUnknown: 'No response after ',
+    webhookConnectionLost: 'The connection closed before a response was received. The workflow may still be running. Check its execution in n8n. This endpoint does not support retrieving the result separately; retrying may run the request twice.',
     errParse:           'Parse Error',
     errEmpty:           'Empty Response',
     errTimeout:         'Timeout',
@@ -2818,7 +2833,11 @@ const i18n = {
     btnCopy:            'Копировать',
     btnDelete:          'Удалить',
     errHttp:            'HTTP ошибка',
+    requestLogTitle:    'Журнал запросов',
     errNetwork:         'Ошибка сети',
+    errConnectionLost:  'Связь потеряна · результат выполнения неизвестен',
+    webhookResultUnknown: 'Ответ не получен за ',
+    webhookConnectionLost: 'Соединение закрылось до получения ответа. Workflow может продолжать работу. Проверьте выполнение в n8n. Этот endpoint не поддерживает отдельное получение результата; повторная отправка может выполнить запрос дважды.',
     errParse:           'Ошибка парсинга',
     errEmpty:           'Пустой ответ',
     errTimeout:         'Таймаут',
@@ -4884,8 +4903,11 @@ function renderAgentText(raw, allowHtml = true) {
   if (/^[\[{]/.test(jsonText)) {
     try { JSON.parse(jsonText); const pre = document.createElement('pre'); pre.className = 'chat-data'; renderDebugJson(pre,jsonText); return pre.outerHTML; } catch (_) {}
   }
-  if (allowHtml && /<[a-z]/i.test(withHtml)) {
-    const clean = withHtml.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)[^>]*>/g, (match, tag) => {
+  // Some webhook parsers escape <br> while preserving the other HTML tags.
+  const htmlText = allowHtml ? withHtml.replace(/&lt;br\s*\/?&gt;/gi, '<br>') : withHtml;
+  if (allowHtml && /<[a-z]/i.test(htmlText)) {
+    const clean = htmlText.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)[^>]*>/g, (match, tag) => {
+      if (tag.toLowerCase() === 'br') return '<br>';
       if (tag.toLowerCase() === 'a') {
         if (match.startsWith('</')) return '</a>';
         const href = (match.match(/href\s*=\s*["']([^"']*)["']/i) || [])[1] || '';
@@ -5388,6 +5410,91 @@ function renderDebugTree(container, content) {
 function debugText(value) { return typeof value === 'string' ? value : JSON.stringify(value, null, 2); }
 
 let pendingNetworkDebug = null;
+// Last requests are stored locally, independently of chat rows and Debug visibility.
+let requestLogEntries = readRequestLog();
+function readRequestLog() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('ai_request_log') || '[]');
+    return Array.isArray(saved) ? saved.filter(item => item && typeof item.id === 'string' && item.request && typeof item.request.method === 'string').slice(0, CFG_REQUEST_LOG_MAX) : [];
+  } catch (_) { return []; }
+}
+function safeRequestLogValue(value) {
+  const secret = /^(authorization|proxy-authorization|cookie|set-cookie|x-api-key|api[_-]?key|token|access_token|password|secret)$/i;
+  const clean = item => {
+    if (Array.isArray(item)) return item.map(clean);
+    if (item && typeof item === 'object') return Object.fromEntries(Object.entries(item).map(([key, val]) => [key, secret.test(key) ? '[REDACTED]' : clean(val)]));
+    if (typeof item === 'string') {
+      let result = sanitizeDebugValue(item);
+      result = result.replace(/([?&](?:api[_-]?key|token|access_token|password|secret)=)[^&#\s]*/gi, '$1[REDACTED]');
+      return result;
+    }
+    return item;
+  };
+  if (typeof value === 'string') {
+    try { return JSON.stringify(clean(JSON.parse(value)), null, 2); } catch (_) {}
+  }
+  return clean(value);
+}
+function persistRequestLog() {
+  try { localStorage.setItem('ai_request_log', JSON.stringify(requestLogEntries)); }
+  catch (_) { /* Storage failure must never prevent sending or receiving. */ }
+  renderRequestLog();
+}
+function captureRequestLog(value) {
+  const text = typeof value === 'string' ? safeRequestLogValue(value) : JSON.stringify(safeRequestLogValue(value), null, 2);
+  return typeof text === 'string' && text.length > CFG_REQUEST_LOG_BODY_MAX_CHARS
+    ? text.slice(0, CFG_REQUEST_LOG_BODY_MAX_CHARS) + '\n[TRUNCATED]' : text;
+}
+function beginRequestLog(endpoint, options) {
+  const entry = {
+    id: crypto.randomUUID(), startedAt: new Date().toISOString(), status: 'pending',
+    request: { method: options.method || 'GET', url: safeRequestLogValue(endpoint), headers: safeRequestLogValue(Object.fromEntries(new Headers(options.headers).entries())), body: captureRequestLog(options.body ?? null) },
+    response: null, error: null
+  };
+  requestLogEntries.unshift(entry);
+  requestLogEntries = requestLogEntries.slice(0, CFG_REQUEST_LOG_MAX);
+  persistRequestLog();
+  return entry;
+}
+function updateRequestLog(entry, patch) {
+  Object.assign(entry, patch);
+  // An old completion must not displace one of the five newest requests.
+  if (requestLogEntries.includes(entry)) persistRequestLog();
+}
+function openRequestLog() {
+  let dialog = document.getElementById('request-log-dialog');
+  if (!dialog) {
+    dialog = document.createElement('dialog'); dialog.id = 'request-log-dialog'; dialog.className = 'ym-hide-content';
+    dialog.setAttribute('aria-label', toolHttpText('Журнал запросов', 'Request log'));
+    const head = document.createElement('div'); head.className = 'request-log-head';
+    const title = document.createElement('strong'); title.textContent = toolHttpText('Журнал запросов', 'Request log');
+    const close = document.createElement('button'); close.className = 'cfg-btn'; close.textContent = toolHttpText('Закрыть', 'Close'); close.onclick = () => dialog.close();
+    const clear = document.createElement('button'); clear.className = 'cfg-btn';
+    clear.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6m4-6v6"/></svg>';
+    const clearText = toolHttpText('Очистить журнал', 'Clear log'); clear.append(document.createTextNode(' ' + clearText)); clear.title = clearText; clear.setAttribute('aria-label', clearText);
+    clear.onclick = () => { requestLogEntries = []; persistRequestLog(); };
+    const copy = document.createElement('button'); copy.className = 'cfg-btn'; copy.textContent = toolHttpText('Копировать JSON', 'Copy JSON');
+    copy.onclick = () => copyText(JSON.stringify(requestLogEntries, null, 2)).then(() => toast(t('toastCopiedMsg')));
+    head.append(title, copy, clear, close);
+    const note = document.createElement('p'); note.textContent = toolHttpText('Последние 5 сетевых запросов сохраняются в этом браузере, включая текст сообщений и ответов. Ключи авторизации скрыты. Ожидание из предыдущего открытия страницы не возобновляется.', 'The last 5 network requests are saved in this browser, including messages and responses. Authorization keys are hidden. Pending requests from a previous page load are not resumed.');
+    const list = document.createElement('div'); list.id = 'request-log-list';
+    dialog.append(head, note, list); document.body.append(dialog);
+  }
+  renderRequestLog(); dialog.showModal();
+}
+function renderRequestLog() {
+  const list = document.getElementById('request-log-list'); if (!list) return;
+  list.replaceChildren();
+  if (!requestLogEntries.length) { list.textContent = toolHttpText('Запросов пока нет.', 'No requests yet.'); return; }
+  requestLogEntries.forEach(entry => {
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = new Date(entry.startedAt).toLocaleString() + ' · ' + entry.request.method + ' · ' + entry.status + (entry.elapsedMs != null ? ' · ' + (entry.elapsedMs / 1000).toFixed(1) + ' s' : '');
+    const pre = document.createElement('pre'); pre.textContent = JSON.stringify(entry, null, 2);
+    details.append(summary, pre); list.append(details);
+  });
+}
+
 async function fetchWithRequestDebug(endpoint, options, owner = null) {
   const request = { method: options.method, endpoint, headers: { ...options.headers } };
   if (typeof options.body === 'string') request.body_text = options.body;
@@ -5406,13 +5513,16 @@ async function fetchWithRequestDebug(endpoint, options, owner = null) {
     row.remove();
   }
   const started = performance.now();
+  const logEntry = beginRequestLog(endpoint, options);
   try {
     const response = await fetch(endpoint, options);
+    updateRequestLog(logEntry, { response: { status: response.status, statusText: response.statusText, headers: safeRequestLogValue(Object.fromEntries(response.headers.entries())), body: null } });
     // Keep the request visible through body parsing and HTTP/parse errors.
     contract.summary.status = response.ok ? 'ok' : 'error';
     contract.response = { http_status: response.status, status_text: response.statusText, headers: Object.fromEntries(response.headers.entries()) };
     // Preserve the received body even when parsing or reply validation later fails.
     const receivedBody = await response.clone().text();
+    updateRequestLog(logEntry, { status: response.ok ? 'completed' : 'http_error', finishedAt: new Date().toISOString(), elapsedMs: Math.round(performance.now() - started), response: { ...logEntry.response, body: captureRequestLog(receivedBody) } });
     contract.raw_response_text = receivedBody;
     try { contract.raw_response = JSON.parse(receivedBody); }
     catch (_) { contract.raw_response = receivedBody; }
@@ -5427,6 +5537,7 @@ async function fetchWithRequestDebug(endpoint, options, owner = null) {
     contract.summary.status = 'error';
     contract.error = error.message;
     contract.timing.elapsed_ms = Math.round(performance.now() - started);
+    updateRequestLog(logEntry, { status: options.signal?.aborted ? 'aborted' : 'connection_lost', finishedAt: new Date().toISOString(), elapsedMs: Math.round(performance.now() - started), error: { name: error.name, message: captureRequestLog(error.message), clientAborted: !!options.signal?.aborted, browserOnline: navigator.onLine } });
     // appendError attaches this request's Debug below the error message.
     throw error;
   }
@@ -6137,7 +6248,7 @@ function finishWebhookWait(request) {
   clearInterval(request.timer);
   const seconds = Math.floor((performance.now() - request.started) / 1000);
   const duration = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
-  request.timerEl.textContent = (request.failed ? toolHttpText('Ошибка через ', 'Failed after ') : toolHttpText('Выполнено за ', 'Completed in ')) + duration;
+  request.timerEl.textContent = (request.connectionLost ? t('webhookResultUnknown') : request.failed ? toolHttpText('Ошибка через ', 'Failed after ') : toolHttpText('Выполнено за ', 'Completed in ')) + duration;
   request.timerEl.title = request.timerEl.textContent;
   webhookWaits.delete(request); request.row.remove();
 }
@@ -6291,18 +6402,8 @@ async function sendMessage() {
     if (request.cancelled) return;
 
 
-    const isTimeout = err.name === 'AbortError';
-    let networkHint;
-    if (!isTimeout && err.message === 'Failed to fetch' && /\/webhook(-test)?\//.test(request.url)) {
-      const isProd = !/\/webhook-test\//.test(request.url);
-      networkHint = {
-        text: isProd ? 'Возможно, нужен TEST webhook?' : 'Возможно, нужен PROD webhook?',
-        actions: isProd
-          ? [['→ TEST', () => setUrlType('test')]]
-          : [['→ PROD', () => setUrlType('prod')]]
-      };
-    }
-    replyError((isTimeout ? t('errTimeoutMsg') : err.message) + '\n' + toolHttpText('Соединение прервано. Сервер мог принять запрос, но получить ответ по этому соединению уже нельзя. Повторная отправка может выполнить запрос ещё раз.', 'Connection closed. The server may have accepted the request, but this connection can no longer receive its response. Retrying may run it again.'), isTimeout ? 'errTimeout' : 'errNetwork', networkHint);
+    request.connectionLost = true;
+    replyError(err.message + '\n' + t('webhookConnectionLost'), 'errConnectionLost');
   } finally {
     finishWebhookWait(request);
     updateSendState();

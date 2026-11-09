@@ -145,6 +145,7 @@ LLM_RUN_CHAIN-OF-THOUGHT: Chain-of-Thought и reasoning без пропуска 
 
 <блок один произвольный интерсный факт>
 
+# ИСТОРИЯ ЗАПРОСОВ
 Begin chat_history{{`
 ${JSON.stringify($json.chat_history || {}, null, 2)}
 `}}End chat_history
