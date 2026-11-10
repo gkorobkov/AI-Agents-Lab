@@ -8,6 +8,19 @@
     chat: ['Чат', 'Chat'], settings: ['Настройки OpenAI API', 'OpenAI API settings'],
     labs: ['Лабы', 'Labs', 'labs.html'], tools: ['Библиотека Tools', 'Tool library', 'tools.html'], mcp: ['Библиотека MCP', 'MCP library', 'mcp.html'], help: ['Помощь', 'Help', 'documentation.html'], docs: ['Доки', 'Docs', 'docs.html'], documentation: ['Документация', 'Documentation', 'documentation.html']
   };
+  const navigationLinks = [...document.querySelectorAll('header > .app-nav-link')];
+  const navigationOrder = [...new Set(CFG_HEADER_NAV_ORDER)].filter(id => navigationLinks.some(link => link.dataset.appPage === id));
+  navigationLinks.forEach(link => { if (!navigationOrder.includes(link.dataset.appPage)) navigationOrder.push(link.dataset.appPage); });
+  const navigationAnchor = document.createComment('navigation');
+  const firstLink = navigationLinks[0];
+  firstLink.previousElementSibling.before(navigationAnchor);
+  navigationOrder.forEach(id => {
+    const link = navigationLinks.find(link => link.dataset.appPage === id);
+    const divider = link.previousElementSibling;
+    if (divider?.classList.contains('app-nav-divider')) navigationAnchor.before(divider);
+    navigationAnchor.before(link);
+  });
+  navigationAnchor.remove();
   const panels = {};
   let slots = ['chat', null];
   let panelHistories = [{ entries: [], cursor: -1 }, { entries: [], cursor: -1 }];
@@ -100,6 +113,22 @@
     el.title = caption; el.setAttribute('aria-label', caption); el.className = className;
     return el;
   };
+  const chatNavigation = document.querySelector('header > .app-nav-link[data-app-page="chat"]');
+  const chatNavigationGroup = document.createElement('span');
+  chatNavigationGroup.className = 'app-nav-chat-group';
+  chatNavigation.before(chatNavigationGroup);
+  const headerSettings = iconButton(panelIcons.settings, label('settings'), toggleActiveSettings, 'icon-btn header-chat-settings');
+  headerSettings.id = 'header-chat-settings-btn';
+  headerSettings.setAttribute('aria-controls', 'webhook-settings');
+  chatNavigationGroup.append(chatNavigation, document.getElementById('header-transport-toggle'), headerSettings);
+  const settingsSource = document.getElementById('mode-settings-btn');
+  const syncHeaderSettings = () => {
+    ['aria-controls', 'aria-expanded', 'disabled'].forEach(attr => settingsSource.hasAttribute(attr)
+      ? headerSettings.setAttribute(attr, settingsSource.getAttribute(attr)) : headerSettings.removeAttribute(attr));
+    headerSettings.title = label('settings'); headerSettings.setAttribute('aria-label', headerSettings.title);
+  };
+  new MutationObserver(syncHeaderSettings).observe(settingsSource, { attributes:true });
+  syncHeaderSettings();
   Object.entries(definitions).forEach(([id, definition]) => {
     const panel = document.createElement('section');
     panel.className = 'workspace-panel'; panel.dataset.panel = id; panel.hidden = true;
@@ -118,7 +147,18 @@
       content.append(frame); panels[id].frame = frame;
     }
   });
-  panels.chat.content.append(document.getElementById('messages'), document.getElementById('composer-validation'), document.getElementById('input-area'));
+  document.addEventListener('DOMContentLoaded', () => {
+    FieldHelp.attach(document.getElementById('tool-chain-help'));
+    document.querySelectorAll('#tool-chain-controls > .chain-hand-icon, #tool-chain-controls > .chain-auto-icon').forEach(icon => {
+      icon.tabIndex = 0; icon.removeAttribute('aria-hidden'); FieldHelp.attach(icon);
+    });
+  }, { once: true });
+  const composerContext = document.createElement('div');
+  composerContext.id = 'composer-context';
+  composerContext.append(document.getElementById('composer-destination'), document.getElementById('header-webhook-controls'), document.getElementById('composer-endpoint'), document.getElementById('tool-chain-controls'));
+  composerContext.querySelector('#composer-endpoint').append(document.getElementById('connection-summary-dot'));
+  document.getElementById('connection-summary').hidden = true;
+  panels.chat.content.append(document.getElementById('messages'), document.getElementById('composer-validation'), composerContext, document.getElementById('input-area'));
   document.querySelectorAll('.transport-settings-panel').forEach(panel => panels.settings.content.append(panel));
   const scrollable = [document.getElementById('messages'), ...document.querySelectorAll('.transport-settings-panel')];
   scrollable.forEach(el => el.addEventListener('scroll', () => {
@@ -171,14 +211,10 @@
         control.disabled = !state || !state.entries[state.cursor + direction];
         head.append(control);
       });
-      ['help', 'docs', 'labs', 'tools', 'mcp', 'rag', 'chat', 'settings'].forEach(candidate => {
+      navigationOrder.flatMap(candidate => candidate === 'chat' ? ['chat', 'settings'] : [candidate]).forEach(candidate => {
         const split = slots.filter(Boolean).length > 1;
         const target = split ? slots.indexOf(id) : undefined;
-        const targetStart = split ? target === 0 : side === 'start';
-        const destination = mobile.matches
-          ? (targetStart ? text('сверху', 'above') : text('снизу', 'below'))
-          : (targetStart ? text('слева', 'on the left') : text('справа', 'on the right'));
-        const hint = singlePanel ? text('Открыть на всю рабочую область: ', 'Fill workspace: ') + label(candidate) : (split ? text('Открыть в этой панели ', 'Open in this panel ') : text('Открыть в новой панели ', 'Open in a new panel ')) + destination + ': ' + label(candidate);
+        const hint = label(candidate);
         const switcher = iconButton(panelIcons[candidate], hint, () => {
           open(candidate, target); panels[candidate].head.focus();
         }, 'workspace-switch');
@@ -327,27 +363,35 @@
     },
     highlightHelp(action) {
       const targets = {
-        modes: '#transport-select-trigger, #transport-select-menu',
-        settings: '#mode-settings-btn, .workspace-switch[data-page="settings"]',
+        modes: '#header-transport-select-trigger, #header-transport-select-menu, #transport-select-trigger, #transport-select-menu, #composer-transport-select-trigger',
+        settings: '#mode-settings-btn, #header-chat-settings-btn, #composer-mode-settings-btn, .workspace-switch[data-page="settings"]',
         webhook: '#header-webhook-url',
         layout: '#panel-side-btn, .workspace-layout'
       };
       if (!targets[action]) return;
       if (action === 'modes') {
-        const trigger = document.getElementById('transport-select-trigger');
+        const trigger = document.getElementById('header-transport-select-trigger');
         if (trigger.getAttribute('aria-expanded') !== 'true') trigger.click();
-        scheduleCompactSelectClose(document.getElementById('transport-toggle'));
+        scheduleCompactSelectClose(document.getElementById('header-transport-toggle'));
       }
-      document.querySelectorAll(targets[action]).forEach(field => api.highlightField(field, { reveal: false, focus: false }));
+      const fields = [...document.querySelectorAll(targets[action])].filter(field => field.getClientRects().length);
+      const scrollTarget = fields.find(field => {
+        const rect = field.getBoundingClientRect();
+        return rect.top >= 0 && rect.bottom <= innerHeight && rect.left >= 0 && rect.right <= innerWidth;
+      }) || fields[0];
+      fields.forEach(field => api.highlightField(field, { reveal: false, focus: false, scroll: field === scrollTarget }));
     },
     highlightField(id, options = {}) {
       const field = typeof id === 'string' ? document.getElementById(id) : id;
-      if (!field || (!workspace.contains(field) && !['transport-select-trigger', 'transport-select-menu', 'mode-settings-btn', 'header-webhook-url', 'panel-side-btn'].includes(field.id))) return;
+      if (!field || (!workspace.contains(field) && !['transport-select-trigger', 'transport-select-menu', 'mode-settings-btn', 'header-transport-select-trigger', 'header-transport-select-menu', 'header-chat-settings-btn', 'header-webhook-url', 'panel-side-btn'].includes(field.id))) return;
       for (let parent = options.reveal === false ? null : field.parentElement; parent && parent !== workspace; parent = parent.parentElement) {
         if (parent.tagName === 'DETAILS') parent.open = true;
       }
       if (!field.getClientRects().length) return;
-      if (options.reveal !== false) field.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+      const touch = mobile.matches || matchMedia('(pointer: coarse)').matches;
+      if (options.scroll !== false && (options.reveal !== false || touch)) {
+        field.scrollIntoView({ block: touch ? 'center' : 'nearest', inline: 'nearest', behavior: touch ? 'smooth' : 'instant' });
+      }
       if (options.focus !== false) field.focus({ preventScroll: true });
       field._helpAnimation?.cancel();
       const theme = getComputedStyle(document.documentElement);
@@ -364,11 +408,11 @@
       });
       const color = theme.getPropertyValue(green ? CFG_HELP_HIGHLIGHT_ALTERNATE_COLOR : CFG_HELP_HIGHLIGHT_COLOR).trim();
       field._helpAnimation = field.animate([
-        { outline: '3px solid transparent', outlineOffset: '3px', boxShadow: 'none', offset: 0 },
-        { outline: '3px solid ' + color, outlineOffset: '3px', boxShadow: '0 0 12px ' + color, offset: .35 },
-        { outline: '3px solid ' + color, outlineOffset: '3px', boxShadow: '0 0 12px ' + color, offset: .55 },
-        { outline: '3px solid transparent', outlineOffset: '3px', boxShadow: 'none', offset: .85 },
-        { outline: '3px solid transparent', outlineOffset: '3px', boxShadow: 'none', offset: 1 }
+        { outline: '3px solid transparent', outlineOffset: '-3px', boxShadow: 'none', offset: 0 },
+        { outline: '3px solid ' + color, outlineOffset: '-3px', boxShadow: 'inset 0 0 12px ' + color, offset: .35 },
+        { outline: '3px solid ' + color, outlineOffset: '-3px', boxShadow: 'inset 0 0 12px ' + color, offset: .55 },
+        { outline: '3px solid transparent', outlineOffset: '-3px', boxShadow: 'none', offset: .85 },
+        { outline: '3px solid transparent', outlineOffset: '-3px', boxShadow: 'none', offset: 1 }
       ], { duration: CFG_HELP_HIGHLIGHT_DURATION_MS, iterations: CFG_HELP_HIGHLIGHT_PULSES, easing: 'ease-in-out' });
     },
     closeSettings() { close('settings'); },

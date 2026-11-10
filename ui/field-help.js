@@ -12,9 +12,14 @@
     hide(); current = button; tooltip.replaceChildren();
     if (button.dataset.helpPath) { const path = document.createElement('div'); path.className = 'help-parameter-path'; path.textContent = button.dataset.helpPath; tooltip.append(path); }
     const text = document.createElement('div'); text.textContent = button.dataset.helpText; tooltip.append(text); tooltip.hidden = false; button.setAttribute('aria-describedby', tooltip.id);
-    const rect = button.getBoundingClientRect();
+    tooltip.style.maxHeight = '';
+    const rect = (button.closest('#tool-chain-controls') || button).getBoundingClientRect();
     tooltip.style.left = Math.max(8, Math.min(rect.left, document.documentElement.clientWidth - tooltip.offsetWidth - 8)) + 'px';
-    tooltip.style.top = Math.max(8, Math.min(rect.bottom + 6, innerHeight - tooltip.offsetHeight - 8)) + 'px';
+    const above = rect.bottom + 6 + tooltip.offsetHeight > innerHeight - 8;
+    const available = above ? rect.top - 14 : innerHeight - rect.bottom - 14;
+    tooltip.style.maxHeight = Math.max(0, available) + 'px';
+    tooltip.style.boxSizing = 'border-box';
+    tooltip.style.top = (above ? Math.max(8, rect.top - tooltip.offsetHeight - 6) : rect.bottom + 6) + 'px';
   };
   function attach(button) {
     button.addEventListener('pointerenter', () => show(button)); button.addEventListener('pointerleave', scheduleHide);
