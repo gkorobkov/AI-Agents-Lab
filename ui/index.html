@@ -1717,6 +1717,8 @@ const CFG_OPENAI_PROVIDERS = [
     transition: opacity 0.2s;
   }
   .wh-clear-btn:hover { opacity: 1; }
+  .wh-clear-btn { display:inline-flex; align-items:center; gap:4px; }
+  .wh-clear-btn svg { width:12px; height:12px; }
 
   .wh-empty {
     padding: 14px 12px;
@@ -1750,7 +1752,10 @@ const CFG_OPENAI_PROVIDERS = [
     gap: 4px;
   }
 
+  .wh-request-line { display:flex; align-items:baseline; gap:6px; min-width:0; }
+  .wh-method { flex-shrink:0; color:var(--text-muted); font:400 9px var(--font-mono); }
   .wh-item-url {
+    min-width: 0;
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--accent);
@@ -1848,7 +1853,7 @@ const CFG_OPENAI_PROVIDERS = [
     align-items: center;
   }
   .wh-actions-row:last-child { justify-content: flex-end; }
-  .wh-check-btn, .wh-copy-btn, .wh-share-btn, .wh-del-btn {
+  .wh-check-btn, .wh-share-btn, .wh-del-btn {
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text-muted);
@@ -1869,12 +1874,10 @@ const CFG_OPENAI_PROVIDERS = [
     padding: 0 8px;
   }
   .wh-check-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
-  .wh-copy-btn, .wh-share-btn, .wh-del-btn { width: 26px; height: 26px; padding: 0; flex-shrink: 0; }
-  .wh-copy-btn svg, .wh-share-btn svg, .wh-del-btn svg { width: 14px; height: 14px; }
+  .wh-share-btn, .wh-del-btn { width: 26px; height: 26px; padding: 0; flex-shrink: 0; }
+  .wh-share-btn svg, .wh-del-btn svg { width: 14px; height: 14px; }
   .wh-check-btn:hover  { border-color: var(--accent); color: var(--accent); }
   .wh-check-btn.checking { opacity: 0.4; pointer-events: none; }
-  .wh-copy-btn:hover   { border-color: var(--accent2); color: var(--accent2); }
-  .wh-copy-btn.copied  { border-color: var(--accent2); color: var(--accent2); }
   .wh-share-btn:hover  { border-color: var(--accent2); color: var(--accent2); }
   .wh-share-btn.copied { border-color: var(--accent2); color: var(--accent2); }
   .wh-del-btn:hover    { border-color: var(--error); color: var(--error); }
@@ -2529,6 +2532,17 @@ const i18n = {
     recentsTitle:       'Recent connections',
     recentsEmpty:       'No recent connections yet',
     recentsClear:       'Clear all',
+    recentsCheck: 'Check server response',
+    recentsChecking: 'Checking server response…',
+    recentsShare: 'Copy a page link with this Webhook URL',
+    recentsShared: 'Page link copied. Opening it will fill in this Webhook URL.',
+    recentsCopyFailed: 'Could not copy the page link. Allow clipboard access and try again.',
+    recentsRemove: 'Remove this connection from history',
+    recentsRemoved: 'Connection removed from history.',
+    recentsCleared: 'Connection history cleared.',
+    recentsResponse: 'Server response received. This does not confirm that the Webhook works.',
+    recentsTimeout: 'The server did not respond within 8 seconds.',
+    recentsUnreachable: 'Could not reach the server.',
     profileName:        'Profile name',
     profileSelect:      'Select OpenAI profile',
     profileSave:        'Save as profile',
@@ -2772,6 +2786,17 @@ const i18n = {
     recentsTitle:       'Недавние подключения',
     recentsEmpty:       'Недавних подключений пока нет',
     recentsClear:       'Очистить всё',
+    recentsCheck: 'Проверить ответ сервера',
+    recentsChecking: 'Проверяем ответ сервера…',
+    recentsShare: 'Скопировать ссылку на страницу с этим Webhook URL',
+    recentsShared: 'Ссылка на страницу скопирована. При открытии в ней будет заполнен этот Webhook URL.',
+    recentsCopyFailed: 'Не удалось скопировать ссылку на страницу. Разрешите доступ к буферу обмена и повторите попытку.',
+    recentsRemove: 'Удалить подключение из истории',
+    recentsRemoved: 'Подключение удалено из истории.',
+    recentsCleared: 'История подключений очищена.',
+    recentsResponse: 'Ответ сервера получен. Это не подтверждает работоспособность Webhook.',
+    recentsTimeout: 'Сервер не ответил за 8 секунд.',
+    recentsUnreachable: 'Не удалось связаться с сервером.',
     profileName:        'Имя профиля',
     profileSelect:      'Выбрать профиль OpenAI',
     profileSave:        'Сохранить профиль',
@@ -2899,6 +2924,7 @@ function applyLang(l, silent) {
   if (!silent) toast(l === 'en' ? '🌐 English' : '🌐 Русский');
   if (typeof renderConsentBanner === 'function') renderConsentBanner();
   if (!silent) updateTransportUI();
+  if (document.querySelector('#webhook-hist-dropdown.open')) renderHistoryDropdown();
   if (typeof updateOpenAIRequestPreview === 'function') queueMicrotask(() => {
     if (document.querySelector('.tool-definition')) renderOpenAITools(readOpenAIForm().tools);
     updateOpenAIRequestPreview();
@@ -4679,7 +4705,7 @@ function getUrlType(url) { return /\/webhook-test\//i.test(url) ? 'test' : 'prod
 
 function fmtHistTs(ts) {
   const d = new Date(ts);
-  return d.toLocaleString([], { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 let histDropOpen = false;
@@ -4733,7 +4759,18 @@ function selectHistoryUrl(value) {
 
 function renderHistoryDropdown() {
   const root = document.getElementById('webhook-hist-dropdown');
+  window.FieldHelp?.hide();
   root.innerHTML = '';
+  const SVG_TRASH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+  const describeAction = (button, key) => {
+    button.type = 'button';
+    button.setAttribute('aria-label', t(key));
+    button.dataset.helpText = t(key);
+    button.addEventListener('pointerenter', () => window.FieldHelp?.show(button));
+    button.addEventListener('pointerleave', () => window.FieldHelp?.hide());
+    button.addEventListener('focus', () => window.FieldHelp?.show(button));
+    button.addEventListener('blur', () => window.FieldHelp?.hide());
+  };
 
   const head = document.createElement('div');
   head.className = 'wh-head';
@@ -4744,8 +4781,10 @@ function renderHistoryDropdown() {
   if (webhookHistory.length > 0) {
     const clr = document.createElement('button');
     clr.className = 'wh-clear-btn';
-    clr.textContent = t('recentsClear');
-    clr.onclick = (e) => { e.stopPropagation(); clearWebhookHistory(); };
+    clr.innerHTML = SVG_TRASH;
+    const caption = document.createElement('span'); caption.textContent = t('recentsClear'); clr.append(caption);
+    describeAction(clr, 'recentsClear');
+    clr.onclick = (e) => { e.stopPropagation(); clearWebhookHistory(); toast(t('recentsCleared')); };
     head.appendChild(clr);
   }
   root.appendChild(head);
@@ -4777,7 +4816,7 @@ function renderHistoryDropdown() {
     badge.className = `wh-badge wh-${type}`;
     badge.textContent = type.toUpperCase();
     const methodBadge = document.createElement('span');
-    methodBadge.className = 'wh-badge';
+    methodBadge.className = 'wh-method';
     methodBadge.textContent = (entry.method || 'post').toUpperCase();
 
     const time = document.createElement('span');
@@ -4788,50 +4827,37 @@ function renderHistoryDropdown() {
     dot.className = 'wh-sdot';
 
     const SVG_LIGHTNING = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
-    const SVG_COPY_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
     const SVG_SHARE_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
-    const SVG_TRASH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
 
     const chkBtn = document.createElement('button');
     chkBtn.className = 'wh-check-btn';
-    chkBtn.innerHTML = SVG_LIGHTNING + 'Check';
-    chkBtn.title = 'Check if this webhook is reachable';
-    chkBtn.onclick = (e) => { e.stopPropagation(); checkWebhookStatus(entry.url, dot, chkBtn); };
-
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'wh-copy-btn';
-    copyBtn.innerHTML = SVG_COPY_ICON;
-    copyBtn.title = 'Copy webhook URL';
-    copyBtn.onclick = (e) => {
-      e.stopPropagation();
-      copyText(entry.url).then(() => {
-        copyBtn.classList.add('copied');
-        setTimeout(() => copyBtn.classList.remove('copied'), 1800);
-      });
-    };
+    chkBtn.innerHTML = SVG_LIGHTNING;
+    const checkCaption = document.createElement('span'); checkCaption.textContent = t('recentsCheck'); chkBtn.append(checkCaption);
+    describeAction(chkBtn, 'recentsCheck');
+    chkBtn.onclick = (e) => { e.stopPropagation(); window.FieldHelp?.hide(); checkWebhookStatus(entry.url, dot, chkBtn); };
 
     const shareBtn = document.createElement('button');
     shareBtn.className = 'wh-share-btn';
     shareBtn.innerHTML = SVG_SHARE_ICON;
-    shareBtn.title = 'Copy shareable page link';
+    describeAction(shareBtn, 'recentsShare');
     shareBtn.onclick = (e) => {
       e.stopPropagation();
-      const base = (window.location.origin + window.location.pathname).replace(/\/$/, '/');
-      copyText(base + '?webhookurl=' + entry.url).then(() => {
-        shareBtn.classList.add('copied');
-        setTimeout(() => shareBtn.classList.remove('copied'), 1800);
-      });
+      window.FieldHelp?.hide();
+      const link = new URL(window.location.pathname, window.location.origin);
+      link.searchParams.set('webhookurl', entry.url);
+      copyText(link.href).then(() => toast(t('recentsShared'))).catch(() => toast(t('recentsCopyFailed')));
     };
 
     const delBtn = document.createElement('button');
     delBtn.className = 'wh-del-btn';
     delBtn.innerHTML = SVG_TRASH;
-    delBtn.title = 'Remove from history';
+    describeAction(delBtn, 'recentsRemove');
     delBtn.onclick = (e) => {
       e.stopPropagation();
       webhookHistory = webhookHistory.filter(h => h.url !== entry.url);
       localStorage.setItem('n8n_wh_history', JSON.stringify(webhookHistory));
       renderHistoryDropdown();
+      toast(t('recentsRemoved'));
     };
 
     const row1 = document.createElement('div');
@@ -4840,18 +4866,22 @@ function renderHistoryDropdown() {
 
     const row2 = document.createElement('div');
     row2.className = 'wh-actions-row';
-    row2.append(copyBtn, shareBtn, delBtn);
+    row2.append(shareBtn, delBtn);
 
     const actions = document.createElement('div');
     actions.className = 'wh-actions';
     if (CFG_SHOW_CHECK_BTN) actions.append(row1);
     actions.append(row2);
 
-    meta.append(badge, methodBadge, time, dot);
+    meta.append(badge, time, dot);
+
+    const requestLine = document.createElement('div');
+    requestLine.className = 'wh-request-line';
+    requestLine.append(methodBadge, urlEl);
 
     const left = document.createElement('div');
     left.className = 'wh-item-left';
-    left.append(urlEl, meta);
+    left.append(requestLine, meta);
 
     item.append(left, actions);
     item.addEventListener('click', () => selectHistoryUrl(entry));
@@ -4862,31 +4892,33 @@ function renderHistoryDropdown() {
 
 async function checkWebhookStatus(url, dotEl, btnEl) {
   dotEl.className = 'wh-sdot vis err';
-  dotEl.title = 'Checking…';
+  dotEl.dataset.helpText = t('recentsChecking');
+  toast(t('recentsChecking'));
   if (btnEl) btnEl.classList.add('checking');
 
   const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), 8000);
+  const timeout = setTimeout(() => ac.abort(), 8000);
 
   try {
     const isLocal = /^https?:\/\/(localhost|127\.)/.test(url);
     if (isLocal) {
       const res = await fetch(url, { method: 'GET', signal: ac.signal });
       dotEl.className = 'wh-sdot vis ' + (res.ok || res.status === 404 ? 'ok' : 'warn');
-      dotEl.title = res.ok || res.status === 404 ? 'Webhook active' : `HTTP ${res.status}`;
+      dotEl.dataset.helpText = `HTTP ${res.status}. ${t('recentsResponse')}`;
     } else {
       // Cross-origin: n8n only sends CORS headers for POST preflights, not for any readable probe.
       // no-cors: any HTTP response = server alive; network errors throw.
       await fetch(url, { method: 'GET', mode: 'no-cors', signal: ac.signal });
       dotEl.className = 'wh-sdot vis ok';
-      dotEl.title = 'Webhook server reachable';
+      dotEl.dataset.helpText = t('recentsResponse');
     }
   } catch(e) {
     console.warn('[checkWebhookStatus]', e.name, e.message, url);
     dotEl.className = 'wh-sdot vis err';
-    dotEl.title = e.name === 'AbortError' ? 'Timeout (8 s)' : 'Not registered or unreachable';
+    dotEl.dataset.helpText = t(e.name === 'AbortError' ? 'recentsTimeout' : 'recentsUnreachable');
   } finally {
-    clearTimeout(t);
+    clearTimeout(timeout);
+    toast(dotEl.dataset.helpText);
     if (btnEl) btnEl.classList.remove('checking');
   }
 }
