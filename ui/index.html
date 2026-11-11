@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.5.7';
+const APP_VERSION = '1.5.8';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -51,6 +51,58 @@ const CFG_TRANSPORT_ORDER = ['webhook', 'openai'];
 const CFG_TRANSPORT_DEFAULT = 'openai';
 
 const CFG_OPENAI_PRESETS = [];
+
+// GDELT DOC 2.0 defaults, shared with the Tools page.
+const CFG_GDELT_DEFAULTS = {
+  "endpoint": "https://api.gdeltproject.org/api/v2/doc/doc",
+  "timespan": "24h",
+  "sort": "datedesc",
+  "limit": 10,
+  "maxLimit": 50,
+  "historyMonths": 3,
+  "minWindowMs": 900000,
+  "timeoutMs": 45000,
+  "minRequestIntervalMs": 5500,
+  "requestGateKey": "ai_gdelt_request_gate_v1",
+  "retries": 1,
+  "retryDelayMs": 5500,
+  "maxRetryDelayMs": 60000,
+  "maxTextLength": 200,
+  "cityAliases": {
+    "москва": "Moscow",
+    "moscow": "Moscow",
+    "санкт-петербург": "Saint Petersburg",
+    "санкт петербург": "Saint Petersburg",
+    "петербург": "Saint Petersburg",
+    "спб": "Saint Petersburg",
+    "st. petersburg": "Saint Petersburg",
+    "saint petersburg": "Saint Petersburg",
+    "казань": "Kazan",
+    "сочи": "Sochi",
+    "новосибирск": "Novosibirsk",
+    "екатеринбург": "Yekaterinburg",
+    "нижний новгород": "Nizhny Novgorod",
+    "лондон": "London",
+    "париж": "Paris",
+    "берлин": "Berlin",
+    "нью-йорк": "New York"
+  },
+  "languageAliases": {
+    "русский": "russian",
+    "английский": "english",
+    "ru": "russian",
+    "en": "english"
+  },
+  "countryAliases": {
+    "россия": "russia",
+    "сша": "unitedstates",
+    "великобритания": "unitedkingdom",
+    "ru": "russia",
+    "us": "unitedstates",
+    "uk": "unitedkingdom"
+  }
+};
+window.gdeltDefaults = Object.freeze(CFG_GDELT_DEFAULTS);
 
 // RAG workbench defaults. API keys are entered in the page and never persisted.
 const CFG_RAG_DEFAULTS = {
@@ -1926,12 +1978,12 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
 #messages .chat-data .json-number { color:#c5af91; }
 #messages .chat-data .json-literal { color:#b4a3c7; }
 </style>
-<link rel="stylesheet" href="app-navigation.css?v=1.5.7">
-<link rel="stylesheet" href="field-help.css?v=1.5.7">
+<link rel="stylesheet" href="app-navigation.css?v=1.5.8">
+<link rel="stylesheet" href="field-help.css?v=1.5.8">
 <!-- Yandex.Metrika 112561962: consent-aware loader -->
-<script src="metrika.js?v=1.5.7" defer></script>
-  <link rel="stylesheet" href="scrollbars.css?v=1.5.7">
-  <link rel="stylesheet" href="credential-fields.css?v=1.5.7">
+<script src="metrika.js?v=1.5.8" defer></script>
+  <link rel="stylesheet" href="scrollbars.css?v=1.5.8">
+  <link rel="stylesheet" href="credential-fields.css?v=1.5.8">
 </head>
 <body>
 
@@ -3870,7 +3922,7 @@ function resolveToolTemplate(template, args, encode = false) {
 }
 function buildToolHttpRequest(tool, call) {
   if (!tool?.http?.url) return null;
-  if (tool.libraryId || tool.http.auth?.placement && tool.http.auth.placement !== 'none') return ToolLibrary.buildRequest(tool, JSON.parse(call.function?.arguments || '{}'));
+  if (tool.adapter || tool.libraryId || tool.http.auth?.placement && tool.http.auth.placement !== 'none') return ToolLibrary.buildRequest(tool, JSON.parse(call.function?.arguments || '{}'));
   const args = JSON.parse(call.function?.arguments || '{}');
   if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error('Tool arguments must be an object');
   const mapped = Object.create(null);
@@ -3922,8 +3974,17 @@ function attachToolHttpRunner(row, input, call, turn) {
     turn.results.delete(call.id); syncToolReturnButtons(turn);
     updateOpenAIRequestPreview();
     status.textContent = toolHttpText('Выполняется…', 'Running…');
-    const timer = setTimeout(() => controller.abort(), 30000);
+    const timer = tool.adapter === 'gdelt' ? null : setTimeout(() => controller.abort(), 30000);
     try {
+      if (tool.adapter === 'gdelt') {
+        const result = await GdeltTool.execute(tool, JSON.parse(call.function?.arguments || '{}'), {signal:controller.signal,onProgress:progress => {
+          if (pendingOpenAIToolTurn === turn) status.textContent = progress.stage === 'request' ? toolHttpText('Ожидание GDELT, попытка ', 'Waiting for GDELT, attempt ') + progress.attempt : toolHttpText('Очередь / повтор GDELT…', 'GDELT queue / retry…');
+        }});
+        if (pendingOpenAIToolTurn !== turn) return;
+        input.value = JSON.stringify(result); input.dispatchEvent(new Event('input', {bubbles:true}));
+        status.textContent = result.status === 'error' ? result.error.message : toolHttpText('Результат инструмента добавлен в чат.', 'Tool result added to chat.');
+        return;
+      }
       const authorized = ToolLibrary.authorizeRequest(request, tool.http);
       const response = await fetch(authorized.url, { method: authorized.method, headers: authorized.headers, body: authorized.body, credentials: 'omit', redirect: 'error', signal: controller.signal });
       const body = ToolLibrary.redact(await response.text());
@@ -3979,7 +4040,8 @@ function renderOpenAITools(tools = []) {
     row.className = 'tool-definition';
     row.toolAuth = tool.http?.auth;
     row.mcpMetadata = tool.mcp;
-    if (tool.libraryId) row.libraryMetadata = {libraryId:tool.libraryId,libraryTitle:tool.libraryTitle,libraryBase:tool.libraryBase,libraryOverrides:tool.libraryOverrides || []};
+    row.libraryMetadata = tool.adapter ? {adapter:tool.adapter} : {};
+    if (tool.libraryId) row.libraryMetadata = {...row.libraryMetadata,libraryId:tool.libraryId,libraryTitle:tool.libraryTitle,libraryBase:tool.libraryBase,libraryOverrides:tool.libraryOverrides || []};
     row.innerHTML = `<label class="api-field"><span>${t('openaiToolName')}</span><input class="api-input" data-tool-field="name" maxlength="64" autocomplete="off" spellcheck="false"></label><label class="api-field"><span>${t('openaiToolDescription')}</span><input class="api-input" data-tool-field="description" autocomplete="off"></label><button class="cfg-btn tool-remove" type="button" title="${t('openaiRemoveTool')}" aria-label="${t('openaiRemoveTool')}">${toolTrashIcon()}</button><label class="api-field tool-definition-schema"><span>${t('openaiToolParameters')}</span><textarea class="api-textarea" data-tool-field="parameters" autocomplete="off" spellcheck="false"></textarea></label><div class="api-toggle-row"><span><strong>${t('openaiToolStrict')}</strong></span><label class="switch"><input type="checkbox" data-tool-field="strict"><span class="slider"></span></label></div>`;
     row.querySelector('[data-tool-field="name"]').value = tool.name || '';
     row.querySelector('[data-tool-field="description"]').value = tool.description || '';
@@ -6899,15 +6961,16 @@ function acceptConsent() {
   }
 })();
 </script>
-<script src="material-catalog.js?v=1.5.7"></script>
-<script src="tool-library.js?v=1.5.7"></script>
-<script src="tool-library-settings.js?v=1.5.7"></script>
-<script src="mcp-runtime.js?v=1.5.7"></script>
-<script src="mcp-library.js?v=1.5.7"></script>
-<script src="mcp-client.js?v=1.5.7"></script>
-<script src="mcp-settings.js?v=1.5.7"></script>
-<script src="app-navigation.js?v=1.5.7"></script>
-<script src="field-help.js?v=1.5.7"></script>
-<script src="openai-field-help.js?v=1.5.7"></script>
+<script src="material-catalog.js?v=1.5.8"></script>
+<script src="tool-gdelt.js?v=1.5.8"></script>
+<script src="tool-library.js?v=1.5.8"></script>
+<script src="tool-library-settings.js?v=1.5.8"></script>
+<script src="mcp-runtime.js?v=1.5.8"></script>
+<script src="mcp-library.js?v=1.5.8"></script>
+<script src="mcp-client.js?v=1.5.8"></script>
+<script src="mcp-settings.js?v=1.5.8"></script>
+<script src="app-navigation.js?v=1.5.8"></script>
+<script src="field-help.js?v=1.5.8"></script>
+<script src="openai-field-help.js?v=1.5.8"></script>
 </body>
 </html>

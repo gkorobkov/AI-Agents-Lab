@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "id": "gdelt_news",
+  "title": "GDELT — поиск новостей и событий",
+  "summary": "Поиск свежих новостей, происшествий и сообщений о событиях по городам, странам и темам. Источник — GDELT DOC 2.0 API. GDELT не предоставляет афишу, билеты или наличие мест. published_at — время регистрации/публикации статьи, а не дата события.",
+  "docsUrl": "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/",
+  "providerUrl": "https://www.gdeltproject.org/",
+  "exampleRequest": {
+    "city": "Москва",
+    "keywords": "festival",
+    "timespan": "7d"
+  },
+  "exampleResponse": {
+    "source": "gdelt",
+    "status": "ok",
+    "query": {
+      "city": "Moscow",
+      "keywords": "festival",
+      "sort": "datedesc",
+      "limit": 10,
+      "timespan": "7d"
+    },
+    "count": 1,
+    "articles": [
+      {
+        "title": "Example title (illustrative, not live data)",
+        "url": "https://example.com/article",
+        "published_at": "2026-11-10T12:00:00Z",
+        "domain": "example.com",
+        "language": "English",
+        "source_country": "Russia",
+        "image_url": null
+      }
+    ]
+  },
+  "tool": {
+    "adapter": "gdelt",
+    "name": "search_news_gdelt",
+    "description": "Search recent news articles and media reports about a city, country, topic, or event using GDELT DOC 2.0. Returns article titles, publication timestamps, source information and links. Use this tool for city news, breaking news, cultural news, public events, incidents and recent developments. This tool does not provide verified event schedules, tickets or venue availability. Supply at least city or keywords. Use English keywords. Cite article links. published_at is the GDELT seen/publication timestamp, never the event date. Do not invent article summaries, schedules or missing facts. Report empty and error statuses honestly. For concert schedules prefer a specialized listings tool if connected.",
+    "parameters": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"city\": {\n      \"type\": \"string\",\n      \"description\": \"City in English or Russian, e.g. Москва. Popular Russian city aliases are normalized to English.\"\n    },\n    \"keywords\": {\n      \"type\": \"string\",\n      \"description\": \"Plain-text English search phrase (GDELT searches English translations). No GDELT operators.\"\n    },\n    \"timespan\": {\n      \"type\": \"string\",\n      \"description\": \"Publication lookback: integer + min, h, d, w or m; default 24h. Minimum 15min; maximum 3 months. Ignored with absolute dates.\"\n    },\n    \"start_date\": {\n      \"type\": \"string\",\n      \"description\": \"Optional UTC ISO 8601 start timestamp ending in Z, within the last 3 months. If omitted with end_date, uses the start of the available window.\"\n    },\n    \"end_date\": {\n      \"type\": \"string\",\n      \"description\": \"Optional UTC ISO 8601 end timestamp ending in Z. Cannot be in the future. If omitted with start_date, uses now. Minimum interval 15 minutes.\"\n    },\n    \"source_language\": {\n      \"type\": \"string\",\n      \"description\": \"Original publication language: English name or GDELT three-letter code (e.g. russian, eng).\"\n    },\n    \"source_country\": {\n      \"type\": \"string\",\n      \"description\": \"Publisher country, NOT event country. English country name or two-letter FIPS code (not ISO).\"\n    },\n    \"sort\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"datedesc\",\n        \"hybridrel\"\n      ],\n      \"description\": \"Sort by newest first (default datedesc) or relevance.\"\n    },\n    \"limit\": {\n      \"type\": \"integer\",\n      \"minimum\": 1,\n      \"maximum\": 50,\n      \"description\": \"Maximum article count, default 10.\"\n    }\n  },\n  \"required\": [],\n  \"additionalProperties\": false\n}",
+    "strict": false,
+    "http": {
+      "url": "https://api.gdeltproject.org/api/v2/doc/doc",
+      "method": "GET",
+      "mappings": [
+        {
+          "key": "mode",
+          "value": "artlist"
+        },
+        {
+          "key": "format",
+          "value": "json"
+        }
+      ],
+      "body": "",
+      "auth": {
+        "placement": "none",
+        "name": "",
+        "prefix": "",
+        "secretId": ""
+      }
+    }
+  }
+}

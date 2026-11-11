@@ -136,6 +136,13 @@
     $('mappings').replaceChildren(); (draft.tool.http.mappings || []).forEach(mappingRow);
     $('delete-tool').hidden = !!draft.builtin || !lib.get(draft.id);
     $('request-preview').textContent = '—'; $('response-output').textContent = '—'; $('test-status').textContent = tr('Ответ сервера появится здесь', 'The server response will appear here'); $('test-status').classList.remove('error');
+    if (record.tool.adapter === 'gdelt') $('test-args').value = JSON.stringify(record.exampleRequest || {});
+    document.getElementById('tool-examples')?.remove();
+    if (record.exampleRequest || record.exampleResponse) {
+      const details = document.createElement('details'); details.id = 'tool-examples';
+      const caption = document.createElement('summary'); caption.textContent = tr('Пример запроса и JSON-ответа (иллюстрация)', 'Example request and JSON response (illustrative)');
+      const content = document.createElement('pre'); content.textContent = JSON.stringify({request:record.exampleRequest,response:record.exampleResponse},null,2); details.append(caption,content); $('edit-description').closest('label').after(details);
+    }
     renderArguments(); lockDefinition(); original = JSON.stringify(readDraft()); selecting = false; updateDirty(); renderPicker(); status('');
   }
   function storeKey(record) {
@@ -244,6 +251,16 @@
       $('test-status').textContent = tr('Выполняется запрос…', 'Request in progress…'); $('test-status').classList.remove('error'); $('response-output').textContent = '—';
       timer = setTimeout(() => { timedOut = true; active.abort(); }, 15000);
       const started = performance.now();
+      if (record.tool.adapter === 'gdelt') {
+        clearTimeout(timer);
+        const result = await GdeltTool.execute(record.tool,args,{signal:active.signal,onProgress:progress => {
+          $('test-status').textContent = progress.stage === 'request' ? tr('Ожидание GDELT, попытка ', 'Waiting for GDELT, attempt ') + progress.attempt + tr(' (до ', ' (up to ') + progress.timeout_ms / 1000 + tr(' с).', ' s).') : tr('Очередь / повтор GDELT', 'GDELT queue / retry') + (progress.wait_ms ? ' · ' + Math.ceil(progress.wait_ms / 1000) + tr(' с.', ' s.') : '…');
+        }});
+        $('response-output').textContent = JSON.stringify(result,null,2);
+        $('test-status').textContent = result.status + ' · ' + (result.meta.external_http_status ? 'HTTP ' + result.meta.external_http_status : tr('HTTP-статус недоступен браузеру', 'HTTP status unavailable to browser')) + (result.error ? ' · ' + result.error.category + ' · ' + result.error.message : '') + ' · ' + result.meta.duration_ms + ' ms · ' + result.meta.request_id;
+        $('test-status').classList.toggle('error',result.status === 'error');
+        return;
+      }
       const response = await fetch(authorized.url, { method:authorized.method, headers:authorized.headers, body:authorized.body || undefined, signal:active.signal, credentials:'omit', redirect:'error' });
       const body = await response.text();
       let display = body; try { display = JSON.stringify(JSON.parse(body), null, 2); } catch (_) {}
@@ -298,22 +315,22 @@
     const container = $('llm-values'); container.replaceChildren();
     const values = Object.create(null);
     const templates = [...$('mappings').querySelectorAll('[data-value]')].map(input => input.value).join(' ') + ' ' + $('edit-url').value + ' ' + ($('edit-method').value === 'POST' ? $('edit-body').value : '');
-    Object.entries(schema.properties || {}).filter(([key]) => [...templates.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g)].some(match => match[1].split('.')[0] === key)).forEach(([key,spec]) => {
+    Object.entries(schema.properties || {}).filter(([key]) => draft.tool.adapter === 'gdelt' || [...templates.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g)].some(match => match[1].split('.')[0] === key)).forEach(([key,spec]) => {
       const row = document.createElement('div'); row.className = 'llm-argument-row';
       const nameLabel = document.createElement('label'), nameCaption = document.createElement('span'), name = document.createElement('input');
       nameCaption.textContent = tr('Имя аргумента для LLM модели', 'Argument name for the LLM model'); name.value = key; name.readOnly = true; nameLabel.append(nameCaption,name);
       const label = document.createElement('label'), caption = document.createElement('span'); caption.textContent = tr('Значение аргумента для LLM модели', 'Argument value for the LLM model');
       const input = document.createElement('input'); input.dataset.argument = key;
       const type = Array.isArray(spec.type) ? spec.type.find(t => t !== 'null') : spec.type;
-      const fallback = type === 'boolean' ? false : ['number','integer'].includes(type) ? 0 : type === 'object' ? {} : type === 'array' ? [] : '';
-      values[key] = Object.hasOwn(previous,key) ? previous[key] : Object.hasOwn(spec,'default') ? spec.default : spec.enum?.[0] ?? fallback;
+      const fallback = draft.tool.adapter === 'gdelt' ? '' : type === 'boolean' ? false : ['number','integer'].includes(type) ? 0 : type === 'object' ? {} : type === 'array' ? [] : '';
+      values[key] = Object.hasOwn(previous,key) ? previous[key] : draft.tool.adapter === 'gdelt' ? '' : Object.hasOwn(spec,'default') ? spec.default : spec.enum?.[0] ?? fallback;
       input.value = typeof values[key] === 'string' ? values[key] : JSON.stringify(values[key]);
-      const sync = () => { input.setCustomValidity(''); try { values[key] = type === 'string' ? input.value : JSON.parse(input.value); } catch (_) { input.setCustomValidity(tr('Введите значение JSON нужного типа.', 'Enter a JSON value of the expected type.')); } $('test-args').value = JSON.stringify(values,null,2); };
+      const sync = () => { input.setCustomValidity(''); try { values[key] = input.value === '' && draft.tool.adapter === 'gdelt' ? '' : type === 'string' ? input.value : JSON.parse(input.value); } catch (_) { input.setCustomValidity(tr('Введите значение JSON нужного типа.', 'Enter a JSON value of the expected type.')); } $('test-args').value = JSON.stringify(draft.tool.adapter === 'gdelt' ? Object.fromEntries(Object.entries(values).filter(([,v]) => v !== '')) : values,null,2); };
       input.oninput = sync;
       label.append(caption,input); row.append(nameLabel,label); container.append(row);
     });
     if (!container.children.length) container.textContent = tr('Аргументы не нужны: запрос использует постоянные значения.', 'No arguments needed: the request uses constant values.');
-    $('test-args').value = JSON.stringify(values,null,2);
+    $('test-args').value = JSON.stringify(draft.tool.adapter === 'gdelt' ? Object.fromEntries(Object.entries(values).filter(([,v]) => v !== '')) : values,null,2);
     container.querySelectorAll('input').forEach(input => input.addEventListener('input',()=>{ refreshMappingSources(); syncTestPrompt(); }));
     refreshMappingSources();
     syncTestPrompt();

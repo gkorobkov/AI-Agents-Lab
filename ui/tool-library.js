@@ -71,6 +71,7 @@
   }
   function buildRequest(tool, args) {
     if (!tool?.http?.url) return null;
+    if (tool.adapter === 'gdelt') return GdeltTool.buildRequest(tool, args);
     const schema = validate(tool, true);
     if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error('Arguments must be a JSON object.');
     for (const key of schema.required || []) if (!Object.prototype.hasOwnProperty.call(args,key)) throw new Error('Missing argument: ' + key);
@@ -139,7 +140,7 @@
     record.builtin = false;
     return save(record);
   }
-  const ready = MaterialCatalog.load('tools-manifest.json', 'tools', validateRecord).then(result => {
+  const ready = Promise.all([MaterialCatalog.load('tools-manifest.json', 'tools', validateRecord), window.GdeltTool?.ready?.catch(() => errors.push('GDELT configuration unavailable.'))]).then(([result]) => {
     presets = result.records.map(record => ({...record, builtin:true})); errors.push(...result.errors);
     window.dispatchEvent(new Event('tool-library:change'));
   });

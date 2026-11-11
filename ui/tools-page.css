@@ -106,3 +106,5 @@ pre.result { overflow:auto; }
 .library-list { padding:4px; }
 .library-list button { min-width:0; }
 .library-list button[aria-current="true"] { box-shadow:none; }
+#tool-examples { margin:6px 0; min-width:0; }
+#tool-examples pre { max-height:260px; overflow:auto; font-size:12px; }
