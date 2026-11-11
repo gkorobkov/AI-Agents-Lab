@@ -5,7 +5,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.5.6';
+const APP_VERSION = '1.5.7';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -1926,12 +1926,12 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
 #messages .chat-data .json-number { color:#c5af91; }
 #messages .chat-data .json-literal { color:#b4a3c7; }
 </style>
-<link rel="stylesheet" href="app-navigation.css?v=1.5.6">
-<link rel="stylesheet" href="field-help.css?v=1.5.6">
+<link rel="stylesheet" href="app-navigation.css?v=1.5.7">
+<link rel="stylesheet" href="field-help.css?v=1.5.7">
 <!-- Yandex.Metrika 112561962: consent-aware loader -->
-<script src="metrika.js?v=1.5.6" defer></script>
-  <link rel="stylesheet" href="scrollbars.css?v=1.5.6">
-  <link rel="stylesheet" href="credential-fields.css?v=1.5.6">
+<script src="metrika.js?v=1.5.7" defer></script>
+  <link rel="stylesheet" href="scrollbars.css?v=1.5.7">
+  <link rel="stylesheet" href="credential-fields.css?v=1.5.7">
 </head>
 <body>
 
@@ -5907,7 +5907,7 @@ async function sendDemoMessage(text) {
   const started = performance.now();
   demoIsRunning = true;
   const input = document.getElementById('msg-input');
-  input.value = ''; resizeTextarea(input);
+  input.value = ''; resizeTextarea(input); input.blur();
   appendMessage('user', text);
   isThinking = true;
   updateSendState();
@@ -6243,7 +6243,7 @@ async function sendOpenAIMessage(text) {
   const requestConfig = { ...openAIConfig };
   const payload = buildOpenAIRequest(requestConfig, getOpenAIContext(text), text);
   const input = document.getElementById('msg-input');
-  input.value = ''; resizeTextarea(input);
+  input.value = ''; resizeTextarea(input); input.blur();
   appendMessage('user', text);
   isThinking = true;
   updateSendState();
@@ -6357,7 +6357,7 @@ async function sendMessage() {
   const requestProvenance = webhookProvenance();
   saveUrlToHistory(webhookUrl);
 
-  input.value = ''; resizeTextarea(input);
+  input.value = ''; resizeTextarea(input); input.blur();
   const userRow = appendMessage('user', text);
   const request = beginWebhookWait(userRow, text);
   const replyMessage = (...args) => { pendingNetworkDebug = request.debugRow || null; const row = appendMessage(...args); if (request.row.isConnected) request.row.before(row); row.querySelector('.bubble-meta')?.prepend(request.timerEl); return row; };
@@ -6489,8 +6489,18 @@ async function sendMessage() {
     if (request.cancelled) return;
 
 
+    let networkHint;
+    if (err.name !== 'AbortError' && err.message === 'Failed to fetch' && /\/webhook(-test)?\//.test(request.url)) {
+      const isProd = !/\/webhook-test\//.test(request.url);
+      networkHint = {
+        text: isProd ? toolHttpText('Возможно, нужен TEST webhook?', 'Perhaps you need a TEST webhook?') : toolHttpText('Возможно, нужен PROD webhook?', 'Perhaps you need a PROD webhook?'),
+        actions: isProd
+          ? [['→ TEST', () => setUrlType('test')]]
+          : [['→ PROD', () => setUrlType('prod')]]
+      };
+    }
     request.connectionLost = true;
-    replyError(err.message + '\n' + t('webhookConnectionLost'), 'errConnectionLost');
+    replyError(err.message + '\n' + t('webhookConnectionLost'), 'errConnectionLost', networkHint);
   } finally {
     finishWebhookWait(request);
     updateSendState();
@@ -6889,15 +6899,15 @@ function acceptConsent() {
   }
 })();
 </script>
-<script src="material-catalog.js?v=1.5.6"></script>
-<script src="tool-library.js?v=1.5.6"></script>
-<script src="tool-library-settings.js?v=1.5.6"></script>
-<script src="mcp-runtime.js?v=1.5.6"></script>
-<script src="mcp-library.js?v=1.5.6"></script>
-<script src="mcp-client.js?v=1.5.6"></script>
-<script src="mcp-settings.js?v=1.5.6"></script>
-<script src="app-navigation.js?v=1.5.6"></script>
-<script src="field-help.js?v=1.5.6"></script>
-<script src="openai-field-help.js?v=1.5.6"></script>
+<script src="material-catalog.js?v=1.5.7"></script>
+<script src="tool-library.js?v=1.5.7"></script>
+<script src="tool-library-settings.js?v=1.5.7"></script>
+<script src="mcp-runtime.js?v=1.5.7"></script>
+<script src="mcp-library.js?v=1.5.7"></script>
+<script src="mcp-client.js?v=1.5.7"></script>
+<script src="mcp-settings.js?v=1.5.7"></script>
+<script src="app-navigation.js?v=1.5.7"></script>
+<script src="field-help.js?v=1.5.7"></script>
+<script src="openai-field-help.js?v=1.5.7"></script>
 </body>
 </html>

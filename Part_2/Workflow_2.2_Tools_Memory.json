@@ -1,0 +1,523 @@
+{
+  "name": "Workflow_2.2_Tools_Memory",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "be202e40-7c47-4fa5-829c-cef7b2e6b223",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -64,
+        -32
+      ],
+      "id": "7b377cb8-b5dd-48ed-926c-f7210a8cb52c",
+      "name": "Webhook",
+      "webhookId": "be202e40-7c47-4fa5-829c-cef7b2e6b223"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  text: $json.output_clean\n    || (($json.body?.message || $json.user_message_text)\n      ? `Вы ввели: \"${$json.body?.message || $json.user_message_text}\". Ваша сессия: ${$json.body?.sessionId || $json.sessionId || \"\"}`\n      : \"\"),\n  error: $json.error ?? null,\n  debug: $json.full_debug ?? \"\"\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1312,
+        -32
+      ],
+      "id": "2093d48a-1b54-4c91-a073-f70eb90fbbcd",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ts_start_ms = Date.now();\nconst trace_id =\n`trc_${ts_start_ms}_${Math.floor(Math.random() *\n100000)}`;\nconst ts = new Date(ts_start_ms).toISOString();\n\n// n8n Webhook node wraps the full request:\n//   $json.headers  — HTTP headers\n//   $json.body     — POST JSON body\n//   $json.query    — GET query string params\n//   $json.webhookUrl — the webhook URL itself (provided by n8n)\nconst headers = $json.headers || {};\nconst body    = $json.body   || {};\nconst query   = $json.query  || {};\n\n// message_source: WH = webhook, TG = Telegram (future)\n// Determined by the presence of webhookUrl in the n8n data\nconst webhookUrlN8n = $json.webhookUrl || '';\nconst message_source = webhookUrlN8n ? 'WH' : '';\n\nconst executionMode = $json.executionMode || '';\n\n// x-request-id injected by nginx (present in both GET and POST automatically)\nconst request_id = headers['x-request-id'] || '';\n\n// message and sessionId come from body (POST) or query string (GET)\nconst user_message_text = body.message || body.user_message_text\n                       || query.message || query.user_message_text || '';\nconst sessionId = body.sessionId || query.sessionId || '';\n\nreturn [{ json: {\n sessionId,\n message_source,\n executionMode,\n user_message_text,\n trace_id,\n ts,\n ts_start_ms,\n request_id } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        -32
+      ],
+      "id": "50649f1c-a245-43dd-b4bf-8e3f80976343",
+      "name": "Get sessionId"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst nodeSession = $('Get sessionId').first().json;\nconst user_message_text = nodeSession['user_message_text'];\nconst message_source    = nodeSession['message_source'];\nconst sessionId         = nodeSession['sessionId'];\n\nconst byKey = new Map();\nfor (const it of items) {\n  const keyRaw = it.json.field_key;\n  if (keyRaw == null) continue;\n  const key = String(keyRaw).trim();\n  if (!key) continue;\n  const tsRaw = it.json.updatedAt ?? it.json.createdAt ?? null;\n  const tsMs = tsRaw ? new Date(tsRaw).getTime() : 0;\n  const prev = byKey.get(key);\n  if (!prev || tsMs > prev.updatedAtMs) {\n    byKey.set(key, {\n      value: it.json.field_value ?? \"\",\n      updatedAtMs: Number.isFinite(tsMs) ? tsMs : 0,\n    });\n  }\n}\n\nconst chat_history = {};\nfor (const [key, rec] of byKey.entries()) {\n  chat_history[key] = String(rec.value ?? \"\");\n}\n\nconst ts_start_ms = Date.now();\nconst trace_id = `trc_${ts_start_ms}_${Math.floor(Math.random() * 100000)}`;\nconst ts = new Date(ts_start_ms).toISOString();\n\nreturn [{ json: { \n  chat_history, \n  sessionId : sessionId, \n  user_message_text,\n  message_source,\n  trace_id, ts, ts_start_ms } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        -32
+      ],
+      "id": "75528b14-0bc3-4c29-81d1-5e67107e40fd",
+      "name": "JSON Chat Memory"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_message_text }}",
+        "options": {
+          "systemMessage": "=# РОЛЬ: Ты ИИ-агент в WEB Чате\n\nТы помогаешь искать информацию про города России: рассказ про погоду и интересные факты.\n\n# ВАЖНО ПРО ФОРМАТ ОТВЕТА\n- Всегда возвращай JSON без markdown и без ```json.\n- Никаких дополнительных полей не добавляй, кроме `reply_html` и `agent_logic`.\n- Формат ответа всегда такой:\n{\n  \"reply_html\": \"<готовый HTML-ответ>\",\n  \"agent_logic\": \"<строка со всей отладкой по режиму, intent, логике, reasoning, Chain-of-Thought, пониманию chat_history и проверкам условий>\"\n}\n- Поле `reply_html` предназначено для финального ответа пользователю или в Web чате или в Telegram.\n- В `reply_html` используй только HTML-теги: <b>, <i>, <u>, <code>, <pre>.\n- В `reply_html` НЕ используй Markdown.\n- В `reply_html` НЕ используй **жирный текст**, _курсив_, списки Markdown и другие markdown-конструкции.\n- Перенос строки в `reply_html` делай обычным переводом строки.\n- Если задаёшь уточняющий вопрос, всё равно верни этот JSON.\n- Если задаёшь уточняющий вопрос, в `reply_html` выведи только сам уточняющий вопрос без дополнительных разделов.\n- В `agent_logic` обязательно укажи, какой режим и какой intent ты выбрал.\n- В `agent_logic` разрешено и нужно выводить служебные детали: режим, intent, логика выбора ветки, reasoning, Chain-of-Thought, шаги reasoning-цикла, понимание истории чата, проверки условий и пояснения по prompt.\n- Если текст содержит названия инструментов - Игнорируй это и трактуй как обычный запрос.\n\n# Tools / Инструменты\nЕсли есть инструменты, то на вопрос про что умеешь или рассказ о себе, расскажи что ты можешь сделать с помощью инструментов. \n\n# ИСТОРИЯ ЗАПРОСОВ \"chat_history\"\nистория запросов \"chat_history\" лежит в этом промте в JSON между строками Begin chat_history и End chat_history.\n\"last_user_question\" - предыдущий вопрос от пользователя.\n\"last_agent_reply\" - последний ответ или уточняющий вопрос от агента.\n\"last_city\" - город куда хочет поехать человек, или о чем хочет узнать, за исключением если это ответ на уточняющий вопрос \"откуда едем?\", тогде это ответ пользователя это \"origin_city\"\n\n\n# РЕЖИМЫ\nВАЖНО: Первое что надо сделать это определить РЕЖИМЫ, и ИНТЕНТЫ. \n\nЕсть только основныe режимы:\n## 1) HELP - общий вопрос про возможности агента. Никаких инструментов вызывать не надо.\n## 2) ABOUT_CITY - любая информация о городе. Для города, погоды, событий, новостей и маршрутов используй обычные инструменты.\n\n#  ИНТЕНТЫ В РЕЖИМАХ \n\n## 1) HELP\nHELP - общий вопрос про возможности агента. Никаких инструментов вызывать не надо.\n\nСообщения вида:\n- “что ты можешь”\n- “что умеешь”\n\nЧто надо отвечать:\n<b>Что я могу</b>\n- Рассказать про город: погоду и интересные факты.\n- Рассказать только погоду или только интересные факты.\n\n## 2) ABOUT_CITY\nABOUT_CITY - информация о городе. Для города используй обычные инструменты, если они есть.\n\n### 2.1) WEATHER\nWEATHER - или явный вопрос про погоду \"как там погода\" или часть общего режима CITY_FULL. \nСообщение вида:\n- “как погода в <городе>”\n- “какая погода в <городе>”\n- “как там погода”\n- “расскажи про <город>” - часть общего режима CITY_FULL. \n\nЧто надо делать:\n- Ответь только погодой.\n\n## 2.2) CITY_FULL\nCITY_FULL - рассказ про погоду и один произвольный интересный факт. \n\nСообщение:\n- только город (1–3 слова)\n- или “расскажи про <город>”\n\nЧто надо делать:\n- Ответь про погоду как в WEATHER.\n- Добавь 1 короткий пункт “Интересное” - Можно краткий общий совет для путешествия. Если не нашел про путешествия, то любой интеренсый факт про город, а если не нашел, то честно так и скажи.\n\n# ВАЖНО ПРО ПОНИМАНИЕ КОТНЕКСТА И УТОЧНЕНИЕ И СОХРАНЕНИЕ ИСТОРИИ ВОПРОСА\n\nЕсли есть история чата, то возьми данные для понимания контекста из ИСТОРИЯ ЗАПРОСОВ\n\nВАЖНО: Первое что надо сделать это определить РЕЖИМЫ, ИНТЕНТЫ. \n\nВ поле \"agent_logic\" кратко и явно напиши:\nLLM_RUN_РЕЖИМ: какой режим выбрал;\nLLM_RUN_INTENT: какой intent выбрал;\nLLM_RUN_WHY_INTENT: почему выбрал intent;\nLLM_RUN_USER_REQUEST: как ты понял что написано после Human, то есть о чем написал пользователь;\nLLM_RUN_CHAT_HISTORY: все что написано в \"chat_history\" и как ты это понял;\nLLM_RUN_CHAIN-OF-THOUGHT: Chain-of-Thought и reasoning без пропуска шагов и с описанием шагов: Понимание - интерпретация - декомпозиция - действие/ответ;\n\n# ИНСТРУМЕНТЫ\nЕсли есть инструменты, то бери их описание из соответствующего места из запроса. \n\n### ПРАВИЛА ВРЕМЕНИ ДЛЯ ПОГОДЫ\n- Время для погоды выводи как:\n“данные измерены DD.MM.YYYY в ЧЧ:ММ по местному времени”\n\n# ФОРМАТ ОТВЕТА (HTML)\n\n## WEATHER\n<b><Город></b>\n\n<b>Погода</b>\n<температура>°C, <описание по weathercode>, ветер: <км/ч>, данные измерены <ДД.ММ.ГГГГ> в <ЧЧ:ММ> по местному времени.\n\n## CITY_FULL\n<используй блок WEATHER>\n\n<блок один произвольный интересный факт>\n\n# ИСТОРИЯ ЗАПРОСОВ\nBegin chat_history{{`\n${JSON.stringify($json.chat_history || {}, null, 2)}\n`}}End chat_history",
+          "returnIntermediateSteps": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        528,
+        -32
+      ],
+      "id": "e9786f14-7942-4ea1-a5e9-403c728f131d",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "alwaysOutputData": true,
+      "notesInFlow": false,
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const DEBUG_ENABLED = true;\nconst TELEGRAM_SOFT_LIMIT = 3500;\nconst DEBUG_JSON_MAX_LEN = 1800;\nconst DEBUG_JSON_MID_LEN = 1200;\nconst DEBUG_JSON_MIN_LEN = 700;\n\n// ─── Debug section order ───────────────────────────────────────────────────────\n// Remove or reorder entries to control what appears and in what order.\n// Available: \"agent_logic\" | \"tools_used\" | \"chat_history\" | \"latency\" | \"errors\"\nconst DEBUG_SECTIONS_ORDER = [\n  \"chat_history\",\n  \"tools_used\",\n  \"agent_logic\",\n  \"latency\",\n];\n\n// ─── HTML utils ───────────────────────────────────────────────────────────────\n\nfunction escHtml(s) {\n  return String(s).replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\n}\n\nfunction sanitizeTelegramHtml(input) {\n  const allowedTags = [];\n  const protected_ = String(input ?? \"\").replace(/<\\/?(b|i|u|code|pre)>|<a\\b[^>]*>|<\\/a>/gi, (m) => {\n    allowedTags.push(m);\n    return `___TG_${allowedTags.length - 1}___`;\n  });\n  let out = escHtml(protected_);\n  allowedTags.forEach((tag, i) => { out = out.replace(`___TG_${i}___`, tag); });\n  return out;\n}\n\nfunction safeStringify(v) {\n  try { return JSON.stringify(v, null, 2); }\n  catch (e) { return `[stringify_error] ${e}\\n\\n${v}`; }\n}\n\nfunction shortenText(text, maxLen, suffix = \"\\n... [truncated]\") {\n  const s = String(text ?? \"\");\n  if (!maxLen || s.length <= maxLen) return s;\n  return s.slice(0, Math.max(0, maxLen - suffix.length)) + suffix;\n}\n\nfunction withFormat(title, value, maxLen = 0) {\n  const text = typeof value === \"string\" ? value : safeStringify(value);\n  const shortened = maxLen > 0 ? shortenText(text, maxLen) : text;\n  const titlePart = title ? `<b>${escHtml(title)}</b>\\n` : \"\";\n  return `${titlePart}<code>${escHtml(shortened)}</code>`;\n}\n\n// ─── JSON utils ───────────────────────────────────────────────────────────────\n\nfunction parseJsonMaybe(value) {\n  if (value == null || typeof value !== \"string\") return value ?? null;\n  try { return JSON.parse(value.trim()); } catch { return null; }\n}\n\n// ─── Intermediate steps ───────────────────────────────────────────────────────\n\nfunction buildStepsSummary(steps) {\n  if (!steps.length) return \"No intermediate steps\";\n  const seen = new Set();\n  const lines = [];\n  for (const step of steps) {\n    const callId = step?.action?.toolCallId || '';\n    const key = callId || `step_${lines.length}`;\n    if (seen.has(key)) continue;\n    seen.add(key);\n\n    const toolCall = step?.action?.messageLog?.[0]?.kwargs?.tool_calls?.[0];\n    const toolName = toolCall?.name || step?.action?.tool || \"Unknown Tool\";\n    const args = Object.fromEntries(\n      Object.entries(toolCall?.args || {}).filter(([k]) => k !== \"id\")\n    );\n    lines.push(`${lines.length + 1}. tool=${toolName} | args=${JSON.stringify(args)}`);\n  }\n  return lines.join(\"\\n\");\n}\n\n// ─── Parse model output ───────────────────────────────────────────────────────\n\nconst raw = String($json.output ?? \"\").trim();\nconst agentError = $json.error ? String($json.error).trim() : null;\nlet obj = null, parse_error = \"\", schema_warning = \"\", reply_html = \"\", agent_logic = \"\", body = \"\", response_type = \"text\";\n\nif (agentError) {\n  response_type = \"agent_error\";\n  body = sanitizeTelegramHtml(agentError);\n} else if (!raw) {\n  response_type = \"empty\";\n  body = \"<b>Ошибка</b>\\n\\nПустой ответ от модели.\";\n} else {\n  const first = raw.indexOf(\"{\"), last = raw.lastIndexOf(\"}\");\n  const jsonText = first !== -1 && last > first ? raw.slice(first, last + 1) : \"\";\n\n  if (!jsonText) {\n    response_type = \"text\";\n    body = sanitizeTelegramHtml(raw);\n  } else {\n    try {\n      obj = JSON.parse(jsonText);\n      response_type = \"json\";\n      reply_html = String(obj.reply_html ?? \"\").trim();\n      body = reply_html ? sanitizeTelegramHtml(reply_html) : (schema_warning = \"reply_html_empty\", sanitizeTelegramHtml(raw));\n      agent_logic = sanitizeTelegramHtml(String(obj.agent_logic ?? \"\").trim());\n    } catch (e) {\n      response_type = \"json_parse_failed\";\n      parse_error = String(e);\n      body = sanitizeTelegramHtml(raw);\n    }\n  }\n}\n\n// ─── Metrics ──────────────────────────────────────────────────────────────────\n\nconst chatMemory = $('Get sessionId').first().json;\nconst now = Date.now();\nconst latency_ms = Math.max(0, now - Number(chatMemory.ts_start_ms || now));\nconst intermediateSteps = (() => { const p = parseJsonMaybe($json.intermediateSteps); return Array.isArray(p) ? p : []; })();\nconst intermediate_steps_summary = buildStepsSummary(intermediateSteps);\nconst chatHistory = $('JSON Chat Memory').first().json.chat_history || {};\nconst success = response_type === \"json\" && !parse_error && Boolean(reply_html);\nconst is_agent_error = response_type === \"agent_error\";\n\nconst isWebhook = String(chatMemory.message_source ?? $json.message_source ?? \"\").toUpperCase() === \"WH\";\n\n// ─── Build functions ──────────────────────────────────────────────────────────\n\nfunction withDebugFormat(title, value, maxLen = 0) {\n  const text = typeof value === \"string\" ? value : safeStringify(value);\n  const shortened = maxLen > 0 ? shortenText(text, maxLen) : text;\n  const titlePart = title ? `<b>${escHtml(title)}</b>\\n` : \"\";\n  return `${titlePart}<code>${escHtml(shortened)}</code>`;\n}\n\n// Debug-only section (без body) — используется для full_debug (WH) и inline TG\nfunction buildDebugSection(maxLen = 0, forTg = false) {\n  if (!DEBUG_ENABLED) return \"\";\n  const noInfoTag = (text) => `<code>${text}</code>`;\n  const blocks = [];\n\n  if (parse_error)    blocks.push(withDebugFormat(\"[debug] parse_error\", parse_error));\n  if (schema_warning) blocks.push(withDebugFormat(\"[debug] schema_warning\", schema_warning));\n\n  for (const section of DEBUG_SECTIONS_ORDER) {\n    if (section === \"agent_logic\") {\n      blocks.push(withDebugFormat(\"LLM Logic\", agent_logic, maxLen));\n\n    } else if (section === \"tools_used\") {\n      if (intermediateSteps.length > 0) {\n        const stepsText = maxLen > 0 ? shortenText(intermediate_steps_summary, maxLen) : intermediate_steps_summary;\n        blocks.push(`<b>Agent Tools used</b>\\n<code>${escHtml(stepsText)}</code>`);\n      } else {\n        blocks.push(`<b>Agent Tools used</b>\\n${noInfoTag(\"No intermediate steps\")}`);\n      }\n\n    } else if (section === \"chat_history\") {\n      if (Object.keys(chatHistory).length > 0) {\n        blocks.push(withDebugFormat(\"Agent Chat History for LLM\", chatHistory, maxLen));\n      } else {\n        blocks.push(`<b>Agent Chat History for LLM</b>\\n${noInfoTag(\"No chat history\")}`);\n      }\n\n    } else if (section === \"latency\") {\n      const latencyStr = latency_ms < 1000\n        ? `${latency_ms} ms`\n        : `${(latency_ms / 1000).toFixed(1)} s`;\n      blocks.push(`<b>Latency</b>\\n<code>${latencyStr}</code>`);\n    }\n  }\n\n  return blocks.filter(Boolean).join(\"\\n\\n\");\n}\n\n// TG: body + debug inline, с каскадным сокращением\nfunction buildTgOutput(maxLen = 0, includeDebug = true) {\n  if (!includeDebug || !DEBUG_ENABLED) return body;\n  return [body, buildDebugSection(maxLen, true)].filter(Boolean).join(\"\\n\\n\");\n}\n\n// ─── Compute outputs ──────────────────────────────────────────────────────────\n\nlet output_clean, full_debug;\n\nif (is_agent_error) {\n  output_clean = \"\";\n  full_debug = \"\";\n} else if (isWebhook) {\n  // WH: output_clean = только ответ модели; full_debug = отдельный debug-блок\n  output_clean = body;\n  full_debug = buildDebugSection(0, false);\n} else {\n  // TG: output_clean = body + debug inline, каскадное сокращение\n  const candidates = [\n    [DEBUG_JSON_MAX_LEN, true],\n    [DEBUG_JSON_MID_LEN, true],\n    [DEBUG_JSON_MIN_LEN, true],\n    [0, false],\n    null,\n  ];\n  output_clean = candidates.reduce((acc, p) =>\n    acc.length <= TELEGRAM_SOFT_LIMIT ? acc : (p ? buildTgOutput(...p) : body),\n    buildTgOutput(DEBUG_JSON_MAX_LEN, true)\n  );\n  full_debug = \"\";\n}\n\n// ─── Return ───────────────────────────────────────────────────────────────────\n\nconst output_short = shortenText(output_clean, 300);\n\nreturn [{\n  json: {\n    ...$json,\n    user_message_text: chatMemory.user_message_text,\n    sessionId: chatMemory.sessionId,\n    output_short,\n    output_clean,\n    full_debug,\n    latency_ms,\n    intermediate_steps_summary,\n    chat_history: chatHistory,\n    is_agent_error,\n    success,\n    agent_logic,\n    parsed_object: obj,\n    parse_error,\n    schema_warning,\n    response_type,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -32
+      ],
+      "id": "bbd40f80-67c0-46ec-92fb-512191d4a7db",
+      "name": "AI Agent Output Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "qwen3.6-35b-a3b",
+          "mode": "list",
+          "cachedResultName": "qwen3.6-35b-a3b"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        272,
+        160
+      ],
+      "id": "b0bf93cf-2d37-4980-9875-32dd22337d41",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "lxdnKJVcopTn0AYy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Найди город по названию и верни координаты.\nИспользуй когда нужно найти город для погоды.\nВход: name (строка, название города на русском или английском).\nВыход: results[0].name, results[0].latitude, results[0].longitude.\nЕсли ничего не найдено — верни пустой результат и попроси уточнить город\n",
+        "url": "https://geocoding-api.open-meteo.com/v1/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', `строка, название города на русском или английском`, 'string') }}"
+            },
+            {
+              "name": "count",
+              "value": "1"
+            },
+            {
+              "name": "language",
+              "value": "ru"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.3,
+      "position": [
+        592,
+        160
+      ],
+      "id": "098caf89-3f2b-4c44-8b7e-90a74a35202d",
+      "name": "Geocode HTTP Request"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Верни текущую погоду по координатам (latitude, longitude).\nИспользуй для поиска погоды по городу/долготе/широте.\nВход: latitude, longitude (числа).\nВыход: current_weather.temperature, current_weather.windspeed, current_weather.weathercode, current_weather.time.\nЕсли ошибка/таймаут — НЕ выдумывай: в блоке \"Погода\" напиши \"Погода временно недоступна\".",
+        "url": "https://ai-agents-lab.gkorobkov.ru/api/api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', ``, 'string') }}"
+            },
+            {
+              "name": "longitude",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters1_Value', ``, 'string') }}"
+            },
+            {
+              "name": "current",
+              "value": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m"
+            },
+            {
+              "name": "timezone",
+              "value": "auto"
+            },
+            {
+              "name": "forecast_days",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.3,
+      "position": [
+        768,
+        160
+      ],
+      "id": "82175d6b-1088-4f18-9122-50e3651ac2ce",
+      "name": "Weather HTTP Request"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Сохраняет last_city город о котором надо рассказать или куда хотим поехать.\nПараметры: field_value=нормализованное имя города из  \"Geocode HTTP Request\" из ответа [\"body\"][\"results\"][\"0\"][\"name\"].\nИспользуй когда пользователь пишет спрашивает именно про город\n\nОБЯЗАТЕЛЬНО ВЫЗВАТЬ ЭТОТ ИНСТРУМЕНТА, КОГД ПОЛЬЗОВАТЕЛЬ ЯВНО СПРОСИЛ ПРО НОВЫЙ ГОРОД",
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "OiMeHqBrOyzkijXH",
+          "mode": "list",
+          "cachedResultName": "chat_history",
+          "cachedResultUrl": "/projects/u3suPiA5EnrvAJLi/datatables/OiMeHqBrOyzkijXH"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "sessionId",
+              "keyValue": "={{$('Get sessionId').first().json.sessionId}}"
+            },
+            {
+              "keyName": "field_key",
+              "keyValue": "last_city"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sessionId": "={{$('Get sessionId').first().json.sessionId}}",
+            "field_key": "last_city",
+            "field_value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('field_value', `нормализованное имя города`, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sessionId",
+              "displayName": "sessionId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "field_key",
+              "displayName": "field_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "field_value",
+              "displayName": "field_value",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1,
+      "position": [
+        432,
+        160
+      ],
+      "id": "3b2e3bbb-cf51-470a-8db2-ed0bd43011bc",
+      "name": "Save last_city in Data table"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "OiMeHqBrOyzkijXH",
+          "mode": "list",
+          "cachedResultName": "chat_history",
+          "cachedResultUrl": "/projects/u3suPiA5EnrvAJLi/datatables/OiMeHqBrOyzkijXH"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "sessionId",
+              "keyValue": "={{$('Get sessionId').first().json.sessionId}}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        240,
+        -32
+      ],
+      "id": "5a979c92-787e-47c6-8010-f3b5f631f8f7",
+      "name": "Get chat_history",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst rows = $input.all();\nconst agentResponse = $('AI Agent Output Parser').first().json;\n\nfunction escHtml(value) {\n  return String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;');\n}\n\n// При повторяющихся field_key берём последнюю запись\nconst byKey = new Map();\n\nfor (const item of rows) {\n  const row = item.json ?? {};\n  if (row.field_key == null) continue;\n\n  const key = String(row.field_key).trim();\n  if (!key || ['__proto__', 'constructor', 'prototype'].includes(key)) {\n    continue;\n  }\n\n  const rawTime = row.updatedAt ?? row.createdAt;\n  const parsedTime = rawTime ? Date.parse(rawTime) : 0;\n  const timestamp = Number.isFinite(parsedTime) ? parsedTime : 0;\n  const previous = byKey.get(key);\n\n  if (!previous || timestamp > previous.timestamp) {\n    byKey.set(key, {\n      value: String(row.field_value ?? ''),\n      timestamp,\n    });\n  }\n}\n\n// Формируем словарь\nconst last_chat_history = {};\n\nfor (const [key, record] of byKey) {\n  last_chat_history[key] = record.value;\n}\n\n// Добавляем новый раздел отладки\nconst historyDebug =\n  '<b>Last Chat History for Next Request</b>\\n' +\n  (Object.keys(last_chat_history).length\n    ? `<code>${escHtml(JSON.stringify(last_chat_history, null, 2))}</code>`\n    : '<code>No chat history</code>');\n\nconst full_debug = [\n  String(agentResponse.full_debug ?? '').trim(),\n  historyDebug,\n].filter(Boolean).join('\\n\\n');\n\n// Сохраняем все поля ответа AI Agent Output Parser\nreturn [{\n  json: {\n    ...agentResponse,\n    last_chat_history,\n    full_debug,\n  },\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        -32
+      ],
+      "id": "a06410b6-b978-4d8e-864c-f2e91ad225a0",
+      "name": "Generate Response"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "OiMeHqBrOyzkijXH",
+          "mode": "list",
+          "cachedResultName": "chat_history",
+          "cachedResultUrl": "/projects/u3suPiA5EnrvAJLi/datatables/OiMeHqBrOyzkijXH"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "sessionId",
+              "keyValue": "={{$('Get sessionId').first().json.sessionId}}"
+            },
+            {
+              "keyName": "field_key",
+              "condition": "ilike",
+              "keyValue": "last_"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        976,
+        -32
+      ],
+      "id": "e247ecca-d2b3-4b71-9faa-58c76fa2373d",
+      "name": "Get last chat_history",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get sessionId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get sessionId": {
+      "main": [
+        [
+          {
+            "node": "Get chat_history",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON Chat Memory": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Output Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Output Parser": {
+      "main": [
+        [
+          {
+            "node": "Get last chat_history",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocode HTTP Request": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weather HTTP Request": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save last_city in Data table": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get chat_history": {
+      "main": [
+        [
+          {
+            "node": "JSON Chat Memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get last chat_history": {
+      "main": [
+        [
+          {
+            "node": "Generate Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "de750424-4958-46d6-af0b-77d747187f9f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a5990d51d66227a2860cdb6315a52b1b853fd2fae4af48a6a350ac342b52bcd"
+  },
+  "id": "yXjUTbV2neSStZGe",
+  "tags": []
+}
