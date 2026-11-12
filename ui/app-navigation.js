@@ -1,5 +1,11 @@
 // Persistent panels are positioned with CSS, never detached or reloaded on switching.
 (() => {
+  const assetVersion = new URL(document.currentScript.src).searchParams.get('v');
+  function panelURL(path) {
+    const url = new URL(path, location.href);
+    if (assetVersion) url.searchParams.set('v', assetVersion);
+    return url.href;
+  }
   const workspace = document.createElement('main');
   workspace.id = 'workspace';
   document.querySelector('body > header').after(workspace);
@@ -275,7 +281,7 @@
     Object.entries(panels).forEach(([id, { panel, frame }]) => {
       const index = slots.indexOf(id); panel.hidden = index < 0;
       panel.style.gridArea = index < 0 ? '' : split && index === 1 ? 'second' : 'first';
-      if (index >= 0 && frame && !frame.hasAttribute('src')) frame.src = definitions[id][2] + '?embedded=1';
+      if (index >= 0 && frame && !frame.hasAttribute('src')) frame.src = panelURL(definitions[id][2] + '?embedded=1');
     });
     document.querySelectorAll('.transport-settings-panel').forEach(panel => {
       const visible = slots.includes('settings') && panel.id === transportMode + '-settings';
@@ -515,7 +521,7 @@
       Object.entries(saved.frames || {}).forEach(([id, href]) => {
         if (!slots.includes(id) || !panels[id]?.frame || typeof href !== 'string') return;
         const url = new URL(href, location.href), expected = new URL(definitions[id][2], location.href);
-        if (url.origin === expected.origin && url.pathname === expected.pathname) panels[id].frame.src = url.href;
+        if (url.origin === expected.origin && url.pathname === expected.pathname) panels[id].frame.src = panelURL(url.href);
       });
       restored = true;
     }

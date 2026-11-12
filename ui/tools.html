@@ -63,9 +63,9 @@
           <div id="schema-builder"></div><button id="add-argument" type="button" class="small">+ Аргумент</button><textarea readonly id="edit-schema" hidden></textarea><label><span>Определение инструмента для LLM модели · JSON</span><textarea id="tool-definition-json" class="code" rows="12" readonly></textarea></label><label class="check"><input id="edit-strict" type="checkbox"><span data-i18n="strict">Строгое соответствие схеме для LLM модели (strict)</span></label>
         </section>
         <section id="llm-test-section">
-          <h3><span>5</span> <span data-i18n="llmTest">Проверка инструмента через LLM</span></h3>
-          <p class="hint" data-i18n="llmHint">Измените значения аргументов — задача для LLM модели сформируется автоматически. Имена аргументов и текст задачи недоступны для редактирования. Нажмите «Вызвать LLM» и сравните аргументы в ответе с заданными значениями: так можно проверить, как LLM модель заполняет вызов инструмента. LLM Модель получает задачу и описание только этого инструмента, без системного промпта и истории чата. Вызов инструмента задан принудительно; HTTP-запрос запускается отдельно кнопкой в разделе 3.</p>
-          <div id="llm-values"></div><label><span data-i18n="llmPrompt">Задача для LLM модели</span><textarea id="llm-prompt" rows="4" readonly></textarea></label>
+          <h3><span>5</span> <span data-i18n="llmTest">Проверка вызова LLM с запросом выбора инструмента</span></h3>
+          <p class="hint" data-i18n="llmHint">Задача для LLM модели по умолчанию формируется из значений локальной проверки в разделе 4. Её можно отредактировать. Модель получит текст задачи и описание инструмента со схемой аргументов. Локальные значения не входят в JSON Schema, но включаются в начальный текст задачи. После нажатия «Вызвать LLM» аргументы из ответа модели появятся в полях локальной проверки. HTTP-запрос запускается отдельно кнопкой в разделе 3.</p>
+          <label><span data-i18n="llmPrompt">Задача для LLM модели</span><textarea id="llm-prompt" rows="4"></textarea></label>
           <button id="test-llm" type="button" class="primary" data-i18n="llmRun">Вызвать LLM</button>
           <p id="llm-status" role="status" class="hint"></p><div id="llm-request-box" class="result" hidden><div class="result-label">Запрос LLM / LLM request</div><pre id="llm-request"></pre></div><div id="llm-response-box" class="result" hidden><div class="result-label">Ответ LLM / LLM response</div><pre id="llm-response"></pre></div>
         </section>

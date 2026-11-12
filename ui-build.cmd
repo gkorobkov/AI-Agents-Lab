@@ -50,6 +50,13 @@ if errorlevel 1 (
     exit /b 1
 )
 
+rem Version local assets in every deployed HTML page, including iframe pages.
+node -e "const fs=require('fs'),path=require('path');try{const version=fs.readFileSync(process.env.UI_SRC,'utf8').match(/APP_VERSION = \x27([\d.]+)\x27/)[1];for(const name of fs.readdirSync(process.env.UI_DST)){if(!name.endsWith('.html'))continue;const file=path.join(process.env.UI_DST,name),html=fs.readFileSync(file,'utf8');const updated=html.replace(/(<(?:script|link)\b[^>]*?\b(?:src|href)=\x22)(?![a-z]+:|\/)([^\x22?]+\.(?:css|js))(?:\?[^\x22]*)?(\x22)/gi,(_,prefix,asset,suffix)=>prefix+asset+'?v='+version+suffix);if(updated!==html)fs.writeFileSync(file,updated,'utf8');}}catch(error){console.error('ERROR: '+error.message);process.exitCode=1;}"
+if errorlevel 1 (
+    echo ERROR: Failed to version UI page assets.
+    exit /b 1
+)
+
 if "%QUIET%"=="0" (
     echo [OK] Copying .\ui\* --^> .\.build\ui\
     for %%f in ("%UI_DIR%\*") do echo     .\ui\%%~nxf

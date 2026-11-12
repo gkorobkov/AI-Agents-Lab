@@ -1,12 +1,15 @@
 // Shared file-loading contract for labs, HTTP tools and MCP definitions.
 (() => {
+  const assetVersion = new URL(document.currentScript.src).searchParams.get('v');
   const CFG_MATERIAL_MAX_BYTES = 2000000;
   async function readFile(file) {
     if (file.size > CFG_MATERIAL_MAX_BYTES) throw new Error('JSON: максимум 2 МБ.');
     return JSON.parse((await file.text()).replace(/^\uFEFF/, ''));
   }
   async function fetchJSON(path) {
-    const response = await fetch(path, { signal: AbortSignal.timeout(15000) });
+    const url = new URL(path, location.href);
+    if (assetVersion) url.searchParams.set('v', assetVersion);
+    const response = await fetch(url, { cache: 'no-cache', signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     return readFile(await response.blob());
   }

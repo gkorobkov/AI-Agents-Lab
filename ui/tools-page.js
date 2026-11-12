@@ -8,7 +8,7 @@
   try { english = localStorage.getItem('n8n_lang') === 'en'; } catch (_) {}
   const tr = (ru, en) => english ? en : ru;
   const en = {
-    llmTest:'Test tool with LLM',llmHint:'Change the argument values to generate the task automatically. Argument names and the task text are read-only. Click Call LLM and compare the returned arguments with the values you supplied to check how the model fills the tool call. The model receives the task and only this tool definition, without a system prompt or chat history. A tool call is forced; run the HTTP request separately using the button in section 3.',llmPrompt:'Task for the LLM model',llmRun:'Call LLM',library:'LIBRARY',importTool:'Load JSON',exportTool:'Download JSON',create:'Create tool',navNote:'Configure once. Connect to your agent and override only what you need.',modelNote:'The model sees the function name, description and argument schema. It decides when to request a call. The application performs the HTTP request; adding a tool does not guarantee a call.',definition:'Description',title:'Library title',name:'Function name for the LLM model',description:'Description for the LLM model',schema:'Arguments for the LLM model · JSON Schema',strict:'Strict schema matching for the LLM model (strict)',http:'Request parameters',method:'Method',query:'URL parameters',addParameter:'+ Parameter',mappingHint:'Test with a constant first. Then select a model argument or create one directly from the parameter.',advanced:'Authentication and request body',body:'Request body (POST, JSON template)',auth:'Authentication',authNone:'Not required',authQuery:'API key in URL parameter',authHeader:'API key in header',authName:'Parameter / header name',authPrefix:'Prefix (optional)',clearKey:'Remove session key',keyHint:'The key is kept only in this browser session and bound to the server. It is never included in the model function definition.',summary:'Library explanation',docs:'Official documentation',provider:'Provider website',test:'Test HTTP request',arguments:'Function arguments · JSON',run:'Run HTTP request to Tool',abort:'Stop',cors:'The request runs in your browser. The tool server must allow CORS.',request:'Request · without secrets',response:'The server response will appear here',saveCopy:'Save a copy',addAgent:'Connect to agent →',delete:'Delete'
+    llmTest:'Test an LLM call requesting tool selection',llmHint:'The default LLM task is generated from the local test values in section 4. You can edit it. The model receives the task text and the tool definition with its argument schema. Local values are excluded from JSON Schema and included in the default task text. After you click Call LLM, the returned arguments populate the local test fields. Run the HTTP request separately using the button in section 3.',llmPrompt:'Task for the LLM model',llmRun:'Call LLM',library:'LIBRARY',importTool:'Load JSON',exportTool:'Download JSON',create:'Create tool',navNote:'Configure once. Connect to your agent and override only what you need.',modelNote:'The model sees the function name, description and argument schema. It decides when to request a call. The application performs the HTTP request; adding a tool does not guarantee a call.',definition:'Description',title:'Library title',name:'Function name for the LLM model',description:'Description for the LLM model',schema:'Arguments for the LLM model · JSON Schema',strict:'Strict schema matching for the LLM model (strict)',http:'Request parameters',method:'Method',query:'URL parameters',addParameter:'+ Parameter',mappingHint:'Test with a constant first. Then select a model argument or create one directly from the parameter.',advanced:'Authentication and request body',body:'Request body (POST, JSON template)',auth:'Authentication',authNone:'Not required',authQuery:'API key in URL parameter',authHeader:'API key in header',authName:'Parameter / header name',authPrefix:'Prefix (optional)',clearKey:'Remove session key',keyHint:'The key is kept only in this browser session and bound to the server. It is never included in the model function definition.',summary:'Library explanation',docs:'Official documentation',provider:'Provider website',test:'Test HTTP request',arguments:'Function arguments · JSON',run:'Run HTTP request to Tool',abort:'Stop',cors:'The request runs in your browser. The tool server must allow CORS.',request:'Request · without secrets',response:'The server response will appear here',saveCopy:'Save a copy',addAgent:'Connect to agent →',delete:'Delete'
   };
   const ru = Object.fromEntries(Array.from(document.querySelectorAll('[data-i18n]'), el => [el.dataset.i18n, el.textContent]));
   function applyLanguage() {
@@ -113,11 +113,6 @@
   function syncDefinitionPreview() {
     $('tool-definition-json').value = JSON.stringify({type:'function',function:{name:$('edit-name').value,description:$('edit-description').value,parameters:JSON.parse($('edit-schema').value),strict:$('edit-strict').checked}},null,2);
   }
-  function syncTestPrompt() {
-    const words = value => value === null ? tr('не задано', 'not specified') : typeof value === 'boolean' ? (value ? tr('да', 'yes') : tr('нет', 'no')) : Array.isArray(value) ? (value.length ? value.map(words).join(', ') : tr('пустой список', 'empty list')) : typeof value === 'object' ? (Object.entries(value).map(([key,item]) => key + ' — ' + words(item)).join('; ') || tr('пустой объект', 'empty object')) : value === '' ? tr('пустая строка', 'empty string') : String(value);
-    const values = Object.entries(JSON.parse($('test-args').value)).map(([key,value]) => key + ' — ' + words(value));
-    $('llm-prompt').value = tr('Вызови только инструмент ', 'Call only the tool ') + $('edit-name').value + (values.length ? tr(' с параметрами: ', ' with arguments: ') + values.join('; ') : tr(' без параметров', ' without arguments')) + '.';
-  }
   function select(record, force = false) {
     if (!force && dirty) autoSave();
     if (!force && dirty) return;
@@ -143,6 +138,7 @@
       const caption = document.createElement('summary'); caption.textContent = tr('Пример запроса и JSON-ответа (иллюстрация)', 'Example request and JSON response (illustrative)');
       const content = document.createElement('pre'); content.textContent = JSON.stringify({request:record.exampleRequest,response:record.exampleResponse},null,2); details.append(caption,content); $('edit-description').closest('label').after(details);
     }
+    $('llm-prompt').value = ''; generatedTestPrompt = '';
     renderArguments(); lockDefinition(); original = JSON.stringify(readDraft()); selecting = false; updateDirty(); renderPicker(); status('');
   }
   function storeKey(record) {
@@ -193,7 +189,7 @@
   $('copy-tool').onclick = () => { const copy = readDraft(); copy.id = lib.newId(); copy.builtin = false; copy.title += tr(' · копия', ' · copy'); const base = copy.tool.name.replace(/_copy(?:_\d+)?$/, '').slice(0,55); let name = base + '_copy', n = 2; while (lib.list().some(item => item.tool.name === name)) name = base + '_copy_' + n++; copy.tool.name = name; copy.tool.http.auth.secretId = lib.newId(); select(copy); autoSave(); };
   $('test-llm').onclick = async () => {
     try {
-      if (![...$('llm-values').querySelectorAll('input')].every(input => input.reportValidity())) return;
+      if (!$('llm-prompt').value.trim()) { $('llm-prompt').focus(); throw new Error(tr('Введите задачу для LLM модели.', 'Enter a task for the LLM model.')); }
       const saved = save(); if (!saved) return;
       if (typeof parent.testLibraryTool !== 'function') throw new Error(tr('Откройте библиотеку внутри приложения.', 'Open the library inside the application.'));
       $('test-llm').disabled = true; $('llm-status').textContent = tr('Выполняется вызов LLM…','Calling LLM…'); $('llm-response-box').hidden = true; $('llm-request-box').hidden = true;
@@ -234,7 +230,7 @@
     if (controller) return;
     let timer, timedOut = false;
     try {
-      if (!Array.from($('llm-values').querySelectorAll('input')).every(input => input.reportValidity())) return;
+      if (!Array.from($('schema-builder').querySelectorAll('.local-test-value')).every(input => input.reportValidity())) return;
       const record = readDraft();
       if (!record.tool.http.url) throw new Error(tr('Укажите URL инструмента.', 'Enter the tool URL.'));
       const args = JSON.parse($('test-args').value);
@@ -279,7 +275,7 @@
     const locked = !!draft.builtin;
     document.body.classList.toggle('tool-readonly', locked);
     $('tool-form').querySelectorAll('section:not(#http-test-section):not(#llm-test-section) input, section:not(#http-test-section):not(#llm-test-section) textarea, section:not(#http-test-section):not(#llm-test-section) select, section:not(#http-test-section):not(#llm-test-section) button').forEach(input => {
-      if (['edit-key','clear-key'].includes(input.id) || input.classList.contains('help-button')) return;
+      if (['edit-key','clear-key'].includes(input.id) || input.classList.contains('help-button') || input.classList.contains('local-test-value')) return;
       if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT' && input.type !== 'checkbox') input.readOnly = locked || ['edit-schema','tool-definition-json'].includes(input.id);
       else input.disabled = locked;
     });
@@ -288,19 +284,36 @@
     $('copy-tool').textContent = tr('Создать копию', 'Create a copy');
     $('add-argument').textContent = tr('+ Аргумент', '+ Argument');
   }
+  let generatedTestPrompt = '';
+  function syncTestPrompt() {
+    const field = $('llm-prompt');
+    const automatic = !field.value || field.value === generatedTestPrompt;
+    const args = Object.entries(JSON.parse($('test-args').value)).map(([key,value]) => key + ' = ' + JSON.stringify(value));
+    generatedTestPrompt = tr('Вызови инструмент ', 'Call the tool ') + $('edit-name').value + (args.length ? tr(' с аргументами ', ' with arguments ') + args.join(', ') : tr(' без аргументов', ' without arguments')) + '.';
+    if (automatic) field.value = generatedTestPrompt;
+  }
   function renderArguments() {
     const schema = JSON.parse($('edit-schema').value);
     const builder = $('schema-builder'); builder.replaceChildren();
     const sync = () => { $('edit-schema').value = JSON.stringify(schema, null, 2); renderValues(schema); refreshMappingSources(); updateDirty(); };
     Object.entries(schema.properties || {}).forEach(([key, spec]) => {
-      const row = document.createElement('div'); row.className = 'schema-row';
-      const field = (caption, input) => { const label = document.createElement('label'); const span = document.createElement('span'); span.textContent = caption; label.append(span,input); row.append(label); return input; };
-      const name = field(tr('Имя аргумента для LLM модели', 'Argument name for the LLM model'), document.createElement('input')); name.value = key;
-      const type = field(tr('Тип для LLM модели', 'Type for the LLM model'), document.createElement('select'));
+      const row = document.createElement('div'); row.className = 'schema-row'; row.dataset.argument = key;
+      const field = (caption, input, property, texts) => {
+        const label = document.createElement('label'), span = document.createElement('span');
+        span.textContent = caption;
+        const button = document.createElement('span'); button.className = 'api-help'; button.tabIndex = 0; button.role = 'button'; button.textContent = '?';
+        button.setAttribute('aria-label', tr('Справка: ', 'Help: ') + caption);
+        button.dataset.helpPath = 'tools[].function.parameters.' + (property === 'required' ? 'required' : 'properties[' + JSON.stringify(key) + ']' + (property ? '.' + property : ''));
+        button.dataset.helpText = tr(...texts);
+        FieldHelp.attach(button); span.append(' ',button);
+        label.append(span,input); row.append(label); return input;
+      };
+      const name = field(tr('Имя аргумента для LLM модели', 'Argument name for the LLM model'), document.createElement('input'), '', ['Поле «Имя аргумента для LLM модели» задаёт ключ в JSON Schema. Модель использует это имя при формировании аргументов вызова. Это же имя используется в шаблонах {{имя}} HTTP-запроса.', 'The argument name field defines a JSON Schema property key. The model uses this name in tool call arguments. HTTP request templates use the same name in {{name}}.']); name.value = key;
+      const type = field(tr('Тип для LLM модели', 'Type for the LLM model'), document.createElement('select'), 'type', ['Поле «Тип для LLM модели» задаёт тип значения аргумента в JSON Schema. string — строка, number — число, integer — целое число, boolean — логическое значение, object — объект, array — массив.', 'The type field defines the JSON Schema value type. string is text, number is numeric, integer is a whole number, boolean is true or false, object contains properties, and array contains items.']);
       ['string','number','integer','boolean','object','array'].forEach(value => { const option = document.createElement('option'); option.value = value; option.textContent = value; type.append(option); });
       if (Array.isArray(spec.type) || !type.querySelector(`option[value="${spec.type}"]`)) { const option = document.createElement('option'); option.value = JSON.stringify(spec.type); option.textContent = option.value || 'schema'; type.append(option); type.value = option.value; } else type.value = spec.type;
-      const description = field(tr('Описание для LLM модели', 'Description for the LLM model'), document.createElement('textarea')); description.rows = 2; description.value = spec.description || '';
-      const required = field(tr('Обязательный для LLM модели', 'Required for the LLM model'), document.createElement('input')); required.type = 'checkbox'; required.checked = (schema.required || []).includes(key);
+      const description = field(tr('Описание для LLM модели', 'Description for the LLM model'), document.createElement('textarea'), 'description', ['Поле «Описание для LLM модели» объясняет смысл аргумента, формат и единицы измерения. Модель получает это описание вместе с JSON Schema и использует его для выбора значения.', 'The description field explains the meaning, format and units of the argument. The model receives this description with JSON Schema and uses it to choose a value.']); description.rows = 2; description.value = spec.description || '';
+      const required = field(tr('Обязательный для LLM модели', 'Required for the LLM model'), document.createElement('input'), 'required', ['Флажок «Обязательный для LLM модели» добавляет имя аргумента в массив required JSON Schema. Модель должна включить этот аргумент в вызов инструмента. Проверка HTTP-запроса также требует его наличия.', 'The required checkbox adds this argument name to the JSON Schema required array. The model must include it in the tool call. HTTP request validation also requires it.']); required.type = 'checkbox'; required.checked = (schema.required || []).includes(key);
       name.onchange = () => { const next = name.value.trim(); if (!next || ['__proto__','constructor','prototype'].includes(next) || next !== key && Object.hasOwn(schema.properties,next)) { name.value = key; status(tr('Укажите уникальное имя аргумента.', 'Use a unique argument name.'), true); return; } schema.properties = Object.fromEntries(Object.entries(schema.properties).map(([k,v]) => [k === key ? next : k,v])); schema.required = (schema.required || []).map(k => k === key ? next : k); $('mappings').querySelectorAll('[data-value]').forEach(input => { input.value = input.value.replaceAll('{{' + key + '}}','{{' + next + '}}'); }); sync(); renderArguments(); lockDefinition(); };
       type.onchange = () => { spec.type = type.value; if (type.value === 'array') spec.items ||= {type:'string'}; if (type.value === 'object') spec.properties ||= {}; sync(); };
       description.oninput = () => { spec.description = description.value; sync(); };
@@ -312,28 +325,32 @@
   }
   function renderValues(schema) {
     let previous = {}; try { previous = JSON.parse($('test-args').value); } catch (_) {}
-    const container = $('llm-values'); container.replaceChildren();
+    if (draft.tool.adapter !== 'gdelt' && !Object.keys(previous).length) {
+      try { previous = JSON.parse($('edit-test-args').value); } catch (_) {}
+    }
+    const container = $('schema-builder'); container.querySelectorAll('.local-test-field').forEach(field => field.remove());
     const values = Object.create(null);
-    const templates = [...$('mappings').querySelectorAll('[data-value]')].map(input => input.value).join(' ') + ' ' + $('edit-url').value + ' ' + ($('edit-method').value === 'POST' ? $('edit-body').value : '');
-    Object.entries(schema.properties || {}).filter(([key]) => draft.tool.adapter === 'gdelt' || [...templates.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g)].some(match => match[1].split('.')[0] === key)).forEach(([key,spec]) => {
-      const row = document.createElement('div'); row.className = 'llm-argument-row';
-      const nameLabel = document.createElement('label'), nameCaption = document.createElement('span'), name = document.createElement('input');
-      nameCaption.textContent = tr('Имя аргумента для LLM модели', 'Argument name for the LLM model'); name.value = key; name.readOnly = true; nameLabel.append(nameCaption,name);
-      const label = document.createElement('label'), caption = document.createElement('span'); caption.textContent = tr('Значение аргумента для LLM модели', 'Argument value for the LLM model');
-      const input = document.createElement('input'); input.dataset.argument = key;
+    Object.entries(schema.properties || {}).forEach(([key,spec]) => {
+      const row = [...container.children].find(row => row.dataset.argument === key);
+      const label = document.createElement('label'); label.className = 'local-test-field';
+      const caption = document.createElement('span'); caption.textContent = tr('Значение для Локальной проверки', 'Value for local testing');
+      const hint = document.createElement('small'); hint.textContent = tr('Не входит в JSON Schema', 'Not included in JSON Schema');
+      const helpButton = document.createElement('span'); helpButton.className = 'api-help'; helpButton.tabIndex = 0; helpButton.role = 'button'; helpButton.textContent = '?';
+      helpButton.setAttribute('aria-label', tr('Справка: значение для локальной проверки', 'Help: local test value'));
+      helpButton.dataset.helpText = tr('Поле «Значение для Локальной проверки» задаёт аргумент для локального HTTP-вызова инструмента, как если бы агент получил это значение от модели. Значение не входит в JSON Schema. Оно также подставляется в начальный текст задачи в разделе «Проверка вызова LLM с запросом выбора инструмента» и передаётся модели в составе этой задачи при нажатии кнопки «Вызвать LLM». Задачу можно отредактировать. После проверки через LLM поле заполняется аргументом из ответа модели.', 'The local test value field supplies an argument for a local HTTP tool call, as if the agent had received this value from the model. The value is excluded from JSON Schema. It also populates the default LLM task and is sent as part of that task when you click Call LLM. You can edit the task. An LLM test fills this field with the argument returned by the model.');
+      FieldHelp.attach(helpButton); caption.append(' ',helpButton);
+      const input = document.createElement('input'); input.dataset.argument = key; input.className = 'local-test-value';
       const type = Array.isArray(spec.type) ? spec.type.find(t => t !== 'null') : spec.type;
       const fallback = draft.tool.adapter === 'gdelt' ? '' : type === 'boolean' ? false : ['number','integer'].includes(type) ? 0 : type === 'object' ? {} : type === 'array' ? [] : '';
       values[key] = Object.hasOwn(previous,key) ? previous[key] : draft.tool.adapter === 'gdelt' ? '' : Object.hasOwn(spec,'default') ? spec.default : spec.enum?.[0] ?? fallback;
       input.value = typeof values[key] === 'string' ? values[key] : JSON.stringify(values[key]);
       const sync = () => { input.setCustomValidity(''); try { values[key] = input.value === '' && draft.tool.adapter === 'gdelt' ? '' : type === 'string' ? input.value : JSON.parse(input.value); } catch (_) { input.setCustomValidity(tr('Введите значение JSON нужного типа.', 'Enter a JSON value of the expected type.')); } $('test-args').value = JSON.stringify(draft.tool.adapter === 'gdelt' ? Object.fromEntries(Object.entries(values).filter(([,v]) => v !== '')) : values,null,2); };
       input.oninput = sync;
-      label.append(caption,input); row.append(nameLabel,label); container.append(row);
+      label.append(caption,hint,input); if (row) row.insertBefore(label, row.querySelector('button'));
     });
-    if (!container.children.length) container.textContent = tr('Аргументы не нужны: запрос использует постоянные значения.', 'No arguments needed: the request uses constant values.');
     $('test-args').value = JSON.stringify(draft.tool.adapter === 'gdelt' ? Object.fromEntries(Object.entries(values).filter(([,v]) => v !== '')) : values,null,2);
-    container.querySelectorAll('input').forEach(input => input.addEventListener('input',()=>{ refreshMappingSources(); syncTestPrompt(); }));
-    refreshMappingSources();
-    syncTestPrompt();
+    container.querySelectorAll('.local-test-value').forEach(input => input.addEventListener('input',()=>{ refreshMappingSources(); syncTestPrompt(); }));
+    refreshMappingSources(); syncTestPrompt();
   }
   const help = {
     'edit-name':['Техническое имя, по которому LLM модель вызывает функцию. Для подключения к агенту нужны 1–64 латинские буквы, цифры, _ или -. Для проверки HTTP имя не используется.','The model calls the function by this name: 1–64 Latin letters, digits, _ or -. HTTP testing does not use it.'],
