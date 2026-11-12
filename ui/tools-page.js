@@ -8,7 +8,8 @@
   try { english = localStorage.getItem('n8n_lang') === 'en'; } catch (_) {}
   const tr = (ru, en) => english ? en : ru;
   const en = {
-    llmTest:'Test an LLM call requesting tool selection',llmHint:'The default LLM task is generated from the local test values in section 4. You can edit it. The model receives the task text and the tool definition with its argument schema. Local values are excluded from JSON Schema and included in the default task text. After you click Call LLM, the returned arguments populate the local test fields. Run the HTTP request separately using the button in section 3.',llmPrompt:'Task for the LLM model',llmRun:'Call LLM',library:'LIBRARY',importTool:'Load JSON',exportTool:'Download JSON',create:'Create tool',navNote:'Configure once. Connect to your agent and override only what you need.',modelNote:'The model sees the function name, description and argument schema. It decides when to request a call. The application performs the HTTP request; adding a tool does not guarantee a call.',definition:'Description',title:'Library title',name:'Function name for the LLM model',description:'Description for the LLM model',schema:'Arguments for the LLM model · JSON Schema',strict:'Strict schema matching for the LLM model (strict)',http:'Request parameters',method:'Method',query:'URL parameters',addParameter:'+ Parameter',mappingHint:'Test with a constant first. Then select a model argument or create one directly from the parameter.',advanced:'Authentication and request body',body:'Request body (POST, JSON template)',auth:'Authentication',authNone:'Not required',authQuery:'API key in URL parameter',authHeader:'API key in header',authName:'Parameter / header name',authPrefix:'Prefix (optional)',clearKey:'Remove session key',keyHint:'The key is kept only in this browser session and bound to the server. It is never included in the model function definition.',summary:'Library explanation',docs:'Official documentation',provider:'Provider website',test:'Test HTTP request',arguments:'Function arguments · JSON',run:'Run HTTP request to Tool',abort:'Stop',cors:'The request runs in your browser. The tool server must allow CORS.',request:'Request · without secrets',response:'The server response will appear here',saveCopy:'Save a copy',addAgent:'Connect to agent →',delete:'Delete'
+    parameterColumn:'Parameter',valueColumn:'Value',modelColumn:'Filled by model',actionsColumn:'Actions',argumentColumn:'Argument',typeColumn:'Type',descriptionColumn:'Description',requiredColumn:'Required',
+    llmTest:'Test an LLM call requesting tool selection',llmHint:'The default LLM task is generated from URL parameter values marked Filled by model. You can edit it. The model receives the task text and the tool definition with its argument schema. Local values are excluded from JSON Schema and included in the default task text. After you click Call LLM, the returned arguments populate the URL parameter fields. Run the HTTP request separately using the button in section 3.',llmPrompt:'Task for the LLM model',llmRun:'Call LLM',library:'LIBRARY',importTool:'Load JSON',exportTool:'Download JSON',create:'Create tool',navNote:'Configure once. Connect to your agent and override only what you need.',modelNote:'The model sees the function name, description and argument schema. It decides when to request a call. The application performs the HTTP request; adding a tool does not guarantee a call.',definition:'Description',title:'Library title',name:'Function name for the LLM model',description:'Description for the LLM model',schema:'Arguments for the LLM model · JSON Schema',strict:'Strict schema matching for the LLM model (strict)',http:'Request parameters',method:'Method',query:'URL parameters',addParameter:'+ Parameter',mappingHint:'Enter a value for testing. Enable Filled by model to add the parameter to JSON Schema.',advanced:'Authentication and request body',body:'Request body (POST, JSON template)',auth:'Authentication',authNone:'Not required',authQuery:'API key in URL parameter',authHeader:'API key in header',authName:'Parameter / header name',authPrefix:'Prefix (optional)',clearKey:'Remove session key',keyHint:'The key is kept only in this browser session and bound to the server. It is never included in the model function definition.',summary:'Library explanation',docs:'Official documentation',provider:'Provider website',test:'Test HTTP request',arguments:'Function arguments · JSON',run:'Run HTTP request to Tool',abort:'Stop',cors:'The request runs in your browser. The tool server must allow CORS.',request:'Request · without secrets',response:'The server response will appear here',saveCopy:'Save a copy',addAgent:'Connect to agent →',delete:'Delete'
   };
   const ru = Object.fromEntries(Array.from(document.querySelectorAll('[data-i18n]'), el => [el.dataset.i18n, el.textContent]));
   function applyLanguage() {
@@ -20,6 +21,7 @@
   if (!lib) { $('page-status').textContent = tr('Не удалось загрузить библиотеку инструментов.', 'Could not load the tool library.'); return; }
   await lib.ready;
   let draft, original = '', dirty = false, controller = null, saveTimer, savedTimer, lastEditedField, selecting = false;
+  const testValuesByTool = new Map();
   const fields = { title:'edit-title', docsUrl:'edit-docs', providerUrl:'edit-provider' };
   function status(message, error = false) { $('page-status').textContent = message; $('page-status').classList.toggle('error', error); }
   function readDraft() {
@@ -31,7 +33,7 @@
     next.tool.parameters = $('edit-schema').value;
     next.tool.strict = $('edit-strict').checked;
     next.tool.http = { ...next.tool.http, url:$('edit-url').value.trim(), method:$('edit-method').value,
-      mappings:Array.from($('mappings').children).map(row => ({ key:row.querySelector('[data-key]').value.trim(), value:row.querySelector('[data-value]').value })).filter(item => item.key),
+      mappings:Array.from($('mappings').children).map(row => ({ key:row.querySelector('[data-key]').value.trim(), value:row.querySelector('[data-value]').value, testValue:row.querySelector('.local-test-value').value })).filter(item => item.key),
       body:$('edit-body').value, auth:{ ...next.tool.http.auth, placement:$('edit-auth').value, name:$('edit-auth-name').value.trim(), prefix:$('edit-auth-prefix').value } };
     return next;
   }
@@ -58,52 +60,59 @@
     $('mappings').querySelectorAll('.mapping').forEach(row => row.refreshSource());
   }
   function mappingRow(item = { key:'', value:'' }) {
-    const row = document.createElement('div'); row.className = 'mapping';
-    const key = document.createElement('input'); key.dataset.key = ''; key.value = item.key; key.placeholder = 'name'; key.setAttribute('aria-label', tr('Имя HTTP-параметра', 'HTTP parameter name'));
+    const row = document.createElement('tr'); row.className = 'mapping';
+    const key = document.createElement('input'); key.dataset.key = ''; key.value = item.key; key.placeholder = 'name'; key.setAttribute('aria-label',tr('Имя HTTP-параметра','HTTP parameter name'));
     const editor = document.createElement('div'); editor.className = 'mapping-value';
-    const switches = document.createElement('div'); switches.className = 'source-switches'; switches.setAttribute('role','group'); switches.setAttribute('aria-label',tr('Источник значения','Value source'));
-    const value = document.createElement('input'); value.dataset.value = ''; value.value = item.value; value.setAttribute('aria-label',tr('Задано вручную','Manual value'));
-    const argumentsList = document.createElement('select'); argumentsList.className = 'source-native'; const chooser = document.createElement('details'); chooser.className = 'argument-chooser'; const heading = document.createElement('summary'); const menu = document.createElement('div'); menu.className = 'argument-menu'; chooser.append(heading,menu); argumentsList.setAttribute('aria-label',tr('Аргумент LLM модели','Model argument'));
-    const note = document.createElement('div'); note.className = 'mapping-note error'; note.setAttribute('role','status'); note.hidden = true;
-    const button = (symbol,label,fn) => { const el = document.createElement('button'); el.type = 'button'; el.textContent = symbol; el.title = label; el.setAttribute('aria-label',label); el.onclick = fn; switches.append(el); return el; };
-    let constantValue = item.value.includes('{{') ? '' : item.value;
-    const literal = button('txt',tr('Задано вручную','Manual value'),()=>{
-      const match = value.value.match(/^\{\{\s*([^{}]+?)\s*\}\}$/);
-      if (match) { const sample = JSON.parse($('test-args').value)[match[1]]; if (sample !== undefined) constantValue = typeof sample === 'object' ? JSON.stringify(sample) : String(sample); }
-      value.value = constantValue; row.refreshSource(); renderValues(JSON.parse($('edit-schema').value)); updateDirty();
-    });
-    const argument = button('↗',tr('Выбрать аргумент LLM модели','Select model argument'),()=>{
-      const names = Object.keys(JSON.parse($('edit-schema').value).properties || {});
-      if (!names.length) { note.textContent = tr('Аргументов пока нет. Нажмите +, чтобы создать аргумент из этого параметра.', 'No arguments yet. Use + to create one from this parameter.'); note.hidden = false; return; }
-      if (!value.value.includes('{{')) constantValue = value.value;
-      value.value = '{{' + names[0] + '}}'; row.refreshSource(); renderValues(JSON.parse($('edit-schema').value)); updateDirty(); heading.focus();
-    });
-    argument.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3v3M9 3h6M3 11H1m22 0h-2"/><rect x="3" y="6" width="18" height="15" rx="4"/><path d="M7 11v3m10-3v3m-9 3h8"/></svg>';
-    button('+',tr('Создать аргумент LLM модели','Create model argument'),()=>{
-      const name = key.value.trim(), schema = JSON.parse($('edit-schema').value);
-      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name) || ['__proto__','prototype','constructor'].includes(name)) { note.textContent = tr('Сначала укажите имя параметра: латинские буквы, цифры и _.','Enter a parameter name using letters, digits and _.'); note.hidden = false; return; }
-      const args = JSON.parse($('test-args').value);
-      if (!Object.hasOwn(schema.properties,name)) {
-        schema.properties[name] = {type:'string',description:tr('Значение параметра ','Value for parameter ') + name};
-        args[name] = value.value.includes('{{') ? constantValue : value.value;
-      }
-      schema.required = [...new Set([...(schema.required || []),name])];
-      $('test-args').value = JSON.stringify(args); $('edit-schema').value = JSON.stringify(schema,null,2);
-      value.value = '{{' + name + '}}'; renderArguments(); lockDefinition(); updateDirty();
-    });
+    const binding = document.createElement('input'); binding.type = 'hidden'; binding.dataset.value = ''; binding.value = item.value;
+    const value = document.createElement('input'); value.className = 'local-test-value'; value.value = item.testValue ?? (item.value.includes('{{') ? '' : item.value); value.setAttribute('aria-label',tr('Значение параметра','Parameter value'));
+    const label = document.createElement('label'); label.className = 'mapping-model';
+    const model = document.createElement('input'); model.type = 'checkbox';
+    model.setAttribute('aria-label',tr('Заполняет модель','Filled by model')); label.append(model);
+    const argumentName = () => binding.value.match(/^\{\{\s*([^{}]+?)\s*\}\}$/)?.[1];
     row.refreshSource = () => {
-      const names = Object.keys(JSON.parse($('edit-schema').value).properties || {});
-      const match = value.value.match(/^\{\{\s*([^{}]+?)\s*\}\}$/), bound = value.value.includes('{{');
-      argumentsList.replaceChildren(); names.forEach(name => { const option = document.createElement('option'); option.value = name; option.textContent = name; argumentsList.append(option); });
-      if (match && names.includes(match[1])) argumentsList.value = match[1];
-      else if (bound) { const option = document.createElement('option'); option.value = ''; option.textContent = value.value; argumentsList.append(option); argumentsList.value = ''; }
-      value.hidden = bound; chooser.hidden = !bound; const args = JSON.parse($('test-args').value); const argumentName = match?.[1]; heading.textContent = (argumentsList.selectedOptions[0]?.textContent || tr('Выберите аргумент','Select argument')) + (argumentName && Object.hasOwn(args,argumentName) ? ' = ' + JSON.stringify(args[argumentName]) : ''); menu.replaceChildren(); [...argumentsList.options].forEach(option => { const choice = document.createElement('button'); choice.type = 'button'; choice.textContent = option.textContent; choice.disabled = !!draft?.builtin; choice.onclick = () => { argumentsList.value = option.value; argumentsList.onchange(); chooser.open = false; heading.focus(); }; menu.append(choice); });
-      literal.setAttribute('aria-pressed',String(!bound)); argument.setAttribute('aria-pressed',String(bound)); note.hidden = true;
+      model.checked = !!argumentName();
+      value.readOnly = false;
     };
-    argumentsList.onchange = () => { value.value = '{{' + argumentsList.value + '}}'; row.refreshSource(); renderValues(JSON.parse($('edit-schema').value)); updateDirty(); };
-    value.addEventListener('input',()=>{ constantValue = value.value; });
-    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'mapping-delete'; remove.innerHTML = trashIcon; remove.title = tr('Удалить параметр','Remove parameter'); remove.setAttribute('aria-label',remove.title); remove.onclick = () => { row.remove(); updateDirty(); };
-    editor.append(switches,value,argumentsList,chooser); row.append(key,editor,remove,note); $('mappings').append(row); row.refreshSource();
+    value.oninput = () => {
+      const name = argumentName();
+      value.setCustomValidity('');
+      if (name) {
+        const schema = JSON.parse($('edit-schema').value), args = JSON.parse($('test-args').value);
+        const type = schema.properties?.[name]?.type;
+        try { args[name] = type === 'string' || Array.isArray(type) && type.includes('string') ? value.value : JSON.parse(value.value); }
+        catch (_) { value.setCustomValidity(tr('Введите значение JSON нужного типа.','Enter a JSON value of the expected type.')); return; }
+        $('test-args').value = JSON.stringify(args); testValuesByTool.set(draft.id,args); syncTestPrompt();
+      } else binding.value = value.value;
+      updateDirty();
+    };
+    model.onchange = () => {
+      const schema = JSON.parse($('edit-schema').value), name = key.value.trim();
+      if (model.checked) {
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name) || ['__proto__','prototype','constructor'].includes(name)) {
+          model.checked = false; status(tr('Укажите имя параметра латинскими буквами, цифрами и _.','Use a parameter name with letters, digits and _.'),true); key.focus(); return;
+        }
+        schema.properties ||= {};
+        schema.properties[name] ||= {type:'string',description:tr('Значение параметра ','Value for parameter ') + name};
+        schema.required = [...new Set([...(schema.required || []),name])];
+        binding.value = '{{' + name + '}}';
+        $('edit-schema').value = JSON.stringify(schema,null,2);
+        value.oninput();
+      } else {
+        const previousName = argumentName();
+        binding.value = value.value;
+        const token = '{{' + previousName + '}}';
+        const used = [...$('mappings').querySelectorAll('[data-value]')].some(input => input.value.includes(token)) || $('edit-body').value.includes(token) || $('edit-url').value.includes(token);
+        if (!used) {
+          delete schema.properties[previousName];
+          schema.required = (schema.required || []).filter(name => name !== previousName);
+          $('edit-schema').value = JSON.stringify(schema,null,2);
+        }
+      }
+      renderArguments(); lockDefinition(); updateDirty();
+    };
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'mapping-delete'; remove.innerHTML = trashIcon; remove.title = tr('Удалить параметр','Remove parameter'); remove.setAttribute('aria-label',remove.title); remove.onclick = () => { row.remove(); renderValues(JSON.parse($('edit-schema').value)); updateDirty(); };
+    editor.append(value,binding);
+    [key,editor,label,remove].forEach(control => { const cell = document.createElement('td'); cell.append(control); row.append(cell); }); $('mappings').append(row); row.refreshSource();
   }
   document.addEventListener('pointerdown', event => { document.querySelectorAll('.argument-chooser[open]').forEach(menu => { if (!menu.contains(event.target)) menu.open = false; }); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') document.querySelectorAll('.argument-chooser[open]').forEach(menu => { menu.open = false; menu.querySelector('summary').focus(); }); });
@@ -116,6 +125,9 @@
   function select(record, force = false) {
     if (!force && dirty) autoSave();
     if (!force && dirty) return;
+    if (draft?.id) {
+      try { testValuesByTool.set(draft.id, JSON.parse($('test-args').value)); } catch (_) {}
+    }
     if (controller) { status(tr('Сначала остановите текущий запрос.', 'Stop the current request before switching tools.'), true); return; }
     clearTimeout(saveTimer); selecting = true;
     draft = clone(record); draft.tool.http ||= { url:'', method:'GET', mappings:[], body:'' }; draft.tool.http.auth ||= { placement:'none', name:'', prefix:'', secretId:lib.newId() };
@@ -131,7 +143,16 @@
     $('mappings').replaceChildren(); (draft.tool.http.mappings || []).forEach(mappingRow);
     $('delete-tool').hidden = !!draft.builtin || !lib.get(draft.id);
     $('request-preview').textContent = '—'; $('response-output').textContent = '—'; $('test-status').textContent = tr('Ответ сервера появится здесь', 'The server response will appear here'); $('test-status').classList.remove('error');
-    if (record.tool.adapter === 'gdelt') $('test-args').value = JSON.stringify(record.exampleRequest || {});
+    const savedTestValues = testValuesByTool.get(record.id);
+    $('test-args').value = JSON.stringify(savedTestValues || (record.exampleRequest || {}));
+    const initialArgs = JSON.parse($('test-args').value);
+    (draft.tool.http.mappings || []).forEach(item => {
+      const name = item.value.match(/^\{\{\s*([^{}]+?)\s*\}\}$/)?.[1];
+      if (!name || item.testValue === undefined || savedTestValues) return;
+      const spec = JSON.parse($('edit-schema').value).properties?.[name];
+      try { initialArgs[name] = spec?.type === 'string' ? item.testValue : JSON.parse(item.testValue); } catch (_) { initialArgs[name] = item.testValue; }
+    });
+    $('test-args').value = JSON.stringify(initialArgs);
     document.getElementById('tool-examples')?.remove();
     if (record.exampleRequest || record.exampleResponse) {
       const details = document.createElement('details'); details.id = 'tool-examples';
@@ -230,7 +251,7 @@
     if (controller) return;
     let timer, timedOut = false;
     try {
-      if (!Array.from($('schema-builder').querySelectorAll('.local-test-value')).every(input => input.reportValidity())) return;
+      if (!Array.from($('mappings').querySelectorAll('.local-test-value')).every(input => input.reportValidity())) return;
       const record = readDraft();
       if (!record.tool.http.url) throw new Error(tr('Укажите URL инструмента.', 'Enter the tool URL.'));
       const args = JSON.parse($('test-args').value);
@@ -297,16 +318,20 @@
     const builder = $('schema-builder'); builder.replaceChildren();
     const sync = () => { $('edit-schema').value = JSON.stringify(schema, null, 2); renderValues(schema); refreshMappingSources(); updateDirty(); };
     Object.entries(schema.properties || {}).forEach(([key, spec]) => {
-      const row = document.createElement('div'); row.className = 'schema-row'; row.dataset.argument = key;
+      const row = document.createElement('tr'); row.className = 'schema-row'; row.dataset.argument = key;
       const field = (caption, input, property, texts) => {
-        const label = document.createElement('label'), span = document.createElement('span');
+        const label = document.createElement('td'), span = document.createElement('span');
         span.textContent = caption;
         const button = document.createElement('span'); button.className = 'api-help'; button.tabIndex = 0; button.role = 'button'; button.textContent = '?';
         button.setAttribute('aria-label', tr('Справка: ', 'Help: ') + caption);
         button.dataset.helpPath = 'tools[].function.parameters.' + (property === 'required' ? 'required' : 'properties[' + JSON.stringify(key) + ']' + (property ? '.' + property : ''));
         button.dataset.helpText = tr(...texts);
         FieldHelp.attach(button); span.append(' ',button);
-        label.append(span,input); row.append(label); return input;
+        input.setAttribute('aria-label',caption);
+        const index = row.children.length;
+        const header = $('schema-table').tHead.rows[0].cells[index];
+        if (!header.querySelector('.api-help')) header.append(' ',button);
+        label.append(input); row.append(label); return input;
       };
       const name = field(tr('Имя аргумента для LLM модели', 'Argument name for the LLM model'), document.createElement('input'), '', ['Поле «Имя аргумента для LLM модели» задаёт ключ в JSON Schema. Модель использует это имя при формировании аргументов вызова. Это же имя используется в шаблонах {{имя}} HTTP-запроса.', 'The argument name field defines a JSON Schema property key. The model uses this name in tool call arguments. HTTP request templates use the same name in {{name}}.']); name.value = key;
       const type = field(tr('Тип для LLM модели', 'Type for the LLM model'), document.createElement('select'), 'type', ['Поле «Тип для LLM модели» задаёт тип значения аргумента в JSON Schema. string — строка, number — число, integer — целое число, boolean — логическое значение, object — объект, array — массив.', 'The type field defines the JSON Schema value type. string is text, number is numeric, integer is a whole number, boolean is true or false, object contains properties, and array contains items.']);
@@ -314,42 +339,40 @@
       if (Array.isArray(spec.type) || !type.querySelector(`option[value="${spec.type}"]`)) { const option = document.createElement('option'); option.value = JSON.stringify(spec.type); option.textContent = option.value || 'schema'; type.append(option); type.value = option.value; } else type.value = spec.type;
       const description = field(tr('Описание для LLM модели', 'Description for the LLM model'), document.createElement('textarea'), 'description', ['Поле «Описание для LLM модели» объясняет смысл аргумента, формат и единицы измерения. Модель получает это описание вместе с JSON Schema и использует его для выбора значения.', 'The description field explains the meaning, format and units of the argument. The model receives this description with JSON Schema and uses it to choose a value.']); description.rows = 2; description.value = spec.description || '';
       const required = field(tr('Обязательный для LLM модели', 'Required for the LLM model'), document.createElement('input'), 'required', ['Флажок «Обязательный для LLM модели» добавляет имя аргумента в массив required JSON Schema. Модель должна включить этот аргумент в вызов инструмента. Проверка HTTP-запроса также требует его наличия.', 'The required checkbox adds this argument name to the JSON Schema required array. The model must include it in the tool call. HTTP request validation also requires it.']); required.type = 'checkbox'; required.checked = (schema.required || []).includes(key);
-      name.onchange = () => { const next = name.value.trim(); if (!next || ['__proto__','constructor','prototype'].includes(next) || next !== key && Object.hasOwn(schema.properties,next)) { name.value = key; status(tr('Укажите уникальное имя аргумента.', 'Use a unique argument name.'), true); return; } schema.properties = Object.fromEntries(Object.entries(schema.properties).map(([k,v]) => [k === key ? next : k,v])); schema.required = (schema.required || []).map(k => k === key ? next : k); $('mappings').querySelectorAll('[data-value]').forEach(input => { input.value = input.value.replaceAll('{{' + key + '}}','{{' + next + '}}'); }); sync(); renderArguments(); lockDefinition(); };
+      name.onchange = () => { const next = name.value.trim(); if (!next || ['__proto__','constructor','prototype'].includes(next) || next !== key && Object.hasOwn(schema.properties,next)) { name.value = key; status(tr('Укажите уникальное имя аргумента.', 'Use a unique argument name.'), true); return; } schema.properties = Object.fromEntries(Object.entries(schema.properties).map(([k,v]) => [k === key ? next : k,v])); schema.required = (schema.required || []).map(k => k === key ? next : k); $('mappings').querySelectorAll('[data-value]').forEach(input => { input.value = input.value.replaceAll('{{' + key + '}}','{{' + next + '}}'); }); const args = JSON.parse($('test-args').value); if (Object.hasOwn(args,key)) { args[next] = args[key]; delete args[key]; $('test-args').value = JSON.stringify(args); } sync(); renderArguments(); lockDefinition(); };
       type.onchange = () => { spec.type = type.value; if (type.value === 'array') spec.items ||= {type:'string'}; if (type.value === 'object') spec.properties ||= {}; sync(); };
       description.oninput = () => { spec.description = description.value; sync(); };
       required.onchange = () => { schema.required = (schema.required || []).filter(k => k !== key); if (required.checked) schema.required.push(key); sync(); };
-      const remove = document.createElement('button'); remove.type = 'button'; remove.innerHTML = trashIcon; remove.setAttribute('aria-label', tr('Удалить аргумент ', 'Remove argument ') + key); remove.title = remove.getAttribute('aria-label'); remove.onclick = () => { if ([...$('mappings').querySelectorAll('[data-value]')].some(input => input.value.includes('{{' + key + '}}'))) { row.querySelector('.argument-delete-note')?.remove(); const note = document.createElement('div'); note.className = 'argument-delete-note error'; note.setAttribute('role','alert'); note.textContent = tr('Аргумент используется в параметрах запроса. Сначала нажмите ＝ у связанного параметра или удалите этот параметр, затем удалите аргумент.', 'This argument is used by a request parameter. Switch that parameter to ＝ (constant) or delete it before removing the argument.'); row.append(note); return; } delete schema.properties[key]; schema.required = (schema.required || []).filter(k => k !== key); sync(); renderArguments(); lockDefinition(); }; row.append(remove); builder.append(row);
+      const remove = document.createElement('button'); remove.type = 'button'; remove.innerHTML = trashIcon; remove.setAttribute('aria-label', tr('Удалить аргумент ', 'Remove argument ') + key); remove.title = remove.getAttribute('aria-label'); remove.onclick = () => { if ([...$('mappings').querySelectorAll('[data-value]')].some(input => input.value.includes('{{' + key + '}}'))) { row.querySelector('.argument-delete-note')?.remove(); const note = document.createElement('div'); note.className = 'argument-delete-note error'; note.setAttribute('role','alert'); note.textContent = tr('Аргумент используется в параметрах запроса. Сначала снимите флажок «Заполняет модель» у связанного параметра или удалите этот параметр, затем удалите аргумент.', 'This argument is used by a request parameter. Uncheck Filled by model for that parameter or delete it before removing the argument.'); const cell = document.createElement('td'); cell.colSpan = 5; cell.append(note); row.append(cell); return; } delete schema.properties[key]; schema.required = (schema.required || []).filter(k => k !== key); sync(); renderArguments(); lockDefinition(); }; const actions = document.createElement('td'); actions.append(remove); row.append(actions); builder.append(row);
     });
     $('add-argument').onclick = () => { let key = 'argument'; let n = 2; while (Object.hasOwn(schema.properties,key)) key = 'argument_' + n++; schema.properties[key] = {type:'string',description:''}; sync(); renderArguments(); lockDefinition(); };
     renderValues(schema); refreshMappingSources();
   }
   function renderValues(schema) {
     let previous = {}; try { previous = JSON.parse($('test-args').value); } catch (_) {}
-    if (draft.tool.adapter !== 'gdelt' && !Object.keys(previous).length) {
-      try { previous = JSON.parse($('edit-test-args').value); } catch (_) {}
-    }
-    const container = $('schema-builder'); container.querySelectorAll('.local-test-field').forEach(field => field.remove());
     const values = Object.create(null);
     Object.entries(schema.properties || {}).forEach(([key,spec]) => {
-      const row = [...container.children].find(row => row.dataset.argument === key);
-      const label = document.createElement('label'); label.className = 'local-test-field';
-      const caption = document.createElement('span'); caption.textContent = tr('Значение для Локальной проверки', 'Value for local testing');
-      const hint = document.createElement('small'); hint.textContent = tr('Не входит в JSON Schema', 'Not included in JSON Schema');
-      const helpButton = document.createElement('span'); helpButton.className = 'api-help'; helpButton.tabIndex = 0; helpButton.role = 'button'; helpButton.textContent = '?';
-      helpButton.setAttribute('aria-label', tr('Справка: значение для локальной проверки', 'Help: local test value'));
-      helpButton.dataset.helpText = tr('Поле «Значение для Локальной проверки» задаёт аргумент для локального HTTP-вызова инструмента, как если бы агент получил это значение от модели. Значение не входит в JSON Schema. Оно также подставляется в начальный текст задачи в разделе «Проверка вызова LLM с запросом выбора инструмента» и передаётся модели в составе этой задачи при нажатии кнопки «Вызвать LLM». Задачу можно отредактировать. После проверки через LLM поле заполняется аргументом из ответа модели.', 'The local test value field supplies an argument for a local HTTP tool call, as if the agent had received this value from the model. The value is excluded from JSON Schema. It also populates the default LLM task and is sent as part of that task when you click Call LLM. You can edit the task. An LLM test fills this field with the argument returned by the model.');
-      FieldHelp.attach(helpButton); caption.append(' ',helpButton);
-      const input = document.createElement('input'); input.dataset.argument = key; input.className = 'local-test-value';
       const type = Array.isArray(spec.type) ? spec.type.find(t => t !== 'null') : spec.type;
+      const mapping = [...$('mappings').querySelectorAll('.mapping')].find(row => row.querySelector('[data-value]').value === '{{' + key + '}}');
+      const sample = mapping?.querySelector('.local-test-value').value;
+      let savedValue;
+      if (sample !== undefined && sample !== '') {
+        try { savedValue = type === 'string' ? sample : JSON.parse(sample); } catch (_) { savedValue = sample; }
+      }
       const fallback = draft.tool.adapter === 'gdelt' ? '' : type === 'boolean' ? false : ['number','integer'].includes(type) ? 0 : type === 'object' ? {} : type === 'array' ? [] : '';
-      values[key] = Object.hasOwn(previous,key) ? previous[key] : draft.tool.adapter === 'gdelt' ? '' : Object.hasOwn(spec,'default') ? spec.default : spec.enum?.[0] ?? fallback;
-      input.value = typeof values[key] === 'string' ? values[key] : JSON.stringify(values[key]);
-      const sync = () => { input.setCustomValidity(''); try { values[key] = input.value === '' && draft.tool.adapter === 'gdelt' ? '' : type === 'string' ? input.value : JSON.parse(input.value); } catch (_) { input.setCustomValidity(tr('Введите значение JSON нужного типа.', 'Enter a JSON value of the expected type.')); } $('test-args').value = JSON.stringify(draft.tool.adapter === 'gdelt' ? Object.fromEntries(Object.entries(values).filter(([,v]) => v !== '')) : values,null,2); };
-      input.oninput = sync;
-      label.append(caption,hint,input); if (row) row.insertBefore(label, row.querySelector('button'));
+      values[key] = Object.hasOwn(previous,key) ? previous[key] : savedValue !== undefined ? savedValue : Object.hasOwn(spec,'default') ? spec.default : spec.enum?.[0] ?? fallback;
+    });
+    $('mappings').querySelectorAll('.mapping').forEach(row => {
+      const binding = row.querySelector('[data-value]'), input = row.querySelector('.local-test-value');
+      const name = binding.value.match(/^\{\{\s*([^{}]+?)\s*\}\}$/)?.[1];
+      input.setCustomValidity('');
+      if (name) {
+        const value = values[name] ?? '';
+        input.value = typeof value === 'string' ? value : JSON.stringify(value);
+      }
     });
     $('test-args').value = JSON.stringify(draft.tool.adapter === 'gdelt' ? Object.fromEntries(Object.entries(values).filter(([,v]) => v !== '')) : values,null,2);
-    container.querySelectorAll('.local-test-value').forEach(input => input.addEventListener('input',()=>{ refreshMappingSources(); syncTestPrompt(); }));
+    testValuesByTool.set(draft.id, JSON.parse($('test-args').value));
     refreshMappingSources(); syncTestPrompt();
   }
   const help = {
