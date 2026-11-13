@@ -10,6 +10,8 @@
     "strict": true,
     "http": {
       "url": "https://geocoding-api.open-meteo.com/v1/search",
+      "alternativeUrl": "/api/geocoding-api.open-meteo.com/v1/search",
+      "useAlternativeUrl": false,
       "method": "GET",
       "mappings": [
         {

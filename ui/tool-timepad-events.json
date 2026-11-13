@@ -12,6 +12,8 @@
     "strict": true,
     "http": {
       "url": "https://api.timepad.ru/v1/events.json",
+      "alternativeUrl": "/api/api.timepad.ru/v1/events.json",
+      "useAlternativeUrl": false,
       "method": "GET",
       "mappings": [
         {

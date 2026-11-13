@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="ru" data-theme="dark">
 <head>
+<meta charset="UTF-8">
 <script>
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.5.9';
+const APP_VERSION = '1.5.10';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -142,7 +143,7 @@ const CFG_OPENAI_PROVIDERS = [
 ];
 </script>
 
-<meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Agents Lab — Лаборатория ИИ Агентов</title>
 
@@ -1961,14 +1962,14 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
 #messages .chat-data .json-number { color:#c5af91; }
 #messages .chat-data .json-literal { color:#b4a3c7; }
 </style>
-<link rel="stylesheet" href="app-navigation.css?v=1.5.9">
-<link rel="stylesheet" href="field-help.css?v=1.5.9">
+<link rel="stylesheet" href="app-navigation.css?v=1.5.10">
+<link rel="stylesheet" href="field-help.css?v=1.5.10">
 <!-- Yandex.Metrika 112561962: consent-aware loader -->
-<script src="metrika.js?v=1.5.9" defer></script>
-  <link rel="stylesheet" href="scrollbars.css?v=1.5.9">
-  <link rel="stylesheet" href="credential-fields.css?v=1.5.9">
-<link rel="stylesheet" href="json-viewer.css">
-<script src="json-viewer.js"></script>
+<script src="metrika.js?v=1.5.10" defer></script>
+  <link rel="stylesheet" href="scrollbars.css?v=1.5.10">
+  <link rel="stylesheet" href="credential-fields.css?v=1.5.10">
+<link rel="stylesheet" href="json-viewer.css?v=1.5.10">
+<script src="json-viewer.js?v=1.5.10"></script>
 </head>
 <body>
 
@@ -3886,7 +3887,7 @@ function renderToolHttpEditor(row, http = {}) {
 }
 function readToolHttpEditor(row) {
   const get = key => row.querySelector(`[data-http-field="${key}"]`)?.value || '';
-  return { url: get('url').trim(), method: get('method') || 'GET', body: get('body'), mappings: [...row.querySelectorAll('.tool-http-mapping')].map(item => ({ key: item.querySelector('[data-http-field="key"]').value.trim(), value: item.querySelector('[data-http-field="value"]').value })) };
+  return { ...(row.toolHttpEndpoints || {}), url: get('url').trim(), method: get('method') || 'GET', body: get('body'), mappings: [...row.querySelectorAll('.tool-http-mapping')].map(item => ({ key: item.querySelector('[data-http-field="key"]').value.trim(), value: item.querySelector('[data-http-field="value"]').value })) };
 }
 function toolArgumentAt(args, path) {
   let value = args;
@@ -3907,7 +3908,7 @@ function resolveToolTemplate(template, args, encode = false) {
 }
 function buildToolHttpRequest(tool, call) {
   if (!tool?.http?.url) return null;
-  if (tool.adapter || tool.libraryId || tool.http.auth?.placement && tool.http.auth.placement !== 'none') return ToolLibrary.buildRequest(tool, JSON.parse(call.function?.arguments || '{}'));
+  if (tool.http.useAlternativeUrl || tool.adapter || tool.libraryId || tool.http.auth?.placement && tool.http.auth.placement !== 'none') return ToolLibrary.buildRequest(tool, JSON.parse(call.function?.arguments || '{}'));
   const args = JSON.parse(call.function?.arguments || '{}');
   if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error('Tool arguments must be an object');
   const mapped = Object.create(null);
@@ -4025,7 +4026,8 @@ function renderOpenAITools(tools = []) {
     row.className = 'tool-definition';
     row.toolAuth = tool.http?.auth;
     row.mcpMetadata = tool.mcp;
-    row.libraryMetadata = tool.adapter ? {adapter:tool.adapter} : {};
+    row.toolHttpEndpoints = {alternativeUrl:tool.http?.alternativeUrl || '',useAlternativeUrl:!!tool.http?.useAlternativeUrl};
+  row.libraryMetadata = tool.adapter ? {adapter:tool.adapter} : {};
     if (tool.libraryId) row.libraryMetadata = {...row.libraryMetadata,libraryId:tool.libraryId,libraryTitle:tool.libraryTitle,libraryBase:tool.libraryBase,libraryOverrides:tool.libraryOverrides || []};
     row.innerHTML = `<label class="api-field"><span>${t('openaiToolName')}</span><input class="api-input" data-tool-field="name" maxlength="64" autocomplete="off" spellcheck="false"></label><label class="api-field"><span>${t('openaiToolDescription')}</span><input class="api-input" data-tool-field="description" autocomplete="off"></label><button class="cfg-btn tool-remove" type="button" title="${t('openaiRemoveTool')}" aria-label="${t('openaiRemoveTool')}">${toolTrashIcon()}</button><label class="api-field tool-definition-schema"><span>${t('openaiToolParameters')}</span><textarea class="api-textarea" data-tool-field="parameters" autocomplete="off" spellcheck="false"></textarea></label><div class="api-toggle-row"><span><strong>${t('openaiToolStrict')}</strong></span><label class="switch"><input type="checkbox" data-tool-field="strict"><span class="slider"></span></label></div>`;
     row.querySelector('[data-tool-field="name"]').value = tool.name || '';
@@ -6858,16 +6860,16 @@ function acceptConsent() {
   }
 })();
 </script>
-<script src="material-catalog.js?v=1.5.9"></script>
-<script src="tool-gdelt.js?v=1.5.9"></script>
-<script src="tool-library.js?v=1.5.9"></script>
-<script src="tool-library-settings.js?v=1.5.9"></script>
-<script src="mcp-runtime.js?v=1.5.9"></script>
-<script src="mcp-library.js?v=1.5.9"></script>
-<script src="mcp-client.js?v=1.5.9"></script>
-<script src="mcp-settings.js?v=1.5.9"></script>
-<script src="app-navigation.js?v=1.5.9"></script>
-<script src="field-help.js?v=1.5.9"></script>
-<script src="openai-field-help.js?v=1.5.9"></script>
+<script src="material-catalog.js?v=1.5.10"></script>
+<script src="tool-gdelt.js?v=1.5.10"></script>
+<script src="tool-library.js?v=1.5.10"></script>
+<script src="tool-library-settings.js?v=1.5.10"></script>
+<script src="mcp-runtime.js?v=1.5.10"></script>
+<script src="mcp-library.js?v=1.5.10"></script>
+<script src="mcp-client.js?v=1.5.10"></script>
+<script src="mcp-settings.js?v=1.5.10"></script>
+<script src="app-navigation.js?v=1.5.10"></script>
+<script src="field-help.js?v=1.5.10"></script>
+<script src="openai-field-help.js?v=1.5.10"></script>
 </body>
 </html>

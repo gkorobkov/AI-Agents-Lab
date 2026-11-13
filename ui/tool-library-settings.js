@@ -88,7 +88,7 @@
     const title=document.createElement('strong'); title.textContent=tool.libraryTitle || tool.libraryId;
     const info=document.createElement('p'); info.textContent=text('Отдельная копия заготовки. По умолчанию используются готовые значения. Для изменения отметьте только нужное поле.','Independent preset copy. Ready-made values are used by default. Check only the fields you want to change.');
     const description=document.createElement('p'); description.textContent=tool.description;
-    const endpoint=document.createElement('code'); endpoint.textContent=(tool.http?.method || 'GET')+' '+(tool.http?.url || '');
+    const endpoint=document.createElement('code'); endpoint.textContent=(tool.http?.method || 'GET')+' '+ToolLibrary.resolveHttpUrl(tool.http);
     const detach=document.createElement('button'); detach.type='button'; detach.className='cfg-btn'; detach.textContent=text('Сделать полностью редактируемой','Make fully editable');
     detach.onclick=()=>{
       const tools=readOpenAIForm().tools, index=[...document.querySelectorAll('.tool-definition')].indexOf(row);
@@ -101,7 +101,7 @@
       const caption=document.createElement('span');caption.textContent=text('API key инструмента · только в этой вкладке','Tool API key · this tab only');
       const input=document.createElement('input');input.type='text';input.autocomplete='off';input.spellcheck=false;input.setAttribute('data-lpignore','true');input.setAttribute('data-1p-ignore','');input.className='api-input credential-input';
       input.placeholder=ToolLibrary.getSecret(tool.http.auth.secretId)?text('Ключ задан','Key is set'):text('Введите ключ','Enter key');
-      input.addEventListener('change',()=>{try{ToolLibrary.setSecret(tool.http.auth.secretId,input.value,new URL(readToolHttpEditor(row).url).origin);input.value='';input.placeholder=text('Ключ задан','Key is set');}catch(error){toast(ToolLibrary.redact(error.message));}});
+      input.addEventListener('change',()=>{try{ToolLibrary.setSecret(tool.http.auth.secretId,input.value,new URL(ToolLibrary.resolveHttpUrl(readToolHttpEditor(row))).origin);input.value='';input.placeholder=text('Ключ задан','Key is set');}catch(error){toast(ToolLibrary.redact(error.message));}});
       label.append(caption,input); intro.append(label);
     }
     syncLibraryOverrides();

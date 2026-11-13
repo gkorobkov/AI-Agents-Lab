@@ -8,6 +8,9 @@
   try { english = localStorage.getItem('n8n_lang') === 'en'; } catch (_) {}
   const tr = (ru, en) => english ? en : ru;
   const en = {
+    httpErrorHelp:'Possible causes and troubleshooting',
+    copyUrl:'Copy URL',
+    alternativeUrl:'Alternative URL',useAlternativeUrl:'Use alternative URL',
     httpRequest:'Request',httpResponse:'Response',httpPreview:'Preview',httpServer:'Response from service',requestHeaders:'HTTP request headers',responseHeaders:'HTTP response headers',requestBody:'Request body',responseBody:'Response body',
     getApiKey:'How to get an API key ↗',
     parameterColumn:'Parameter',valueColumn:'Value',modelColumn:'Filled by model',actionsColumn:'Actions',argumentColumn:'Argument',typeColumn:'Type',descriptionColumn:'Description',requiredColumn:'Required',
@@ -38,7 +41,7 @@
     delete next.summary;
     next.tool.parameters = $('edit-schema').value;
     next.tool.strict = $('edit-strict').checked;
-    next.tool.http = { ...next.tool.http, url:$('edit-url').value.trim(), method:$('edit-method').value,
+    next.tool.http = { ...next.tool.http, url:$('edit-url').value.trim(), alternativeUrl:$('edit-alternative-url').value.trim(), useAlternativeUrl:$('edit-use-alternative-url').checked, method:$('edit-method').value,
       mappings:Array.from($('mappings').children).map(row => ({ key:row.querySelector('[data-key]').value.trim(), value:row.querySelector('[data-value]').value, testValue:row.querySelector('.local-test-value').value })).filter(item => item.key),
       body:$('edit-body').value, auth:{ ...next.tool.http.auth, placement:$('edit-auth').value, name:$('edit-auth-name').value.trim(), prefix:$('edit-auth-prefix').value } };
     return next;
@@ -50,6 +53,8 @@
     syncLinks(); syncDefinitionPreview(); syncTestPrompt(); syncHttpPreview();
     $('auth-fields').hidden = $('edit-auth').value === 'none';
     $('edit-body').closest('label').hidden = $('edit-method').value !== 'POST';
+    $('edit-url').required = !$('edit-use-alternative-url').checked;
+    $('edit-alternative-url').required = $('edit-use-alternative-url').checked;
     clearTimeout(saveTimer); if (dirty && !selecting) saveTimer = setTimeout(autoSave, 300);
   }
   function renderPicker() {
@@ -138,6 +143,7 @@
     return lib.redact(body);
   }
   function syncHttpPreview() {
+    $('copy-request-url').disabled = true;
     $('request-method').textContent = $('edit-method').value;
     $('request-url').textContent = '—'; $('request-preview').textContent = '—'; httpBodyViews['request-body'].update('—');
     try {
@@ -150,6 +156,7 @@
       if (auth?.placement === 'header' && auth.name) headers[auth.name] = (auth.prefix || '') + '$API_KEY';
       if (auth?.placement === 'query' && auth.name) url.searchParams.set(auth.name,(auth.prefix || '') + '$API_KEY');
       $('request-url').textContent = lib.redact(url.href);
+      $('copy-request-url').disabled = false;
       $('request-preview').textContent = lib.redact(Object.entries(headers).map(([name,value]) => name + ': ' + value).join('\n')) || tr('(нет заголовков)', '(no headers)');
       httpBodyViews['request-body'].update(formatHttpBody(request.body));
     } catch (error) {
@@ -157,6 +164,7 @@
     }
   }
   function select(record, force = false) {
+    $('test-error-details').hidden = true;
     if (!force && dirty) autoSave();
     if (!force && dirty) return;
     if (draft?.id) {
@@ -172,6 +180,7 @@
     syncLinks();
     $('edit-name').value = draft.tool.name || ''; $('edit-description').value = [...new Set([draft.summary, draft.tool.description].filter(value => value?.trim()).map(value => value.trim()))].join('\n\n'); $('edit-schema').value = typeof draft.tool.parameters === 'string' ? draft.tool.parameters : JSON.stringify(draft.tool.parameters, null, 2);
     $('edit-strict').checked = !!draft.tool.strict; $('edit-url').value = draft.tool.http.url || ''; $('edit-method').value = draft.tool.http.method || 'GET'; $('edit-body').value = draft.tool.http.body || '';
+    $('edit-alternative-url').value = draft.tool.http.alternativeUrl || ''; $('edit-use-alternative-url').checked = !!draft.tool.http.useAlternativeUrl;
     $('edit-auth').value = draft.tool.http.auth.placement || 'none'; $('edit-auth-name').value = draft.tool.http.auth.name || ''; $('edit-auth-prefix').value = draft.tool.http.auth.prefix || ''; $('edit-key').value = '';
     const keyHelp = $('api-key-help');
     keyHelp.hidden = !/^https:\/\//i.test(draft.apiKeyUrl || '');
@@ -201,7 +210,7 @@
     renderArguments(); lockDefinition(); original = JSON.stringify(readDraft()); selecting = false; updateDirty(); renderPicker(); status('');
   }
   function storeKey(record) {
-    if ($('edit-key').value) lib.setSecret(record.tool.http.auth.secretId, $('edit-key').value, new URL(record.tool.http.url).origin);
+    if ($('edit-key').value) lib.setSecret(record.tool.http.auth.secretId, $('edit-key').value, new URL(lib.resolveHttpUrl(record.tool.http)).origin);
   }
   function save(draftOnly = false) {
     clearTimeout(saveTimer);
@@ -285,13 +294,29 @@
     } catch (error) { status(error.message, true); }
   };
   $('abort-test').onclick = () => controller?.abort();
+  $('edit-use-alternative-url').onchange = () => {
+    if (draft.builtin) {
+      try { lib.setPresetUrlSelection(draft.id,$('edit-use-alternative-url').checked); }
+      catch (error) { $('edit-use-alternative-url').checked = !!lib.get(draft.id)?.tool.http.useAlternativeUrl; status(String(error.message || error),true); }
+    }
+    updateDirty();
+  };
+  $('copy-request-url').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText($('request-url').textContent);
+      status(tr('URL скопирован.', 'URL copied.'));
+    } catch (_) {
+      status(tr('Не удалось скопировать URL. Выделите и скопируйте адрес вручную.', 'Could not copy the URL. Select and copy the address manually.'),true);
+    }
+  };
   $('run-test').onclick = async () => {
     if (controller) return;
-    let timer, timedOut = false;
+    let timer, timedOut = false, fetchRequest = null, responseReceived = false;
+    $('test-error-details').hidden = true;
     try {
       if (!Array.from($('mappings').querySelectorAll('.local-test-value')).every(input => input.reportValidity())) return;
       const record = readDraft();
-      if (!record.tool.http.url) throw new Error(tr('Укажите URL инструмента.', 'Enter the tool URL.'));
+      lib.resolveHttpUrl(record.tool.http);
       const args = JSON.parse($('test-args').value);
       if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error(tr('Аргументы должны быть JSON-объектом.', 'Arguments must be a JSON object.'));
       const request = buildLocalRequest(record);
@@ -315,7 +340,9 @@
         $('test-status').classList.toggle('error',result.status === 'error');
         return;
       }
+      fetchRequest = authorized;
       const response = await fetch(authorized.url, { method:authorized.method, headers:authorized.headers, body:authorized.body || undefined, signal:active.signal, credentials:'omit', redirect:'error' });
+      responseReceived = true;
       $('response-headers').textContent = lib.redact([...response.headers].map(([name,value]) => name + ': ' + value).join('\n')) || tr('(нет доступных заголовков)', '(no exposed headers)');
       const body = await response.text();
       const display = body;
@@ -323,6 +350,22 @@
       $('test-status').textContent = 'HTTP ' + response.status + ' · ' + Math.round(performance.now() - started) + ' ms'; $('test-status').classList.toggle('error', !response.ok);
     } catch (error) {
       $('test-status').textContent = error.name === 'AbortError' ? (timedOut ? tr('Превышено время ожидания: 15 с.', 'Request timed out after 15 seconds.') : tr('Запрос остановлен.', 'Request stopped.')) : lib.redact(String(error.message || error)); $('test-status').classList.add('error');
+      if (fetchRequest && !responseReceived && error.name !== 'AbortError') {
+        $('test-status').textContent = tr('Браузер не смог получить ответ сервиса.', 'The browser could not receive the service response.');
+        const target = new URL(fetchRequest.url), crossOrigin = target.origin !== location.origin;
+        const lines = [tr('Страница открыта на ', 'Page origin is ') + location.origin + tr('. Запрос направлен на ', '. Request destination is ') + target.origin + '.'];
+        if (crossOrigin) {
+          lines.push(tr('Возможная причина — CORS. Сервер или прокси должен разрешать origin этой страницы заголовком Access-Control-Allow-Origin. Ответ OPTIONS с кодом 204 сам по себе этого не гарантирует — проверьте CORS-заголовки OPTIONS и основного ответа.', 'CORS is a possible cause. The server or proxy must allow this page origin through Access-Control-Allow-Origin. An OPTIONS 204 response alone does not confirm access — check the CORS headers of both OPTIONS and the actual response.'));
+          if (Object.keys(fetchRequest.headers || {}).some(name => name.toLowerCase() === 'authorization')) lines.push(tr('Запрос содержит Authorization. Для предварительного запроса сервер должен разрешать этот заголовок через Access-Control-Allow-Headers.', 'The request includes Authorization. The server must allow this header in the preflight response through Access-Control-Allow-Headers.'));
+        }
+        lines.push(tr('Также возможны недоступность сервиса, ошибка DNS или TLS-сертификата, блокировка расширением, запрещённое перенаправление или HTTP-адрес при открытии страницы по HTTPS. Точную причину браузер показывает в DevTools → Network и Console. JavaScript страницы не получает эти подробности.', 'Other possible causes include an unreachable service, DNS or TLS certificate errors, extension blocking, a rejected redirect, or an HTTP endpoint on an HTTPS page. Check DevTools → Network and Console for the exact browser error. Page JavaScript cannot access these details.'));
+        if ($('edit-alternative-url').value.trim() && !$('edit-use-alternative-url').checked) lines.push(tr('Попробуйте включить «Использовать альтернативный URL», если по этому адресу настроен прокси.', 'Try enabling Use alternative URL if a proxy is configured at that address.'));
+        if ($('edit-use-alternative-url').checked && target.origin === location.origin) lines.push(tr('Выбран относительный адрес на текущем сайте. Проверьте, что маршрут /api/ обслуживается прокси именно здесь, включая запуск на localhost.', 'The selected relative address points to the current site. Check that its /api/ route is handled by a proxy here, including when running on localhost.'));
+        lines.push(tr('Сообщение браузера — ', 'Browser message — ') + lib.redact(String(error.message || error)));
+        $('test-error-explanation').textContent = lines.join('\n\n'); $('test-error-details').hidden = false;
+        $('response-headers').textContent = tr('Заголовки ответа недоступны браузеру.', 'Response headers are unavailable to the browser.');
+        httpBodyViews['response-output'].update(tr('Тело ответа недоступно браузеру. Причины и шаги проверки указаны выше.', 'The response body is unavailable to the browser. See the explanation and troubleshooting steps above.'));
+      }
     } finally {
       clearTimeout(timer); controller = null; $('run-test').disabled = false; $('abort-test').hidden = true;
       ['create-tool','copy-tool','import-tool','test-llm','add-agent','delete-tool'].forEach(id => { $(id).disabled = false; });
@@ -334,6 +377,7 @@
     const locked = !!draft.builtin;
     document.body.classList.toggle('tool-readonly', locked);
     $('tool-form').querySelectorAll('section:not(#http-test-section):not(#llm-test-section) input, section:not(#http-test-section):not(#llm-test-section) textarea, section:not(#http-test-section):not(#llm-test-section) select, section:not(#http-test-section):not(#llm-test-section) button').forEach(input => {
+      if (input.id === 'edit-use-alternative-url') { input.disabled = false; return; }
       if (['edit-key','clear-key'].includes(input.id) || input.classList.contains('help-button') || input.classList.contains('local-test-value')) return;
       if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT' && input.type !== 'checkbox') input.readOnly = locked || ['edit-schema','tool-definition-json'].includes(input.id);
       else input.disabled = locked;

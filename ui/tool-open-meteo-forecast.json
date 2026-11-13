@@ -10,6 +10,8 @@
     "strict": true,
     "http": {
       "url": "https://api.open-meteo.com/v1/forecast",
+      "alternativeUrl": "/api/api.open-meteo.com/v1/forecast",
+      "useAlternativeUrl": false,
       "method": "GET",
       "mappings": [
         {

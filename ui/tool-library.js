@@ -8,7 +8,18 @@
   function list() {
     let saved = [];
     try { const value = JSON.parse(localStorage.getItem(storageKey) || '[]'); if (Array.isArray(value)) saved = value.filter(item => item?.id && item.tool && !presets.some(preset => preset.id === item.id)).slice(0, 100); } catch (_) {}
-    return [...clone(presets), ...saved.map(item => ({ ...item, builtin:false }))];
+    const builtins = clone(presets).map(record => {
+      let selected;
+      try { selected = localStorage.getItem('ai_tool_url_selection:' + record.id); } catch (_) {}
+      if (selected === 'true' || selected === 'false') record.tool.http.useAlternativeUrl = selected === 'true';
+      return record;
+    });
+    return [...builtins, ...saved.map(item => ({ ...item, builtin:false }))];
+  }
+  function setPresetUrlSelection(id, selected) {
+    if (!presets.some(record => record.id === id)) throw new Error('Built-in tool not found.');
+    localStorage.setItem('ai_tool_url_selection:' + id,String(!!selected));
+    window.dispatchEvent(new Event('tool-library:change'));
   }
   const get = id => list().find(item => item.id === id);
   const newId = () => 'tool_' + crypto.randomUUID();
@@ -17,7 +28,7 @@
     if (!httpOnly && !tool.description?.trim()) throw new Error('Describe what the function does for the model.');
     const schema = JSON.parse(tool.parameters);
     if (!schema || schema.type !== 'object' || !schema.properties || typeof schema.properties !== 'object' || Array.isArray(schema.properties)) throw new Error('Parameters must be an object JSON Schema with properties.');
-    const url = new URL(tool.http?.url);
+    const url = new URL(resolveHttpUrl(tool.http));
     if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw new Error('Use an HTTP(S) URL without embedded credentials.');
     if (!['GET', 'POST'].includes(tool.http.method)) throw new Error('Choose GET or POST.');
     const keys = new Set();
@@ -69,8 +80,15 @@
       return encode ? encodeURIComponent(text) : text;
     });
   }
+  function resolveHttpUrl(http) {
+    const value = http?.useAlternativeUrl ? http.alternativeUrl : http?.url;
+    if (!value?.trim()) throw new Error('Enter the selected HTTP URL.');
+    const url = http.useAlternativeUrl ? new URL(value,window.location.href) : new URL(value);
+    if (!['http:','https:'].includes(url.protocol) || url.username || url.password) throw new Error('Use an HTTP(S) URL without embedded credentials.');
+    return url.href;
+  }
   function buildRequest(tool, args) {
-    if (!tool?.http?.url) return null;
+    if (!tool?.http?.url && !tool?.http?.useAlternativeUrl) return null;
     if (tool.adapter === 'gdelt') return GdeltTool.buildRequest(tool, args);
     const schema = validate(tool, true);
     if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error('Arguments must be a JSON object.');
@@ -86,7 +104,7 @@
     const mapped = Object.create(null);
     for (const mapping of tool.http.mappings || []) mapped[mapping.key] = template(mapping.value, args);
     const context = { ...args, ...mapped };
-    const url = new URL(template(tool.http.url, context, true));
+    const url = new URL(resolveHttpUrl({...tool.http,url:template(tool.http.url || '',context,true),alternativeUrl:template(tool.http.alternativeUrl || '',context,true)}));
     if (!['http:','https:'].includes(url.protocol) || url.username || url.password) throw new Error('Invalid HTTP URL.');
     const method = tool.http.method || 'GET';
     if (method === 'GET') {
@@ -144,5 +162,5 @@
     presets = result.records.map(record => ({...record, builtin:true})); errors.push(...result.errors);
     window.dispatchEvent(new Event('tool-library:change'));
   });
-  window.ToolLibrary = {ready,errors,validateRecord,importRecord,list,get,newId,validate,save,remove,snapshot,buildRequest,authorizeRequest,setSecret,getSecret,clearSecret,redact};
+  window.ToolLibrary = {ready,errors,validateRecord,importRecord,list,get,newId,validate,save,remove,snapshot,setPresetUrlSelection,resolveHttpUrl,buildRequest,authorizeRequest,setSecret,getSecret,clearSecret,redact};
 })();

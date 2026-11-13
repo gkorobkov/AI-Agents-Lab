@@ -40,6 +40,8 @@
         <section>
           <h3><span>2</span> <span data-i18n="http">Параметры запроса</span></h3>
           <div class="fields endpoint"><label><span data-i18n="method">Метод</span><select id="edit-method"><option>GET</option><option>POST</option></select></label><label><span>URL</span><input id="edit-url" type="url" required spellcheck="false"></label></div>
+          <label><span data-i18n="alternativeUrl">Альтернативный URL</span><input id="edit-alternative-url" type="text" spellcheck="false"></label>
+          <label class="check"><input id="edit-use-alternative-url" type="checkbox"><span data-i18n="useAlternativeUrl">Использовать альтернативный URL</span></label>
           <div class="subhead"><strong data-i18n="query">Параметры URL</strong><button id="add-mapping" type="button" class="small" data-i18n="addParameter">+ Параметр</button></div>
           <p class="hint" data-i18n="mappingHint">Введите значение для проверки. Включите «Заполняет модель», чтобы добавить параметр в JSON Schema.</p>
           <div class="tool-table-scroll"><table class="tool-table mapping-table"><thead><tr><th scope="col" data-i18n="parameterColumn">Параметр</th><th scope="col" data-i18n="valueColumn">Значение</th><th scope="col" data-i18n="modelColumn">Заполняет модель</th><th scope="col"><span class="sr-only" data-i18n="actionsColumn">Действия</span></th></tr></thead><tbody id="mappings"></tbody></table></div>
@@ -56,13 +58,14 @@
           <p class="hint" data-i18n="cors">Запрос выполняется из браузера. Сервер инструмента должен разрешать CORS.</p>
           <details class="http-debug" open>
             <summary><span data-i18n="httpRequest">Запрос</span><span class="http-debug-badge" data-i18n="httpPreview">Предпросмотр</span></summary>
-            <div class="http-metadata"><div><span data-i18n="method">Метод</span> <strong id="request-method">—</strong></div><div class="http-url"><span>URL</span> <span id="request-url">—</span></div></div>
+            <div class="http-metadata"><div><span data-i18n="method">Метод</span> <strong id="request-method">—</strong></div><div class="http-url"><span>URL</span><span id="request-url">—</span><button id="copy-request-url" type="button" class="small" data-i18n="copyUrl" disabled>Copy URL</button></div></div>
             <details class="http-debug-part" open><summary data-i18n="requestHeaders">HTTP-заголовки запроса</summary><pre id="request-preview">—</pre></details>
             <details class="http-debug-part" open><summary data-i18n="requestBody">Тело запроса</summary><pre id="request-body">—</pre></details>
           </details>
           <details class="http-debug" open>
             <summary><span data-i18n="httpResponse">Ответ</span><span class="http-debug-badge" data-i18n="httpServer">Ответ от сервиса</span></summary>
             <p id="test-status" class="http-status" role="status" data-i18n="response">Ответ сервера появится здесь</p>
+            <details id="test-error-details" class="http-error-details" open hidden><summary data-i18n="httpErrorHelp">Возможные причины и что проверить</summary><div id="test-error-explanation"></div></details>
             <details class="http-debug-part"><summary data-i18n="responseHeaders">HTTP-заголовки ответа</summary><pre id="response-headers">—</pre></details>
             <details class="http-debug-part" open><summary data-i18n="responseBody">Тело ответа</summary><pre id="response-output" class="ym-hide-content">—</pre></details>
           </details>

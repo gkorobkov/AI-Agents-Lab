@@ -73,7 +73,13 @@
   }
   function buildRequest(tool, args) {
     if (tool.http.method !== 'GET' || tool.http.url !== cfg.endpoint || tool.http.auth?.placement && tool.http.auth.placement !== 'none') fail('The GDELT adapter requires its configured public GET endpoint without credentials.');
-    return prepare(args);
+    const request = prepare(args);
+    if (tool.http.useAlternativeUrl) {
+      const url = new URL(ToolLibrary.resolveHttpUrl(tool.http));
+      new URL(request.url).searchParams.forEach((value,key) => url.searchParams.set(key,value));
+      request.url = url.href;
+    }
+    return request;
   }
   function safeURL(value, deduplicate = false) {
     try {
