@@ -3,6 +3,7 @@
   "tools": [
     "tool-open-meteo-geocoding.json",
     "tool-open-meteo-forecast.json",
-    "tool-gdelt-news.json"
+    "tool-gdelt-news.json",
+    "tool-timepad-events.json"
   ]
 }

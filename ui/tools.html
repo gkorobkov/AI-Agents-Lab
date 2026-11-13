@@ -46,7 +46,7 @@
           <div class="tool-request-details"><h4 data-i18n="advanced">Авторизация и тело запроса</h4>
             <label><span data-i18n="body">Тело запроса (POST, шаблон JSON)</span><textarea id="edit-body" class="code" rows="3" spellcheck="false"></textarea></label>
             <label><span data-i18n="auth">Авторизация</span><select id="edit-auth"><option value="none" data-i18n="authNone">Не требуется</option><option value="query" data-i18n="authQuery">API key в параметре URL</option><option value="header" data-i18n="authHeader">API key в заголовке</option></select></label>
-            <div id="auth-fields" hidden><div class="fields two"><label><span data-i18n="authName">Имя параметра / заголовка</span><input id="edit-auth-name" placeholder="apikey / Authorization"></label><label><span data-i18n="authPrefix">Префикс (если нужен)</span><input id="edit-auth-prefix" placeholder="Bearer "></label></div><label><span>API key</span><input id="edit-key" class="ym-hide-content credential-input" type="text" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label><p id="key-state" class="hint"></p><button id="clear-key" type="button" class="small"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg><span data-i18n="clearKey">Удалить ключ из сессии</span></button><p class="hint" data-i18n="keyHint">Ключ хранится только в текущей сессии браузера и привязан к серверу. Определение функции для LLM модели его не содержит.</p></div>
+            <div id="auth-fields" hidden><div class="fields two"><label><span data-i18n="authName">Имя параметра / заголовка</span><input id="edit-auth-name" placeholder="apikey / Authorization"></label><label><span data-i18n="authPrefix">Префикс (если нужен)</span><input id="edit-auth-prefix" placeholder="Bearer "></label></div><label><span>API key</span><input id="edit-key" class="ym-hide-content credential-input" type="text" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label><a id="api-key-help" class="hint" target="_blank" rel="noopener noreferrer" data-i18n="getApiKey" hidden>Как получить API key ↗</a><p id="key-state" class="hint"></p><button id="clear-key" type="button" class="small"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg><span data-i18n="clearKey">Удалить ключ из сессии</span></button><p class="hint" data-i18n="keyHint">Ключ хранится только в текущей сессии браузера и привязан к серверу. Определение функции для LLM модели его не содержит.</p></div>
           </div>
         </section>
         <section id="http-test-section">
@@ -54,8 +54,18 @@
           <textarea id="test-args" hidden>{"name":"Москва"}</textarea>
           <div class="actions"><button id="run-test" type="button" class="primary" data-i18n="run">Выполнить HTTP-запрос к Инструменту</button><button id="abort-test" type="button" hidden data-i18n="abort">Остановить</button></div>
           <p class="hint" data-i18n="cors">Запрос выполняется из браузера. Сервер инструмента должен разрешать CORS.</p>
-          <div class="result"><div class="result-label" data-i18n="request">Запрос · без секретов</div><pre id="request-preview">—</pre></div>
-          <div class="result"><div id="test-status" class="result-label" role="status" data-i18n="response">Ответ сервера появится здесь</div><pre id="response-output" class="ym-hide-content">—</pre></div>
+          <details class="http-debug" open>
+            <summary><span data-i18n="httpRequest">Запрос</span><span class="http-debug-badge" data-i18n="httpPreview">Предпросмотр</span></summary>
+            <div class="http-metadata"><div><span data-i18n="method">Метод</span> <strong id="request-method">—</strong></div><div class="http-url"><span>URL</span> <span id="request-url">—</span></div></div>
+            <details class="http-debug-part" open><summary data-i18n="requestHeaders">HTTP-заголовки запроса</summary><pre id="request-preview">—</pre></details>
+            <details class="http-debug-part" open><summary data-i18n="requestBody">Тело запроса</summary><pre id="request-body">—</pre></details>
+          </details>
+          <details class="http-debug" open>
+            <summary><span data-i18n="httpResponse">Ответ</span><span class="http-debug-badge" data-i18n="httpServer">Ответ от сервиса</span></summary>
+            <p id="test-status" class="http-status" role="status" data-i18n="response">Ответ сервера появится здесь</p>
+            <details class="http-debug-part"><summary data-i18n="responseHeaders">HTTP-заголовки ответа</summary><pre id="response-headers">—</pre></details>
+            <details class="http-debug-part" open><summary data-i18n="responseBody">Тело ответа</summary><pre id="response-output" class="ym-hide-content">—</pre></details>
+          </details>
         </section>
         <section id="schema-details">
           <h3><span>4</span> <span data-i18n="schema">Аргументы для LLM модели · JSON Schema</span></h3>
@@ -77,6 +87,8 @@
 <script src="tool-gdelt.js?v=1.5.7"></script>
 <script src="tool-library.js"></script>
   <script src="field-help.js"></script>
+  <link rel="stylesheet" href="json-viewer.css">
+  <script src="json-viewer.js"></script>
   <script src="tools-page.js"></script>
 </body>
 </html>

@@ -85,6 +85,28 @@ pre.result { overflow:auto; }
 #tool-examples { margin:6px 0; min-width:0; }
 #tool-examples pre { max-height:260px; overflow:auto; font-size:12px; }
 
+/* HTTP inspection follows the chat Debug panels. */
+.http-debug { margin-top:10px; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--bg); }
+.http-debug > summary { display:flex; align-items:center; gap:8px; min-height:34px; padding:6px 10px; background:var(--tint); color:var(--muted); font:12px var(--mono); list-style:none; }
+.http-debug > summary::-webkit-details-marker { display:none; }
+.http-debug > summary::before { content:'▸'; color:var(--cyan); }
+.http-debug[open] > summary::before { content:'▾'; }
+.http-debug-badge { border:1px solid var(--border); border-radius:10px; padding:2px 6px; color:var(--cyan); font-size:10px; }
+.http-metadata { padding:8px 10px; font:12px/1.7 var(--mono); }
+.http-metadata div > span:first-child { color:var(--muted); margin-right:6px; }
+.http-metadata strong,.http-url > span:last-child { color:var(--accent); overflow-wrap:anywhere; }
+.http-debug .http-debug-part { margin:0 10px; border-top:1px solid var(--border); }
+.http-debug-part > summary { padding:6px 0; color:var(--muted); }
+.http-debug-part > summary { display:flex; align-items:center; gap:8px; list-style:none; }
+.http-debug-part > summary::-webkit-details-marker { display:none; }
+.http-debug-part > summary::before { content:'▸'; color:var(--cyan); }
+.http-debug-part[open] > summary::before { content:'▾'; }
+.http-debug .debug-view-toggle button { min-height:24px; padding:4px 7px; font-size:10px; }
+.http-debug .debug-json-tree { padding:8px 0 10px; }
+.http-debug-part > pre { padding:8px 0 10px; color:var(--accent); max-height:340px; }
+.http-status { margin:0; padding:8px 10px; color:var(--muted); font:12px/1.6 var(--mono); overflow-wrap:anywhere; }
+@media(max-width:400px) { .http-debug > summary { flex-wrap:wrap; gap:5px; } }
+
 /* Request and schema tables share the compact application styling. */
 .tool-table-scroll { position:relative; max-width:100%; overflow-x:auto; margin:10px 0; }
 .tool-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px; }

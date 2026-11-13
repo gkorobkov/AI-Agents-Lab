@@ -8,6 +8,8 @@
   try { english = localStorage.getItem('n8n_lang') === 'en'; } catch (_) {}
   const tr = (ru, en) => english ? en : ru;
   const en = {
+    httpRequest:'Request',httpResponse:'Response',httpPreview:'Preview',httpServer:'Response from service',requestHeaders:'HTTP request headers',responseHeaders:'HTTP response headers',requestBody:'Request body',responseBody:'Response body',
+    getApiKey:'How to get an API key ↗',
     parameterColumn:'Parameter',valueColumn:'Value',modelColumn:'Filled by model',actionsColumn:'Actions',argumentColumn:'Argument',typeColumn:'Type',descriptionColumn:'Description',requiredColumn:'Required',
     llmTest:'Test an LLM call requesting tool selection',llmHint:'The default LLM task is generated from URL parameter values marked Filled by model. You can edit it. The model receives the task text and the tool definition with its argument schema. Local values are excluded from JSON Schema and included in the default task text. After you click Call LLM, the returned arguments populate the URL parameter fields. Run the HTTP request separately using the button in section 3.',llmPrompt:'Task for the LLM model',llmRun:'Call LLM',library:'LIBRARY',importTool:'Load JSON',exportTool:'Download JSON',create:'Create tool',navNote:'Configure once. Connect to your agent and override only what you need.',modelNote:'The model sees the function name, description and argument schema. It decides when to request a call. The application performs the HTTP request; adding a tool does not guarantee a call.',definition:'Description',title:'Library title',name:'Function name for the LLM model',description:'Description for the LLM model',schema:'Arguments for the LLM model · JSON Schema',strict:'Strict schema matching for the LLM model (strict)',http:'Request parameters',method:'Method',query:'URL parameters',addParameter:'+ Parameter',mappingHint:'Enter a value for testing. Enable Filled by model to add the parameter to JSON Schema.',advanced:'Authentication and request body',body:'Request body (POST, JSON template)',auth:'Authentication',authNone:'Not required',authQuery:'API key in URL parameter',authHeader:'API key in header',authName:'Parameter / header name',authPrefix:'Prefix (optional)',clearKey:'Remove session key',keyHint:'The key is kept only in this browser session and bound to the server. It is never included in the model function definition.',summary:'Library explanation',docs:'Official documentation',provider:'Provider website',test:'Test HTTP request',arguments:'Function arguments · JSON',run:'Run HTTP request to Tool',abort:'Stop',cors:'The request runs in your browser. The tool server must allow CORS.',request:'Request · without secrets',response:'The server response will appear here',saveCopy:'Save a copy',addAgent:'Connect to agent →',delete:'Delete'
   };
@@ -20,6 +22,10 @@
   if (english) $('test-args').value = '{"name":"Berlin"}';
   if (!lib) { $('page-status').textContent = tr('Не удалось загрузить библиотеку инструментов.', 'Could not load the tool library.'); return; }
   await lib.ready;
+  const httpBodyViews = Object.fromEntries(['request-body','response-output'].map(id => {
+    const pre = $(id);
+    return [id,JsonViewer.create({pre,heading:pre.parentElement.querySelector('summary'),language:() => english ? 'en' : 'ru'})];
+  }));
   let draft, original = '', dirty = false, controller = null, saveTimer, savedTimer, lastEditedField, selecting = false;
   const testValuesByTool = new Map();
   const fields = { title:'edit-title', docsUrl:'edit-docs', providerUrl:'edit-provider' };
@@ -41,7 +47,7 @@
     dirty = !draft.builtin && (!lib.get(draft.id) || JSON.stringify(readDraft()) !== original);
     $('dirty-state').textContent = dirty ? tr('Есть изменения', 'Unsaved changes') : (draft.builtin ? tr('Только чтение · создайте копию для изменений', 'Read-only · create a copy to edit') : tr('Сохранено', 'Saved'));
     $('dirty-state').classList.toggle('dirty', dirty);
-    syncLinks(); syncDefinitionPreview(); syncTestPrompt();
+    syncLinks(); syncDefinitionPreview(); syncTestPrompt(); syncHttpPreview();
     $('auth-fields').hidden = $('edit-auth').value === 'none';
     $('edit-body').closest('label').hidden = $('edit-method').value !== 'POST';
     clearTimeout(saveTimer); if (dirty && !selecting) saveTimer = setTimeout(autoSave, 300);
@@ -122,6 +128,34 @@
   function syncDefinitionPreview() {
     $('tool-definition-json').value = JSON.stringify({type:'function',function:{name:$('edit-name').value,description:$('edit-description').value,parameters:JSON.parse($('edit-schema').value),strict:$('edit-strict').checked}},null,2);
   }
+  function buildLocalRequest(record) {
+    const args = JSON.parse($('test-args').value);
+    const schema = JSON.parse(record.tool.parameters);
+    return lib.buildRequest({...record.tool, parameters:JSON.stringify({...schema, required:(schema.required || []).filter(key => Object.hasOwn(args,key))})}, args);
+  }
+  function formatHttpBody(body) {
+    if (!body) return tr('(пустое тело)', '(empty body)');
+    return lib.redact(body);
+  }
+  function syncHttpPreview() {
+    $('request-method').textContent = $('edit-method').value;
+    $('request-url').textContent = '—'; $('request-preview').textContent = '—'; httpBodyViews['request-body'].update('—');
+    try {
+      const invalid = [...$('mappings').querySelectorAll('.local-test-value')].find(input => !input.validity.valid);
+      if (invalid) throw new Error(invalid.validationMessage);
+      const record = readDraft(), request = buildLocalRequest(record);
+      if (!request) return;
+      const headers = {...request.headers}, auth = record.tool.http.auth;
+      const url = new URL(request.url);
+      if (auth?.placement === 'header' && auth.name) headers[auth.name] = (auth.prefix || '') + '$API_KEY';
+      if (auth?.placement === 'query' && auth.name) url.searchParams.set(auth.name,(auth.prefix || '') + '$API_KEY');
+      $('request-url').textContent = lib.redact(url.href);
+      $('request-preview').textContent = lib.redact(Object.entries(headers).map(([name,value]) => name + ': ' + value).join('\n')) || tr('(нет заголовков)', '(no headers)');
+      httpBodyViews['request-body'].update(formatHttpBody(request.body));
+    } catch (error) {
+      $('request-preview').textContent = lib.redact(String(error.message || error));
+    }
+  }
   function select(record, force = false) {
     if (!force && dirty) autoSave();
     if (!force && dirty) return;
@@ -139,10 +173,14 @@
     $('edit-name').value = draft.tool.name || ''; $('edit-description').value = [...new Set([draft.summary, draft.tool.description].filter(value => value?.trim()).map(value => value.trim()))].join('\n\n'); $('edit-schema').value = typeof draft.tool.parameters === 'string' ? draft.tool.parameters : JSON.stringify(draft.tool.parameters, null, 2);
     $('edit-strict').checked = !!draft.tool.strict; $('edit-url').value = draft.tool.http.url || ''; $('edit-method').value = draft.tool.http.method || 'GET'; $('edit-body').value = draft.tool.http.body || '';
     $('edit-auth').value = draft.tool.http.auth.placement || 'none'; $('edit-auth-name').value = draft.tool.http.auth.name || ''; $('edit-auth-prefix').value = draft.tool.http.auth.prefix || ''; $('edit-key').value = '';
+    const keyHelp = $('api-key-help');
+    keyHelp.hidden = !/^https:\/\//i.test(draft.apiKeyUrl || '');
+    if (keyHelp.hidden) keyHelp.removeAttribute('href');
+    else keyHelp.href = draft.apiKeyUrl;
     $('key-state').textContent = lib.getSecret(draft.tool.http.auth.secretId) ? tr('Ключ уже задан в сессии.', 'A session key is configured.') : tr('Ключ не задан.', 'No key configured.');
     $('mappings').replaceChildren(); (draft.tool.http.mappings || []).forEach(mappingRow);
     $('delete-tool').hidden = !!draft.builtin || !lib.get(draft.id);
-    $('request-preview').textContent = '—'; $('response-output').textContent = '—'; $('test-status').textContent = tr('Ответ сервера появится здесь', 'The server response will appear here'); $('test-status').classList.remove('error');
+    $('response-headers').textContent = '—'; httpBodyViews['response-output'].update('—'); $('test-status').textContent = tr('Ответ сервера появится здесь', 'The server response will appear here'); $('test-status').classList.remove('error');
     const savedTestValues = testValuesByTool.get(record.id);
     $('test-args').value = JSON.stringify(savedTestValues || (record.exampleRequest || {}));
     const initialArgs = JSON.parse($('test-args').value);
@@ -256,16 +294,15 @@
       if (!record.tool.http.url) throw new Error(tr('Укажите URL инструмента.', 'Enter the tool URL.'));
       const args = JSON.parse($('test-args').value);
       if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error(tr('Аргументы должны быть JSON-объектом.', 'Arguments must be a JSON object.'));
-      const schema = JSON.parse(record.tool.parameters);
-      const request = lib.buildRequest({...record.tool, parameters:JSON.stringify({...schema, required:(schema.required || []).filter(key => Object.hasOwn(args,key))})}, args);
+      const request = buildLocalRequest(record);
       storeKey(record);
-      $('request-preview').textContent = lib.redact(JSON.stringify(request, null, 2));
+      syncHttpPreview();
       const authorized = lib.authorizeRequest(request, record.tool.http);
       controller = new AbortController(); const active = controller;
       $('run-test').disabled = true; $('abort-test').hidden = false;
       ['create-tool','copy-tool','import-tool','test-llm','add-agent','delete-tool'].forEach(id => { $(id).disabled = true; });
       $('library-list').querySelectorAll('button').forEach(button => { button.disabled = true; });
-      $('test-status').textContent = tr('Выполняется запрос…', 'Request in progress…'); $('test-status').classList.remove('error'); $('response-output').textContent = '—';
+      $('test-status').textContent = tr('Выполняется запрос…', 'Request in progress…'); $('test-status').classList.remove('error'); httpBodyViews['response-output'].update('—'); $('response-headers').textContent = '—';
       timer = setTimeout(() => { timedOut = true; active.abort(); }, 15000);
       const started = performance.now();
       if (record.tool.adapter === 'gdelt') {
@@ -273,15 +310,16 @@
         const result = await GdeltTool.execute(record.tool,args,{signal:active.signal,onProgress:progress => {
           $('test-status').textContent = progress.stage === 'request' ? tr('Ожидание GDELT, попытка ', 'Waiting for GDELT, attempt ') + progress.attempt + tr(' (до ', ' (up to ') + progress.timeout_ms / 1000 + tr(' с).', ' s).') : tr('Очередь / повтор GDELT', 'GDELT queue / retry') + (progress.wait_ms ? ' · ' + Math.ceil(progress.wait_ms / 1000) + tr(' с.', ' s.') : '…');
         }});
-        $('response-output').textContent = JSON.stringify(result,null,2);
+        httpBodyViews['response-output'].update(lib.redact(JSON.stringify(result,null,2)));
         $('test-status').textContent = result.status + ' · ' + (result.meta.external_http_status ? 'HTTP ' + result.meta.external_http_status : tr('HTTP-статус недоступен браузеру', 'HTTP status unavailable to browser')) + (result.error ? ' · ' + result.error.category + ' · ' + result.error.message : '') + ' · ' + result.meta.duration_ms + ' ms · ' + result.meta.request_id;
         $('test-status').classList.toggle('error',result.status === 'error');
         return;
       }
       const response = await fetch(authorized.url, { method:authorized.method, headers:authorized.headers, body:authorized.body || undefined, signal:active.signal, credentials:'omit', redirect:'error' });
+      $('response-headers').textContent = lib.redact([...response.headers].map(([name,value]) => name + ': ' + value).join('\n')) || tr('(нет доступных заголовков)', '(no exposed headers)');
       const body = await response.text();
-      let display = body; try { display = JSON.stringify(JSON.parse(body), null, 2); } catch (_) {}
-      $('response-output').textContent = lib.redact(display || tr('(пустое тело ответа)', '(empty response body)'));
+      const display = body;
+      httpBodyViews['response-output'].update(lib.redact(display || tr('(пустое тело ответа)', '(empty response body)')));
       $('test-status').textContent = 'HTTP ' + response.status + ' · ' + Math.round(performance.now() - started) + ' ms'; $('test-status').classList.toggle('error', !response.ok);
     } catch (error) {
       $('test-status').textContent = error.name === 'AbortError' ? (timedOut ? tr('Превышено время ожидания: 15 с.', 'Request timed out after 15 seconds.') : tr('Запрос остановлен.', 'Request stopped.')) : lib.redact(String(error.message || error)); $('test-status').classList.add('error');
@@ -373,7 +411,7 @@
     });
     $('test-args').value = JSON.stringify(draft.tool.adapter === 'gdelt' ? Object.fromEntries(Object.entries(values).filter(([,v]) => v !== '')) : values,null,2);
     testValuesByTool.set(draft.id, JSON.parse($('test-args').value));
-    refreshMappingSources(); syncTestPrompt();
+    refreshMappingSources(); syncTestPrompt(); syncHttpPreview();
   }
   const help = {
     'edit-name':['Техническое имя, по которому LLM модель вызывает функцию. Для подключения к агенту нужны 1–64 латинские буквы, цифры, _ или -. Для проверки HTTP имя не используется.','The model calls the function by this name: 1–64 Latin letters, digits, _ or -. HTTP testing does not use it.'],

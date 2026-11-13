@@ -1,0 +1,19 @@
+  .json-key { color: #89b6cb; }
+  .json-string { color: #b8e7b3; }
+  .json-number { color: #c5af91; }
+  .json-literal { color: #b4a3c7; }
+  .debug-view-toggle { display: inline-flex; margin-left: auto; border: 1px solid var(--border); border-radius: 5px; overflow: hidden; flex-shrink: 0; }
+  .debug-view-toggle button { border: 0; padding: 4px 6px; background: transparent; color: var(--text-muted); font: 9px var(--font-mono, var(--mono)); cursor: pointer; }
+  .debug-view-toggle button[aria-pressed="true"] { background: rgba(0,200,255,.12); color: var(--accent2, var(--cyan)); }
+  .debug-view-toggle button:focus-visible { outline: 1px solid var(--accent2, var(--cyan)); outline-offset: -1px; }
+  .debug-view-toggle button:disabled { opacity: .4; cursor: default; }
+  .debug-section .debug-view-toggle + .dbg-copy { margin-left: 3px; flex-shrink: 0; }
+  .debug-json-tree { max-height: 320px; overflow: auto; padding: 8px 10px; font: 11px/1.6 var(--font-mono, var(--mono)); }
+  .debug-json-tree[hidden], .debug-section pre[hidden] { display: none; }
+  .debug-json-node { margin:0; border:0; }
+  .debug-json-children { padding-left: 14px; border-left: 1px solid var(--border); margin-left: 3px; }
+  .debug-json-leaf { padding-left: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .debug-json-node > summary { display: block; padding: 1px 0; border: 0; background: transparent; font: inherit; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .debug-json-node > summary::before { content: '›'; display: inline-block; width: 13px; color: var(--accent2, var(--cyan)); }
+  .debug-json-node[open] > summary::before { content: '⌄'; }
+  .debug-json-node > summary:focus-visible { outline: 1px solid var(--accent2, var(--cyan)); outline-offset: -1px; }

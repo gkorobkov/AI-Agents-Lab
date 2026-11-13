@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "timepad_events",
+  "title": "Timepad · События",
+  "docsUrl": "https://dev.timepad.ru/api/get-v1-events/",
+  "apiKeyUrl": "https://dev.timepad.ru/api/oauth/",
+  "providerUrl": "https://timepad.ru/",
+  "tool": {
+    "name": "search_timepad_events",
+    "description": "Найти до двух ближайших публичных событий Timepad в указанном городе за заданный период. Уточни город, если пользователь его не указал. Для запроса «на ближайшие 3 дня» используй текущее время из контекста задачи и конец периода через три дня. Если текущая дата неизвестна, запроси её. Передавай даты ISO 8601 с часовым поясом города. Запрос возвращает максимум 2 события, отсортированных по времени начала. Из values возьми название name, дату starts_at, место location, описание description_short, ссылку url и данные о ценах registration_data, если они присутствуют. Покажи до двух найденных событий с датой, адресом и ссылкой. Если найдено меньше двух, сообщи фактическое количество. При пустой выдаче или ошибке сообщи об этом. Не придумывай события, цены и адреса.\n\nДля занятия в n8n подключите HTTP Request Tool к AI Agent. GET https://api.timepad.ru/v1/events.json. Параметры cities, starts_at_min и starts_at_max заполняет модель. Постоянные параметры limit=2, sort=starts_at, fields=location,description_short,registration_data. Передайте агенту текущее время через {{ $now.toISO() }} и часовой пояс города. Токен Timepad с доступом view_events храните в credentials n8n и передавайте заголовком Authorization: Bearer <токен>. Проверка API без токена вернула HTTP 403. Прямой вызов из браузера лаборатории ограничен CORS. Лимит API — 60 запросов в минуту на IP.",
+    "parameters": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"cities\": {\n      \"type\": \"string\",\n      \"description\": \"Город проведения события на русском языке, например Москва. Если город неизвестен, уточни его у пользователя.\"\n    },\n    \"starts_at_min\": {\n      \"type\": \"string\",\n      \"description\": \"Начало периода в ISO 8601 с часовым поясом города. Для ближайших трёх дней используй текущее время из контекста задачи.\"\n    },\n    \"starts_at_max\": {\n      \"type\": \"string\",\n      \"description\": \"Конец периода в ISO 8601 с тем же часовым поясом. Для ближайших трёх дней вычисли начало периода плюс три дня.\"\n    }\n  },\n  \"required\": [\n    \"cities\",\n    \"starts_at_min\",\n    \"starts_at_max\"\n  ],\n  \"additionalProperties\": false\n}",
+    "strict": true,
+    "http": {
+      "url": "https://api.timepad.ru/v1/events.json",
+      "method": "GET",
+      "mappings": [
+        {
+          "key": "cities",
+          "value": "{{cities}}",
+          "testValue": "Москва"
+        },
+        {
+          "key": "starts_at_min",
+          "value": "{{starts_at_min}}",
+          "testValue": "2026-11-12T12:00:00+03:00"
+        },
+        {
+          "key": "starts_at_max",
+          "value": "{{starts_at_max}}",
+          "testValue": "2026-11-15T12:00:00+03:00"
+        },
+        {
+          "key": "limit",
+          "value": "2"
+        },
+        {
+          "key": "sort",
+          "value": "starts_at"
+        },
+        {
+          "key": "fields",
+          "value": "location,description_short,registration_data"
+        }
+      ],
+      "body": "",
+      "auth": {
+        "placement": "header",
+        "name": "Authorization",
+        "prefix": "Bearer ",
+        "secretId": "timepad_events_api_key"
+      }
+    }
+  },
+  "exampleRequest": {
+    "cities": "Москва",
+    "starts_at_min": "2026-11-12T12:00:00+03:00",
+    "starts_at_max": "2026-11-15T12:00:00+03:00"
+  }
+}

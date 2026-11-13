@@ -478,10 +478,7 @@ const CFG_OPENAI_PROVIDERS = [
   button, summary, label { -webkit-user-select: text; user-select: text; }
   .debug-field-name { color: #89b6cb; font-weight: 400; }
   .debug-field-value { color: #b8e7b3; font-weight: 400; }
-  .json-key { color: #89b6cb; }
-  .json-string { color: #b8e7b3; }
-  .json-number { color: #c5af91; }
-  .json-literal { color: #b4a3c7; }
+
   .debug-summary-text { padding: 10px; white-space: pre-wrap; overflow-wrap: anywhere; color: #dff7ff; font: 11px/1.7 var(--font-mono); }
   .response-view { display: flex; align-items: center; gap: 8px; margin: 6px 12px 8px; min-height: 24px; font: 11px var(--font-ui); color: var(--text-muted); }
   .bubble-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
@@ -1131,20 +1128,6 @@ const CFG_OPENAI_PROVIDERS = [
   .debug-block .debug-reasoning > summary { padding: 5px 7px; border-radius: 5px; background: rgba(0,200,255,.06); color: var(--accent2); font: 600 10px/1.5 var(--font-mono); white-space: normal; }
   .debug-reasoning > summary::before { content: '›'; margin-right: 6px; }
   .debug-reasoning[open] > summary::before { transform: rotate(90deg); }
-  .debug-view-toggle { display: inline-flex; margin-left: auto; border: 1px solid var(--border); border-radius: 5px; overflow: hidden; flex-shrink: 0; }
-  .debug-view-toggle button { border: 0; padding: 4px 6px; background: transparent; color: var(--text-muted); font: 9px var(--font-mono); cursor: pointer; }
-  .debug-view-toggle button[aria-pressed="true"] { background: rgba(0,200,255,.12); color: var(--accent2); }
-  .debug-view-toggle button:focus-visible { outline: 1px solid var(--accent2); outline-offset: -1px; }
-  .debug-view-toggle button:disabled { opacity: .4; cursor: default; }
-  .debug-section .debug-view-toggle + .dbg-copy { margin-left: 3px; flex-shrink: 0; }
-  .debug-json-tree { max-height: 320px; overflow: auto; padding: 8px 10px; font: 11px/1.6 var(--font-mono); }
-  .debug-json-tree[hidden], .debug-section pre[hidden] { display: none; }
-  .debug-json-children { padding-left: 14px; border-left: 1px solid var(--border); margin-left: 3px; }
-  .debug-json-leaf { padding-left: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .debug-block .debug-json-node > summary { display: block; padding: 1px 0; border: 0; background: transparent; font: inherit; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .debug-json-node > summary::before { content: '›'; display: inline-block; width: 13px; color: var(--accent2); }
-  .debug-json-node[open] > summary::before { content: '⌄'; }
-  .debug-json-node > summary:focus-visible { outline: 1px solid var(--accent2); outline-offset: -1px; }
   .debug-reasoning-content { max-height: 180px; overflow: auto; overflow-wrap: anywhere; font: 11px/1.55 var(--font-mono); }
   .debug-reasoning-content > :first-child { margin-top: 4px; }
   .debug-reasoning-content > :last-child { margin-bottom: 0; }
@@ -1984,6 +1967,8 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
 <script src="metrika.js?v=1.5.9" defer></script>
   <link rel="stylesheet" href="scrollbars.css?v=1.5.9">
   <link rel="stylesheet" href="credential-fields.css?v=1.5.9">
+<link rel="stylesheet" href="json-viewer.css">
+<script src="json-viewer.js"></script>
 </head>
 <body>
 
@@ -2476,7 +2461,7 @@ const i18n = {
     debugTiming:        'Timing & usage',
     debugUiGenerated:   'UI-generated',
     debugUiSent:        'Sent by UI',
-    debugServerProvided:'Server-provided',
+    debugServerProvided:'Response from service',
     debugLocalProvided: 'Local preset',
     debugCopySection:   'Copy section',
     debugCopyPackage:   'Copy complete debug package',
@@ -2730,7 +2715,7 @@ const i18n = {
     debugTiming:        'Время и токены',
     debugUiGenerated:   'Сформировано UI',
     debugUiSent:        'Отправлено с UI',
-    debugServerProvided:'Получено от сервера',
+    debugServerProvided:'Ответ от сервиса',
     debugLocalProvided: 'Локальный пресет',
     debugCopySection:   'Копировать раздел',
     debugCopyPackage:   'Копировать весь debug-пакет',
@@ -5454,35 +5439,7 @@ function debugContractSections(contract, responseBadge = 'debugServerProvided') 
 
   return sections;
 }
-function renderDebugJson(container, content, format = true) {
-  container.replaceChildren();
-  try { JSON.parse(content); } catch (_) { container.textContent = content; return; }
-  // Format whitespace only: preserve number precision, duplicate keys and string escapes.
-  const parts = content.match(/"(?:\\.|[^"\\])*"|[{}\[\],:]|[^\s{}\[\],:]+/g) || [];
-  let depth = 0;
-  if (format) content = parts.map((part, index) => {
-    if (part === '{' || part === '[') {
-      depth++;
-      return part + (/^[}\]]$/.test(parts[index + 1] || '') ? '' : '\n' + '  '.repeat(depth));
-    }
-    if (part === '}' || part === ']') {
-      depth--;
-      return (/^[{\[]$/.test(parts[index - 1] || '') ? '' : '\n' + '  '.repeat(depth)) + part;
-    }
-    if (part === ',') return ',\n' + '  '.repeat(depth);
-    return part === ':' ? ': ' : part;
-  }).join('');
-  const tokens = /"(?:\\.|[^"\\])*"(?=\s*:)|"(?:\\.|[^"\\])*"|-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|\b(?:true|false|null)\b/g;
-  let offset = 0;
-  for (const match of content.matchAll(tokens)) {
-    container.appendChild(document.createTextNode(content.slice(offset, match.index)));
-    const span = document.createElement('span');
-    span.className = match[0][0] === '"' ? (/^\s*:/.test(content.slice(match.index + match[0].length)) ? 'json-key' : 'json-string') : (/^(true|false|null)$/.test(match[0]) ? 'json-literal' : 'json-number');
-    span.textContent = match[0]; container.appendChild(span);
-    offset = match.index + match[0].length;
-  }
-  container.appendChild(document.createTextNode(content.slice(offset)));
-}
+function renderDebugJson(container, content, format = true) { JsonViewer.renderText(container, content, format); }
 function renderChatData(container, text) {
   container.replaceChildren();
   container.classList.add('chat-data');
@@ -5506,47 +5463,7 @@ function renderChatData(container, text) {
   }
   container.append(document.createTextNode(text.slice(offset)));
 }
-function renderDebugTree(container, content) {
-  // Keep literal tokens intact, including large numbers and duplicate object keys.
-  const tokens = content.match(/"(?:\\.|[^"\\])*"|[{}\[\],:]|[^\s{}\[\],:]+/g) || [];
-  const stack = [];
-  let root;
-  tokens.forEach((token, index) => {
-    if (token === ':' || token === ',') return;
-    if (token === '}' || token === ']') { stack.pop(); return; }
-    const parent = stack[stack.length - 1];
-    if (tokens[index + 1] === ':') { parent.nextKey = token; return; }
-    const node = { key: parent ? parent.type === '[' ? String(parent.children.length) : parent.nextKey : '', type: token, children: [] };
-    if (parent) parent.children.push(node); else root = node;
-    if (token === '{' || token === '[') stack.push(node);
-  });
-  function appendNode(parent, node, open = false) {
-    const branch = node.type === '{' || node.type === '[';
-    const el = document.createElement(branch ? 'details' : 'div');
-    el.className = branch ? 'debug-json-node' : 'debug-json-leaf';
-    const line = branch ? document.createElement('summary') : el;
-    if (node.key) {
-      const key = document.createElement('span'); key.className = 'json-key'; key.textContent = node.key + ': '; line.appendChild(key);
-    }
-    const value = document.createElement('span');
-    value.className = branch ? '' : node.type.startsWith('"') ? 'json-string' : /^(true|false|null)$/.test(node.type) ? 'json-literal' : 'json-number';
-    value.textContent = branch ? `${node.type}${node.children.length ? '…' : ''}${node.type === '{' ? '}' : ']'} (${node.children.length})` : node.type;
-    line.appendChild(value);
-    if (branch) {
-      el.appendChild(line);
-      let loaded = false;
-      const populate = () => {
-        if (!el.open || loaded) return;
-        loaded = true;
-        const children = document.createElement('div'); children.className = 'debug-json-children';
-        node.children.forEach(child => appendNode(children, child)); el.appendChild(children);
-      };
-      el.addEventListener('toggle', populate); el.open = open; populate();
-    }
-    parent.appendChild(el);
-  }
-  if (root) appendNode(container, root, true);
-}
+function renderDebugTree(container, content) { JsonViewer.renderTree(container, content); }
 function debugText(value) { return typeof value === 'string' ? value : JSON.stringify(value, null, 2); }
 
 let pendingNetworkDebug = null;
@@ -5796,27 +5713,7 @@ function appendDebug(row, debugData) {
     if (safeSection.id !== 'summary' && !heading.parentNode) section.appendChild(heading);
     section.appendChild(pre);
     if (safeSection.id === 'request' || safeSection.id === 'response') {
-      const toggle = document.createElement('span'); toggle.className = 'debug-view-toggle';
-      toggle.setAttribute('role', 'group'); toggle.setAttribute('aria-label', lang === 'ru' ? 'Просмотр JSON' : 'JSON view');
-      const tree = document.createElement('div'); tree.className = 'debug-json-tree'; tree.hidden = true;
-      let validJson = true;
-      try { JSON.parse(content); } catch (_) { validJson = false; }
-      let treeLoaded = false;
-      ['text', 'tree'].forEach(mode => {
-        const button = document.createElement('button'); button.type = 'button'; button.dataset.view = mode;
-        button.textContent = mode === 'text' ? (lang === 'ru' ? 'Текст' : 'Text') : (lang === 'ru' ? 'Дерево' : 'Tree');
-        button.setAttribute('aria-pressed', String(mode === 'text'));
-        button.disabled = mode === 'tree' && !validJson;
-        if (button.disabled) button.title = lang === 'ru' ? 'Ответ не содержит корректный JSON' : 'Response is not valid JSON';
-        button.addEventListener('click', event => {
-          event.preventDefault(); event.stopPropagation();
-          if (mode === 'tree' && !treeLoaded) { renderDebugTree(tree, content); treeLoaded = true; }
-          pre.hidden = mode === 'tree'; tree.hidden = mode !== 'tree';
-          toggle.querySelectorAll('button').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
-        });
-        toggle.appendChild(button);
-      });
-      heading.insertBefore(toggle, sectionCopy); section.appendChild(tree);
+      JsonViewer.create({pre, heading, before:sectionCopy, language:() => lang}).update(content);
     }
     if (safeSection.id === 'summary') {
       if (safeContract.trace != null && safeContract.trace !== '') {
