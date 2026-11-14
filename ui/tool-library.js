@@ -102,7 +102,11 @@
       if (typeof value === 'number' && (value < (spec.minimum ?? -Infinity) || value > (spec.maximum ?? Infinity))) throw new Error('Argument out of range: ' + key);
     }
     const mapped = Object.create(null);
-    for (const mapping of tool.http.mappings || []) mapped[mapping.key] = template(mapping.value, args);
+    for (const mapping of tool.http.mappings || []) {
+      const value = template(mapping.value,args);
+      if (mapping.omitIfEmpty && (value === '' || value == null)) continue;
+      mapped[mapping.key] = value;
+    }
     const context = { ...args, ...mapped };
     const url = new URL(resolveHttpUrl({...tool.http,url:template(tool.http.url || '',context,true),alternativeUrl:template(tool.http.alternativeUrl || '',context,true)}));
     if (!['http:','https:'].includes(url.protocol) || url.username || url.password) throw new Error('Invalid HTTP URL.');

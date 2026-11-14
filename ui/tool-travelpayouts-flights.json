@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "id": "travelpayouts_flights",
+  "title": "Travelpayouts Flight · Авиабилеты",
+  "docsUrl": "https://support.travelpayouts.com/hc/ru/articles/203956163",
+  "providerUrl": "https://www.travelpayouts.com/",
+  "apiKeyUrl": "https://support.travelpayouts.com/hc/ru/articles/13024069738386",
+  "apiKeyInstructions": "Зарегистрируйтесь в Travelpayouts и войдите в личный кабинет. Откройте «Профиль» → «API-ключ» и скопируйте токен в поле API key. После обновления ключа замените его во всех интеграциях.",
+  "tool": {
+    "name": "search_flight_prices",
+    "description": "Поиск авиабилетов по маршруту и датам через Travelpayouts Flight / Aviasales Data API. Можно искать перелёт в одну сторону или туда-обратно, на точный день или месяц, с фильтром прямых рейсов и выбором валюты. Результат содержит до пяти наиболее дешёвых вариантов из доступной выборки с датами, авиакомпанией, пересадками и ссылкой Aviasales.\n\nНа вопросы «Что ты умеешь?» и «Расскажи о себе» объясняй эту возможность понятными словами. Например, «Могу подобрать варианты авиабилетов по маршруту и датам, сравнить найденные цены, показать пересадки и ссылки для проверки и покупки». Перечисляй только подключённые возможности. Для рассказа о возможностях вызов API не требуется.\n\nПеред поиском уточни города отправления и назначения, даты, тип поездки и пожелания по пересадкам и валюте. Используй IATA-коды городов или аэропортов, при неоднозначности уточняй выбор. Для поездки в одну сторону передай one_way=true и return_at=\"\". Для туда-обратно передай one_way=false и дату возвращения не раньше вылета. Относительные даты вычисляй по текущей дате из контекста, при её отсутствии уточняй дату. Настройка limit=5, sorting=price.\n\nПроверь success и error в ответе. В data используй price, origin, destination, departure_at, return_at, airline, flight_number, transfers, return_transfers и duration, если они присутствуют. Валюту бери из ответа или параметра currency. Относительную link дополни базой https://www.aviasales.ru. Показывай фактические значения и ссылки. Данные основаны на поисках пользователей Aviasales за последние 48 часов, поэтому укажи, что цену и доступность нужно перепроверить по ссылке. Бронирование и оплата выполняются на стороне продавца. При пустой выдаче сообщи, что в выборке нет подходящих результатов, и предложи изменить даты. При ошибке объясни, что получить данные не удалось. Токен задаётся пользователем отдельно и передаётся заголовком X-Access-Token.",
+    "parameters": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"origin\": {\n      \"type\": \"string\",\n      \"description\": \"IATA-код города или аэропорта отправления, например MOW. Уточни неоднозначный город.\"\n    },\n    \"destination\": {\n      \"type\": \"string\",\n      \"description\": \"IATA-код города или аэропорта назначения, например LED.\"\n    },\n    \"departure_at\": {\n      \"type\": \"string\",\n      \"description\": \"Дата вылета YYYY-MM-DD либо месяц YYYY-MM. Уточни год, если он неизвестен.\"\n    },\n    \"return_at\": {\n      \"type\": \"string\",\n      \"description\": \"Дата возвращения YYYY-MM-DD либо YYYY-MM. Для перелёта в одну сторону передай пустую строку.\"\n    },\n    \"one_way\": {\n      \"type\": \"boolean\",\n      \"description\": \"true для перелёта в одну сторону, false для туда-обратно. При false заполни return_at.\"\n    },\n    \"direct\": {\n      \"type\": \"boolean\",\n      \"description\": \"true для прямых рейсов, false допускает пересадки.\"\n    },\n    \"currency\": {\n      \"type\": \"string\",\n      \"description\": \"Код валюты цены, например rub, usd или eur. Согласуй с пользователем.\"\n    }\n  },\n  \"required\": [\n    \"origin\",\n    \"destination\",\n    \"departure_at\",\n    \"return_at\",\n    \"one_way\",\n    \"direct\",\n    \"currency\"\n  ],\n  \"additionalProperties\": false\n}",
+    "strict": true,
+    "http": {
+      "url": "https://api.travelpayouts.com/aviasales/v3/prices_for_dates",
+      "alternativeUrl": "",
+      "useAlternativeUrl": false,
+      "method": "GET",
+      "mappings": [
+        {
+          "key": "origin",
+          "value": "{{origin}}",
+          "testValue": "MOW"
+        },
+        {
+          "key": "destination",
+          "value": "{{destination}}",
+          "testValue": "LED"
+        },
+        {
+          "key": "departure_at",
+          "value": "{{departure_at}}",
+          "testValue": "2026-12-10"
+        },
+        {
+          "key": "return_at",
+          "value": "{{return_at}}",
+          "testValue": "",
+          "omitIfEmpty": true
+        },
+        {
+          "key": "one_way",
+          "value": "{{one_way}}",
+          "testValue": "true"
+        },
+        {
+          "key": "direct",
+          "value": "{{direct}}",
+          "testValue": "false"
+        },
+        {
+          "key": "currency",
+          "value": "{{currency}}",
+          "testValue": "rub"
+        },
+        {
+          "key": "limit",
+          "value": "5"
+        },
+        {
+          "key": "sorting",
+          "value": "price"
+        },
+        {
+          "key": "page",
+          "value": "1"
+        },
+        {
+          "key": "unique",
+          "value": "false"
+        }
+      ],
+      "body": "",
+      "auth": {
+        "placement": "header",
+        "name": "X-Access-Token",
+        "prefix": "",
+        "secretId": "travelpayouts_flights_api_key"
+      }
+    }
+  },
+  "exampleRequest": {
+    "origin": "MOW",
+    "destination": "LED",
+    "departure_at": "2026-12-10",
+    "return_at": "",
+    "one_way": true,
+    "direct": false,
+    "currency": "rub"
+  }
+}

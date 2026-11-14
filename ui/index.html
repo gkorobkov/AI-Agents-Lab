@@ -6,7 +6,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.5.10';
+const APP_VERSION = '1.5.11';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -1962,14 +1962,14 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
 #messages .chat-data .json-number { color:#c5af91; }
 #messages .chat-data .json-literal { color:#b4a3c7; }
 </style>
-<link rel="stylesheet" href="app-navigation.css?v=1.5.10">
-<link rel="stylesheet" href="field-help.css?v=1.5.10">
+<link rel="stylesheet" href="app-navigation.css?v=1.5.11">
+<link rel="stylesheet" href="field-help.css?v=1.5.11">
 <!-- Yandex.Metrika 112561962: consent-aware loader -->
-<script src="metrika.js?v=1.5.10" defer></script>
-  <link rel="stylesheet" href="scrollbars.css?v=1.5.10">
-  <link rel="stylesheet" href="credential-fields.css?v=1.5.10">
-<link rel="stylesheet" href="json-viewer.css?v=1.5.10">
-<script src="json-viewer.js?v=1.5.10"></script>
+<script src="metrika.js?v=1.5.11" defer></script>
+  <link rel="stylesheet" href="scrollbars.css?v=1.5.11">
+  <link rel="stylesheet" href="credential-fields.css?v=1.5.11">
+<link rel="stylesheet" href="json-viewer.css?v=1.5.11">
+<script src="json-viewer.js?v=1.5.11"></script>
 </head>
 <body>
 
@@ -3869,6 +3869,7 @@ function renderToolHttpEditor(row, http = {}) {
   const mappings = document.createElement('div'); mappings.className = 'tool-http-mappings'; box.appendChild(mappings);
   const addMapping = (mapping = {}) => {
     const item = document.createElement('div'); item.className = 'tool-http-mapping';
+    item.mappingOptions = mapping.omitIfEmpty ? {omitIfEmpty:true} : {};
     item.append(field(toolHttpText('Имя HTTP-параметра', 'HTTP parameter name'), 'key', mapping.key || ''), field(toolHttpText('Значение / {{аргумент}}', 'Value / {{argument}}'), 'value', mapping.value || ''));
     const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'cfg-btn tool-mapping-remove'; remove.innerHTML = toolTrashIcon(); remove.title = toolHttpText('Удалить параметр', 'Remove parameter'); remove.setAttribute('aria-label', remove.title);
     remove.onclick = () => { const name = item.querySelector('[data-http-field="key"]').value.trim(); if (!confirm(toolHttpText('Удалить HTTP-параметр', 'Delete HTTP parameter') + (name ? ' «' + name + '»' : '') + '?')) return; item.remove(); onOpenAIToolDraftChange(); commitOpenAISettings(); }; item.appendChild(remove); mappings.appendChild(item);
@@ -3887,7 +3888,7 @@ function renderToolHttpEditor(row, http = {}) {
 }
 function readToolHttpEditor(row) {
   const get = key => row.querySelector(`[data-http-field="${key}"]`)?.value || '';
-  return { ...(row.toolHttpEndpoints || {}), url: get('url').trim(), method: get('method') || 'GET', body: get('body'), mappings: [...row.querySelectorAll('.tool-http-mapping')].map(item => ({ key: item.querySelector('[data-http-field="key"]').value.trim(), value: item.querySelector('[data-http-field="value"]').value })) };
+  return { ...(row.toolHttpEndpoints || {}), url: get('url').trim(), method: get('method') || 'GET', body: get('body'), mappings: [...row.querySelectorAll('.tool-http-mapping')].map(item => ({ ...item.mappingOptions, key: item.querySelector('[data-http-field="key"]').value.trim(), value: item.querySelector('[data-http-field="value"]').value })) };
 }
 function toolArgumentAt(args, path) {
   let value = args;
@@ -6860,16 +6861,16 @@ function acceptConsent() {
   }
 })();
 </script>
-<script src="material-catalog.js?v=1.5.10"></script>
-<script src="tool-gdelt.js?v=1.5.10"></script>
-<script src="tool-library.js?v=1.5.10"></script>
-<script src="tool-library-settings.js?v=1.5.10"></script>
-<script src="mcp-runtime.js?v=1.5.10"></script>
-<script src="mcp-library.js?v=1.5.10"></script>
-<script src="mcp-client.js?v=1.5.10"></script>
-<script src="mcp-settings.js?v=1.5.10"></script>
-<script src="app-navigation.js?v=1.5.10"></script>
-<script src="field-help.js?v=1.5.10"></script>
-<script src="openai-field-help.js?v=1.5.10"></script>
+<script src="material-catalog.js?v=1.5.11"></script>
+<script src="tool-gdelt.js?v=1.5.11"></script>
+<script src="tool-library.js?v=1.5.11"></script>
+<script src="tool-library-settings.js?v=1.5.11"></script>
+<script src="mcp-runtime.js?v=1.5.11"></script>
+<script src="mcp-library.js?v=1.5.11"></script>
+<script src="mcp-client.js?v=1.5.11"></script>
+<script src="mcp-settings.js?v=1.5.11"></script>
+<script src="app-navigation.js?v=1.5.11"></script>
+<script src="field-help.js?v=1.5.11"></script>
+<script src="openai-field-help.js?v=1.5.11"></script>
 </body>
 </html>

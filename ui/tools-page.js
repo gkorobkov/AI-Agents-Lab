@@ -42,7 +42,7 @@
     next.tool.parameters = $('edit-schema').value;
     next.tool.strict = $('edit-strict').checked;
     next.tool.http = { ...next.tool.http, url:$('edit-url').value.trim(), alternativeUrl:$('edit-alternative-url').value.trim(), useAlternativeUrl:$('edit-use-alternative-url').checked, method:$('edit-method').value,
-      mappings:Array.from($('mappings').children).map(row => ({ key:row.querySelector('[data-key]').value.trim(), value:row.querySelector('[data-value]').value, testValue:row.querySelector('.local-test-value').value })).filter(item => item.key),
+      mappings:Array.from($('mappings').children).map(row => ({ ...row.mappingOptions, key:row.querySelector('[data-key]').value.trim(), value:row.querySelector('[data-value]').value, testValue:row.querySelector('.local-test-value').value })).filter(item => item.key),
       body:$('edit-body').value, auth:{ ...next.tool.http.auth, placement:$('edit-auth').value, name:$('edit-auth-name').value.trim(), prefix:$('edit-auth-prefix').value } };
     return next;
   }
@@ -72,6 +72,7 @@
   }
   function mappingRow(item = { key:'', value:'' }) {
     const row = document.createElement('tr'); row.className = 'mapping';
+    row.mappingOptions = item.omitIfEmpty ? {omitIfEmpty:true} : {};
     const key = document.createElement('input'); key.dataset.key = ''; key.value = item.key; key.placeholder = 'name'; key.setAttribute('aria-label',tr('Имя HTTP-параметра','HTTP parameter name'));
     const editor = document.createElement('div'); editor.className = 'mapping-value';
     const binding = document.createElement('input'); binding.type = 'hidden'; binding.dataset.value = ''; binding.value = item.value;
@@ -186,6 +187,10 @@
     keyHelp.hidden = !/^https:\/\//i.test(draft.apiKeyUrl || '');
     if (keyHelp.hidden) keyHelp.removeAttribute('href');
     else keyHelp.href = draft.apiKeyUrl;
+    $('api-key-instructions')?.remove();
+    if (draft.apiKeyInstructions) {
+      const hint = document.createElement('p'); hint.id = 'api-key-instructions'; hint.className = 'hint'; hint.textContent = draft.apiKeyInstructions; keyHelp.after(hint);
+    }
     $('key-state').textContent = lib.getSecret(draft.tool.http.auth.secretId) ? tr('Ключ уже задан в сессии.', 'A session key is configured.') : tr('Ключ не задан.', 'No key configured.');
     $('mappings').replaceChildren(); (draft.tool.http.mappings || []).forEach(mappingRow);
     $('delete-tool').hidden = !!draft.builtin || !lib.get(draft.id);
