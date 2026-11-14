@@ -20,8 +20,12 @@ const message_source = webhookUrlN8n ? 'WH' : '';
 
 const executionMode = $json.executionMode || '';
 
-// x-request-id injected by nginx (present in both GET and POST automatically)
-const request_id = headers['x-request-id'] || '';
+// Keep the UI operation ID separate from the HTTP proxy's request ID.
+// An intermediary can assign a new header ID when forwarding the same payload again.
+const client_request_id = body.requestId || query.requestId || '';
+const client_timestamp = body.timestamp || query.timestamp || '';
+const proxy_request_id = headers['x-request-id'] || '';
+const request_id = client_request_id || proxy_request_id;
 
 // message and sessionId come from body (POST) or query string (GET)
 const user_message_text = body.message || body.user_message_text
@@ -36,4 +40,7 @@ return [{ json: {
  trace_id,
  ts,
  ts_start_ms,
- request_id } }];
+ request_id,
+ client_request_id,
+ client_timestamp,
+ proxy_request_id } }];

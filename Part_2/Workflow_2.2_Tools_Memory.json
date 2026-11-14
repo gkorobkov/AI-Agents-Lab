@@ -35,7 +35,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const ts_start_ms = Date.now();\nconst trace_id =\n`trc_${ts_start_ms}_${Math.floor(Math.random() *\n100000)}`;\nconst ts = new Date(ts_start_ms).toISOString();\n\n// n8n Webhook node wraps the full request:\n//   $json.headers  — HTTP headers\n//   $json.body     — POST JSON body\n//   $json.query    — GET query string params\n//   $json.webhookUrl — the webhook URL itself (provided by n8n)\nconst headers = $json.headers || {};\nconst body    = $json.body   || {};\nconst query   = $json.query  || {};\n\n// message_source: WH = webhook, TG = Telegram (future)\n// Determined by the presence of webhookUrl in the n8n data\nconst webhookUrlN8n = $json.webhookUrl || '';\nconst message_source = webhookUrlN8n ? 'WH' : '';\n\nconst executionMode = $json.executionMode || '';\n\n// x-request-id injected by nginx (present in both GET and POST automatically)\nconst request_id = headers['x-request-id'] || '';\n\n// message and sessionId come from body (POST) or query string (GET)\nconst user_message_text = body.message || body.user_message_text\n                       || query.message || query.user_message_text || '';\nconst sessionId = body.sessionId || query.sessionId || '';\n\nreturn [{ json: {\n sessionId,\n message_source,\n executionMode,\n user_message_text,\n trace_id,\n ts,\n ts_start_ms,\n request_id } }];\n"
+        "jsCode": "const ts_start_ms = Date.now();\nconst trace_id =\n`trc_${ts_start_ms}_${Math.floor(Math.random() *\n100000)}`;\nconst ts = new Date(ts_start_ms).toISOString();\n\n// n8n Webhook node wraps the full request:\n//   $json.headers  — HTTP headers\n//   $json.body     — POST JSON body\n//   $json.query    — GET query string params\n//   $json.webhookUrl — the webhook URL itself (provided by n8n)\nconst headers = $json.headers || {};\nconst body    = $json.body   || {};\nconst query   = $json.query  || {};\n\n// message_source: WH = webhook, TG = Telegram (future)\n// Determined by the presence of webhookUrl in the n8n data\nconst webhookUrlN8n = $json.webhookUrl || '';\nconst message_source = webhookUrlN8n ? 'WH' : '';\n\nconst executionMode = $json.executionMode || '';\n\n// Keep the UI operation ID separate from the HTTP proxy's request ID.\n// An intermediary can assign a new header ID when forwarding the same payload again.\nconst client_request_id = body.requestId || query.requestId || '';\nconst client_timestamp = body.timestamp || query.timestamp || '';\nconst proxy_request_id = headers['x-request-id'] || '';\nconst request_id = client_request_id || proxy_request_id;\n\n// message and sessionId come from body (POST) or query string (GET)\nconst user_message_text = body.message || body.user_message_text\n                       || query.message || query.user_message_text || '';\nconst sessionId = body.sessionId || query.sessionId || '';\n\nreturn [{ json: {\n sessionId,\n message_source,\n executionMode,\n user_message_text,\n trace_id,\n ts,\n ts_start_ms,\n request_id,\n client_request_id,\n client_timestamp,\n proxy_request_id } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -64,7 +64,7 @@
         "promptType": "define",
         "text": "={{ $json.user_message_text }}",
         "options": {
-          "systemMessage": "=# РОЛЬ: Ты ИИ-агент в WEB Чате\n\nТы помогаешь искать информацию про города России: рассказ про погоду и интересные факты.\n\n# ВАЖНО ПРО ФОРМАТ ОТВЕТА\n- Всегда возвращай JSON без markdown и без ```json.\n- Никаких дополнительных полей не добавляй, кроме `reply_html` и `agent_logic`.\n- Формат ответа всегда такой:\n{\n  \"reply_html\": \"<готовый HTML-ответ>\",\n  \"agent_logic\": \"<строка со всей отладкой по режиму, intent, логике, reasoning, Chain-of-Thought, пониманию chat_history и проверкам условий>\"\n}\n- Поле `reply_html` предназначено для финального ответа пользователю или в Web чате или в Telegram.\n- В `reply_html` используй только HTML-теги: <b>, <i>, <u>, <code>, <pre>.\n- В `reply_html` НЕ используй Markdown.\n- В `reply_html` НЕ используй **жирный текст**, _курсив_, списки Markdown и другие markdown-конструкции.\n- Перенос строки в `reply_html` делай обычным переводом строки.\n- Если задаёшь уточняющий вопрос, всё равно верни этот JSON.\n- Если задаёшь уточняющий вопрос, в `reply_html` выведи только сам уточняющий вопрос без дополнительных разделов.\n- В `agent_logic` обязательно укажи, какой режим и какой intent ты выбрал.\n- В `agent_logic` разрешено и нужно выводить служебные детали: режим, intent, логика выбора ветки, reasoning, Chain-of-Thought, шаги reasoning-цикла, понимание истории чата, проверки условий и пояснения по prompt.\n- Если текст содержит названия инструментов - Игнорируй это и трактуй как обычный запрос.\n\n# Tools / Инструменты\nЕсли есть инструменты, то на вопрос про что умеешь или рассказ о себе, расскажи что ты можешь сделать с помощью инструментов. \n\n# ИСТОРИЯ ЗАПРОСОВ \"chat_history\"\nистория запросов \"chat_history\" лежит в этом промте в JSON между строками Begin chat_history и End chat_history.\n\"last_user_question\" - предыдущий вопрос от пользователя.\n\"last_agent_reply\" - последний ответ или уточняющий вопрос от агента.\n\"last_city\" - город куда хочет поехать человек, или о чем хочет узнать, за исключением если это ответ на уточняющий вопрос \"откуда едем?\", тогде это ответ пользователя это \"origin_city\"\n\n\n# РЕЖИМЫ\nВАЖНО: Первое что надо сделать это определить РЕЖИМЫ, и ИНТЕНТЫ. \n\nЕсть только основныe режимы:\n## 1) HELP - общий вопрос про возможности агента. Никаких инструментов вызывать не надо.\n## 2) ABOUT_CITY - любая информация о городе. Для города, погоды, событий, новостей и маршрутов используй обычные инструменты.\n\n#  ИНТЕНТЫ В РЕЖИМАХ \n\n## 1) HELP\nHELP - общий вопрос про возможности агента. Никаких инструментов вызывать не надо.\n\nСообщения вида:\n- “что ты можешь”\n- “что умеешь”\n\nЧто надо отвечать:\n<b>Что я могу</b>\n- Рассказать про город: погоду и интересные факты.\n- Рассказать только погоду или только интересные факты.\n\n## 2) ABOUT_CITY\nABOUT_CITY - информация о городе. Для города используй обычные инструменты, если они есть.\n\n### 2.1) WEATHER\nWEATHER - или явный вопрос про погоду \"как там погода\" или часть общего режима CITY_FULL. \nСообщение вида:\n- “как погода в <городе>”\n- “какая погода в <городе>”\n- “как там погода”\n- “расскажи про <город>” - часть общего режима CITY_FULL. \n\nЧто надо делать:\n- Ответь только погодой.\n\n## 2.2) CITY_FULL\nCITY_FULL - рассказ про погоду и один произвольный интересный факт. \n\nСообщение:\n- только город (1–3 слова)\n- или “расскажи про <город>”\n\nЧто надо делать:\n- Ответь про погоду как в WEATHER.\n- Добавь 1 короткий пункт “Интересное” - Можно краткий общий совет для путешествия. Если не нашел про путешествия, то любой интеренсый факт про город, а если не нашел, то честно так и скажи.\n\n# ВАЖНО ПРО ПОНИМАНИЕ КОТНЕКСТА И УТОЧНЕНИЕ И СОХРАНЕНИЕ ИСТОРИИ ВОПРОСА\n\nЕсли есть история чата, то возьми данные для понимания контекста из ИСТОРИЯ ЗАПРОСОВ\n\nВАЖНО: Первое что надо сделать это определить РЕЖИМЫ, ИНТЕНТЫ. \n\nВ поле \"agent_logic\" кратко и явно напиши:\nLLM_RUN_РЕЖИМ: какой режим выбрал;\nLLM_RUN_INTENT: какой intent выбрал;\nLLM_RUN_WHY_INTENT: почему выбрал intent;\nLLM_RUN_USER_REQUEST: как ты понял что написано после Human, то есть о чем написал пользователь;\nLLM_RUN_CHAT_HISTORY: все что написано в \"chat_history\" и как ты это понял;\nLLM_RUN_CHAIN-OF-THOUGHT: Chain-of-Thought и reasoning без пропуска шагов и с описанием шагов: Понимание - интерпретация - декомпозиция - действие/ответ;\n\n# ИНСТРУМЕНТЫ\nЕсли есть инструменты, то бери их описание из соответствующего места из запроса. \n\n### ПРАВИЛА ВРЕМЕНИ ДЛЯ ПОГОДЫ\n- Время для погоды выводи как:\n“данные измерены DD.MM.YYYY в ЧЧ:ММ по местному времени”\n\n# ФОРМАТ ОТВЕТА (HTML)\n\n## WEATHER\n<b><Город></b>\n\n<b>Погода</b>\n<температура>°C, <описание по weathercode>, ветер: <км/ч>, данные измерены <ДД.ММ.ГГГГ> в <ЧЧ:ММ> по местному времени.\n\n## CITY_FULL\n<используй блок WEATHER>\n\n<блок один произвольный интересный факт>\n\n# ИСТОРИЯ ЗАПРОСОВ\nBegin chat_history{{`\n${JSON.stringify($json.chat_history || {}, null, 2)}\n`}}End chat_history",
+          "systemMessage": "=# РОЛЬ: Ты ИИ-агент в WEB Чате\n\nТы помогаешь искать информацию про города России: рассказ про погоду и интересные факты.\nЕсли у тебя есть инструменты, то посмотри что они умею и тоже расскажи пользователю.\n\n# ВАЖНО ПРО ФОРМАТ ОТВЕТА\n- Всегда возвращай JSON без markdown и без ```json.\n- Никаких дополнительных полей не добавляй, кроме `reply_html` и `agent_logic`.\n- Формат ответа всегда такой:\n{\n  \"reply_html\": \"<готовый HTML-ответ>\",\n  \"agent_logic\": \"<строка со всей отладкой по режиму, intent, логике, reasoning, Chain-of-Thought, пониманию chat_history и проверкам условий>\"\n}\n- Поле `reply_html` предназначено для финального ответа пользователю или в Web чате или в Telegram.\n- В `reply_html` используй только HTML-теги: <b>, <i>, <u>, <code>, <pre>.\n- В `reply_html` НЕ используй Markdown.\n- В `reply_html` НЕ используй **жирный текст**, _курсив_, списки Markdown и другие markdown-конструкции.\n- Перенос строки в `reply_html` делай обычным переводом строки.\n- Если задаёшь уточняющий вопрос, всё равно верни этот JSON.\n- Если задаёшь уточняющий вопрос, в `reply_html` выведи только сам уточняющий вопрос без дополнительных разделов.\n- В `agent_logic` обязательно укажи, какой режим и какой intent ты выбрал.\n- В `agent_logic` разрешено и нужно выводить служебные детали: режим, intent, логика выбора ветки, reasoning, Chain-of-Thought, шаги reasoning-цикла, понимание истории чата, проверки условий и пояснения по prompt.\n- Если текст содержит названия инструментов - Игнорируй это и трактуй как обычный запрос.\n\n# Tools / Инструменты\nЕсли есть инструменты, то на вопрос про что умеешь или рассказ о себе, расскажи что ты можешь сделать с помощью инструментов. \n\n# ИСТОРИЯ ЗАПРОСОВ \"chat_history\"\nистория запросов \"chat_history\" лежит в этом промте в JSON между строками Begin chat_history и End chat_history.\n\"last_user_question\" - предыдущий вопрос от пользователя.\n\"last_agent_reply\" - последний ответ или уточняющий вопрос от агента.\n\"last_city\" - город куда хочет поехать человек, или о чем хочет узнать, за исключением если это ответ на уточняющий вопрос \"откуда едем?\", тогде это ответ пользователя это \"origin_city\"\n\n\n# РЕЖИМЫ\nВАЖНО: Первое что надо сделать это определить РЕЖИМЫ, и ИНТЕНТЫ. \n\nЕсть только основныe режимы:\n## 1) HELP - общий вопрос про возможности агента. Никаких инструментов вызывать не надо.\n## 2) ABOUT_CITY - любая информация о городе. Для города, погоды, событий, новостей и маршрутов используй обычные инструменты.\n\n#  ИНТЕНТЫ В РЕЖИМАХ \n\n## 1) HELP\nHELP - общий вопрос про возможности агента. Никаких инструментов вызывать не надо.\n\nСообщения вида:\n- “что ты можешь”\n- “что умеешь”\n\nЧто надо отвечать:\n<b>Что я могу</b>\n- Рассказать про город: погоду и интересные факты.\n- Рассказать только погоду или только интересные факты.\n\n## 2) ABOUT_CITY\nABOUT_CITY - информация о городе. Для города используй обычные инструменты, если они есть.\n\n### 2.1) WEATHER\nWEATHER - или явный вопрос про погоду \"как там погода\" или часть общего режима CITY_FULL. \nСообщение вида:\n- “как погода в <городе>”\n- “какая погода в <городе>”\n- “как там погода”\n- “расскажи про <город>” - часть общего режима CITY_FULL. \n\nЧто надо делать:\n- Ответь только погодой.\n\n## 2.2) CITY_FULL\nCITY_FULL - рассказ про погоду, один произвольный интересный факт, далее если для города можно вызвать инструменты, то вызывай инстументы. \n\nСообщение:\n- только город (1–3 слова)\n- или “расскажи про <город>”\n\nЧто надо делать:\n- Ответь про погоду как в WEATHER.\n- Добавь 1 короткий пункт “Интересное” - Можно краткий общий совет для путешествия. Если не нашел про путешествия, то любой интеренсый факт про город, а если не нашел, то честно так и скажи.\n- Посмотри какие есть инструменты связанные с городом - погода, поиск билетов, меропириятия и так далее. Вызови каждый инструмент для города и верни результат так как это описано в инструменте.\n\n# ВАЖНО ПРО ПОНИМАНИЕ КОТНЕКСТА И УТОЧНЕНИЕ И СОХРАНЕНИЕ ИСТОРИИ ВОПРОСА\n\nЕсли есть история чата, то возьми данные для понимания контекста из ИСТОРИЯ ЗАПРОСОВ\n\nВАЖНО: Первое что надо сделать это определить РЕЖИМЫ, ИНТЕНТЫ. \n\nВ поле \"agent_logic\" кратко и явно напиши:\nLLM_RUN_РЕЖИМ: какой режим выбрал;\nLLM_RUN_INTENT: какой intent выбрал;\nLLM_RUN_WHY_INTENT: почему выбрал intent;\nLLM_RUN_USER_REQUEST: как ты понял что написано после Human, то есть о чем написал пользователь;\nLLM_RUN_CHAT_HISTORY: все что написано в \"chat_history\" и как ты это понял;\nLLM_RUN_CHAIN-OF-THOUGHT: Chain-of-Thought и reasoning без пропуска шагов и с описанием шагов: Понимание - интерпретация - декомпозиция - действие/ответ;\n\n# ИНСТРУМЕНТЫ\nЕсли есть инструменты, то бери их описание из соответствующего места из запроса. \n\n### ПРАВИЛА ВРЕМЕНИ ДЛЯ ПОГОДЫ\n- Время для погоды выводи как:\n“данные измерены DD.MM.YYYY в ЧЧ:ММ по местному времени”\n\n# ФОРМАТ ОТВЕТА (HTML)\n\n## WEATHER\n<b><Город></b>\n\n<b>Погода</b>\n<температура>°C, <описание по weathercode>, ветер: <км/ч>, данные измерены <ДД.ММ.ГГГГ> в <ЧЧ:ММ> по местному времени.\n\n## CITY_FULL\n<используй блок WEATHER>\n\n<блок один произвольный интересный факт>\n\n# ИСТОРИЯ ЗАПРОСОВ\nBegin chat_history{{`\n${JSON.stringify($json.chat_history || {}, null, 2)}\n`}}End chat_history",
           "returnIntermediateSteps": true
         }
       },
@@ -81,6 +81,7 @@
       "alwaysOutputData": true,
       "notesInFlow": false,
       "executeOnce": true,
+      "waitBetweenTries": 5000,
       "onError": "continueRegularOutput"
     },
     {
@@ -372,6 +373,124 @@
       "name": "Get last chat_history",
       "alwaysOutputData": true,
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "toolDescription": "GDELT City News HTTP Request Tool — Description\nВерни новости о городе из GDELT по поисковому запросу.\nИспользуй для CITY_FULL и CITY_FUN_ONLY.\nВход: query (строка), формат: \"<city_en> sourcecountry:russia\".\nВыход: articles[] (title, url, seendate).\nЕсли ошибка/таймаут/пусто — НЕ останавливайся: в блоке “Новости” напиши “Новости временно недоступны (GDELT)”.",
+        "url": "https://api.gdeltproject.org/api/v2/doc/doc",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "mode",
+              "value": "artlist"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "sort",
+              "value": "datedesc"
+            },
+            {
+              "name": "timespan",
+              "value": "1week"
+            },
+            {
+              "name": "maxrecords",
+              "value": "2"
+            },
+            {
+              "name": "query",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters5_Value', `query: Поисковый запрос для GDELT DOC 2.0 (artlist). Сформируй запрос по городу пользователя и верни ОДНУ строку.\nПравила:\n- Основа: <город на английском/транслитом> (например: moscow, saint petersburg, kazan).\n- Фильтр страны для РФ: добавляй \\`sourcecountry:russia\\`.\n- Не используй кавычки и сложные операторы, если не уверен.\n- Не добавляй параметры URL (mode/format/timespan/maxrecords/sort) — только текст запроса.\nПримеры:\n- moscow sourcecountry:russia\n- saint petersburg sourcecountry:russia\n- kazan sourcecountry:russia\n- yekaterinburg sourcecountry:russia\n- nizhny novgorod sourcecountry:russia\n`, 'string') }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.3,
+      "position": [
+        304,
+        416
+      ],
+      "id": "f5cb8d4f-23b7-4b59-bfd4-15cc17677586",
+      "name": "GDELT City News HTTP Request Tool"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Travelpayouts Flight Prices HTTP Request Tool — Description\nВерни варианты авиабилетов/цен по направлениям (origin, destination) на дату.\nИспользуй для режима TICKETS (авиа).\nВход: origin (IATA), destination (IATA), departure_at (YYYY-MM-DD).\nВыход: data[] (price, airline, flight_number если есть).\nЕсли ошибка/пусто — в блоке “Авиа” напиши “Авиа временно недоступна”.",
+        "url": "https://api.travelpayouts.com/aviasales/v3/prices_for_dates",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "={{ $env.TRAVELPAYOUTS_TOKEN }}"
+            },
+            {
+              "name": "origin",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters1_Value', ``, 'string') }}"
+            },
+            {
+              "name": "destination",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters2_Value', ``, 'string') }}"
+            },
+            {
+              "name": "departure_at",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters3_Value', ``, 'string') }}"
+            },
+            {
+              "name": "one_way",
+              "value": "true"
+            },
+            {
+              "name": "sorting",
+              "value": "price"
+            },
+            {
+              "name": "direct",
+              "value": "false"
+            },
+            {
+              "name": "currency",
+              "value": "rub"
+            },
+            {
+              "name": "limit",
+              "value": "10"
+            },
+            {
+              "name": "page",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.3,
+      "position": [
+        976,
+        160
+      ],
+      "id": "51e90496-f71b-4a42-bef1-0324d7711117",
+      "name": "Travelpayouts Flight Prices HTTP Request Tool"
     }
   ],
   "pinData": {},
@@ -507,13 +626,29 @@
           }
         ]
       ]
+    },
+    "GDELT City News HTTP Request Tool": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "Travelpayouts Flight Prices HTTP Request Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "de750424-4958-46d6-af0b-77d747187f9f",
+  "versionId": "3495b9b2-a511-475c-8c86-25f71bc73e18",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a5990d51d66227a2860cdb6315a52b1b853fd2fae4af48a6a350ac342b52bcd"

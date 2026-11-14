@@ -6,7 +6,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║ ── VERSION ──  (grep: APP_VERSION for build increment)   ║
 // ╚══════════════════════════════════════════════════════════╝
-const APP_VERSION = '1.5.11';
+const APP_VERSION = '1.5.12';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   CONFIGURABLE DEFAULTS                  ║
@@ -1962,14 +1962,14 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
 #messages .chat-data .json-number { color:#c5af91; }
 #messages .chat-data .json-literal { color:#b4a3c7; }
 </style>
-<link rel="stylesheet" href="app-navigation.css?v=1.5.11">
-<link rel="stylesheet" href="field-help.css?v=1.5.11">
+<link rel="stylesheet" href="app-navigation.css?v=1.5.12">
+<link rel="stylesheet" href="field-help.css?v=1.5.12">
 <!-- Yandex.Metrika 112561962: consent-aware loader -->
-<script src="metrika.js?v=1.5.11" defer></script>
-  <link rel="stylesheet" href="scrollbars.css?v=1.5.11">
-  <link rel="stylesheet" href="credential-fields.css?v=1.5.11">
-<link rel="stylesheet" href="json-viewer.css?v=1.5.11">
-<script src="json-viewer.js?v=1.5.11"></script>
+<script src="metrika.js?v=1.5.12" defer></script>
+  <link rel="stylesheet" href="scrollbars.css?v=1.5.12">
+  <link rel="stylesheet" href="credential-fields.css?v=1.5.12">
+<link rel="stylesheet" href="json-viewer.css?v=1.5.12">
+<script src="json-viewer.js?v=1.5.12"></script>
 </head>
 <body>
 
@@ -5394,6 +5394,8 @@ function formatDebugSummary(contract) {
   if (contract.response?.http_status != null) lines.push(`HTTP: ${contract.response.http_status} ${contract.response.status_text || ''}`.trim());
   const elapsed = contract.timing?.elapsed_ms;
   lines.push(`${t('debugElapsed')}: ${formatResponseTime(elapsed)}`);
+  if (contract.request?.requestId) lines.push(`RequestID: ${contract.request.requestId}`);
+  if (contract.request?.timestamp) lines.push(`Timestamp: ${contract.request.timestamp}`);
   Object.entries(contract.request?.headers || {}).forEach(([name, value]) => {
     lines.push(`${name}: ${typeof value === 'string' ? value : JSON.stringify(value)}`);
   });
@@ -5505,9 +5507,9 @@ function captureRequestLog(value) {
   return typeof text === 'string' && text.length > CFG_REQUEST_LOG_BODY_MAX_CHARS
     ? text.slice(0, CFG_REQUEST_LOG_BODY_MAX_CHARS) + '\n[TRUNCATED]' : text;
 }
-function beginRequestLog(endpoint, options) {
+function beginRequestLog(endpoint, options, owner = null) {
   const entry = {
-    id: crypto.randomUUID(), startedAt: new Date().toISOString(), status: 'pending',
+    id: owner?.requestId || crypto.randomUUID(), startedAt: owner?.timestamp || new Date().toISOString(), status: 'pending',
     request: { method: options.method || 'GET', url: safeRequestLogValue(endpoint), headers: safeRequestLogValue(Object.fromEntries(new Headers(options.headers).entries())), body: captureRequestLog(options.body ?? null) },
     response: null, error: null
   };
@@ -5557,6 +5559,7 @@ function renderRequestLog() {
 
 async function fetchWithRequestDebug(endpoint, options, owner = null) {
   const request = { method: options.method, endpoint, headers: { ...options.headers } };
+  if (owner?.requestId) { request.requestId = owner.requestId; request.timestamp = owner.timestamp; }
   if (typeof options.body === 'string') request.body_text = options.body;
   if (request.headers.Authorization) request.headers.Authorization = 'Bearer $OPENAI_API_KEY';
   if (options.body) { try { request.body = JSON.parse(options.body); } catch (_) { request.body = options.body; } }
@@ -5573,7 +5576,7 @@ async function fetchWithRequestDebug(endpoint, options, owner = null) {
     row.remove();
   }
   const started = performance.now();
-  const logEntry = beginRequestLog(endpoint, options);
+  const logEntry = beginRequestLog(endpoint, options, owner);
   try {
     const response = await fetch(endpoint, options);
     updateRequestLog(logEntry, { response: { status: response.status, statusText: response.statusText, headers: safeRequestLogValue(Object.fromEntries(response.headers.entries())), body: null } });
@@ -6274,7 +6277,7 @@ function beginWebhookWait(userRow, text) {
   const timer = document.createElement('span');
   timer.className = 'request-wait-timer';
   row.querySelector('.bubble-meta').prepend(timer);
-  const request = { row, bubble, timerEl: timer, url: webhookUrl, method: httpMethod, sessionId, controller: new AbortController(), started: performance.now(), expired: false };
+  const request = { row, bubble, timerEl: timer, url: webhookUrl, method: httpMethod, sessionId, requestId:crypto.randomUUID(), timestamp:new Date().toISOString(), controller: new AbortController(), started: performance.now(), expired: false };
   webhookWaits.add(request);
   const render = () => {
     const elapsed = performance.now() - request.started;
@@ -6382,20 +6385,21 @@ async function sendMessage() {
   try {
     let res;
     let requestMeta;
+    const payload = { message:text, sessionId:request.sessionId, requestId:request.requestId, timestamp:request.timestamp };
     if (request.method === 'get') {
-      const params = new URLSearchParams({ sessionId: request.sessionId, message: text,  });
+      const params = new URLSearchParams(payload);
       const getUrl = request.url + (request.url.includes('?') ? '&' : '?') + params.toString();
-      requestMeta = { method: 'GET', endpoint: getUrl, headers: {} };
+      requestMeta = { method: 'GET', endpoint: getUrl, headers: {}, requestId:request.requestId, timestamp:request.timestamp };
       res = await fetchWithRequestDebug(getUrl, {
         method: 'GET',
         signal: abortCtrl.signal
       }, request);
     } else {
-      requestMeta = { method: 'POST', endpoint: request.url, headers: { 'Content-Type': 'application/json' }, body: { message: text, sessionId: request.sessionId } };
+      requestMeta = { method: 'POST', endpoint: request.url, headers: { 'Content-Type': 'application/json' }, body:payload, requestId:request.requestId, timestamp:request.timestamp };
       res = await fetchWithRequestDebug(request.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, sessionId: request.sessionId }),
+        body: JSON.stringify(payload),
         signal: abortCtrl.signal
       }, request);
     }
@@ -6861,16 +6865,16 @@ function acceptConsent() {
   }
 })();
 </script>
-<script src="material-catalog.js?v=1.5.11"></script>
-<script src="tool-gdelt.js?v=1.5.11"></script>
-<script src="tool-library.js?v=1.5.11"></script>
-<script src="tool-library-settings.js?v=1.5.11"></script>
-<script src="mcp-runtime.js?v=1.5.11"></script>
-<script src="mcp-library.js?v=1.5.11"></script>
-<script src="mcp-client.js?v=1.5.11"></script>
-<script src="mcp-settings.js?v=1.5.11"></script>
-<script src="app-navigation.js?v=1.5.11"></script>
-<script src="field-help.js?v=1.5.11"></script>
-<script src="openai-field-help.js?v=1.5.11"></script>
+<script src="material-catalog.js?v=1.5.12"></script>
+<script src="tool-gdelt.js?v=1.5.12"></script>
+<script src="tool-library.js?v=1.5.12"></script>
+<script src="tool-library-settings.js?v=1.5.12"></script>
+<script src="mcp-runtime.js?v=1.5.12"></script>
+<script src="mcp-library.js?v=1.5.12"></script>
+<script src="mcp-client.js?v=1.5.12"></script>
+<script src="mcp-settings.js?v=1.5.12"></script>
+<script src="app-navigation.js?v=1.5.12"></script>
+<script src="field-help.js?v=1.5.12"></script>
+<script src="openai-field-help.js?v=1.5.12"></script>
 </body>
 </html>
