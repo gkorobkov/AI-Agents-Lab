@@ -316,7 +316,7 @@
   };
   $('run-test').onclick = async () => {
     if (controller) return;
-    let timer, timedOut = false, fetchRequest = null, responseReceived = false;
+    let fetchRequest = null, responseReceived = false;
     $('test-error-details').hidden = true;
     try {
       if (!Array.from($('mappings').querySelectorAll('.local-test-value')).every(input => input.reportValidity())) return;
@@ -333,10 +333,8 @@
       ['create-tool','copy-tool','import-tool','test-llm','add-agent','delete-tool'].forEach(id => { $(id).disabled = true; });
       $('library-list').querySelectorAll('button').forEach(button => { button.disabled = true; });
       $('test-status').textContent = tr('Выполняется запрос…', 'Request in progress…'); $('test-status').classList.remove('error'); httpBodyViews['response-output'].update('—'); $('response-headers').textContent = '—';
-      timer = setTimeout(() => { timedOut = true; active.abort(); }, 15000);
       const started = performance.now();
       if (record.tool.adapter === 'gdelt') {
-        clearTimeout(timer);
         const result = await GdeltTool.execute(record.tool,args,{signal:active.signal,onProgress:progress => {
           $('test-status').textContent = progress.stage === 'request' ? tr('Ожидание GDELT, попытка ', 'Waiting for GDELT, attempt ') + progress.attempt + tr(' (до ', ' (up to ') + progress.timeout_ms / 1000 + tr(' с).', ' s).') : tr('Очередь / повтор GDELT', 'GDELT queue / retry') + (progress.wait_ms ? ' · ' + Math.ceil(progress.wait_ms / 1000) + tr(' с.', ' s.') : '…');
         }});
@@ -354,7 +352,7 @@
       httpBodyViews['response-output'].update(lib.redact(display || tr('(пустое тело ответа)', '(empty response body)')));
       $('test-status').textContent = 'HTTP ' + response.status + ' · ' + Math.round(performance.now() - started) + ' ms'; $('test-status').classList.toggle('error', !response.ok);
     } catch (error) {
-      $('test-status').textContent = error.name === 'AbortError' ? (timedOut ? tr('Превышено время ожидания: 15 с.', 'Request timed out after 15 seconds.') : tr('Запрос остановлен.', 'Request stopped.')) : lib.redact(String(error.message || error)); $('test-status').classList.add('error');
+      $('test-status').textContent = error.name === 'AbortError' ? tr('Запрос остановлен.', 'Request stopped.') : lib.redact(String(error.message || error)); $('test-status').classList.add('error');
       if (fetchRequest && !responseReceived && error.name !== 'AbortError') {
         $('test-status').textContent = tr('Браузер не смог получить ответ сервиса.', 'The browser could not receive the service response.');
         const target = new URL(fetchRequest.url), crossOrigin = target.origin !== location.origin;
@@ -372,7 +370,7 @@
         httpBodyViews['response-output'].update(tr('Тело ответа недоступно браузеру. Причины и шаги проверки указаны выше.', 'The response body is unavailable to the browser. See the explanation and troubleshooting steps above.'));
       }
     } finally {
-      clearTimeout(timer); controller = null; $('run-test').disabled = false; $('abort-test').hidden = true;
+      controller = null; $('run-test').disabled = false; $('abort-test').hidden = true;
       ['create-tool','copy-tool','import-tool','test-llm','add-agent','delete-tool'].forEach(id => { $(id).disabled = false; });
       $('library-list').querySelectorAll('button').forEach(button => { button.disabled = false; }); lockDefinition();
     }
