@@ -62,18 +62,48 @@ function buildStepsSummary(steps) {
   if (!steps.length) return "No intermediate steps";
   const seen = new Set();
   const lines = [];
+  const hasError = (value) => {
+    if (typeof value === "string") {
+      const parsed = parseJsonMaybe(value);
+      return parsed !== null && parsed !== value && hasError(parsed);
+    }
+    if (!value || typeof value !== "object") return false;
+    return Object.prototype.hasOwnProperty.call(value, "error") ||
+      Object.values(value).some(hasError);
+  };
   for (const step of steps) {
-    const callId = step?.action?.toolCallId || '';
+    const action = step?.action || {};
+    const callId = action.toolCallId || '';
     const key = callId || `step_${lines.length}`;
     if (seen.has(key)) continue;
     seen.add(key);
 
-    const toolCall = step?.action?.messageLog?.[0]?.kwargs?.tool_calls?.[0];
-    const toolName = toolCall?.name || step?.action?.tool || "Unknown Tool";
-    const args = Object.fromEntries(
-      Object.entries(toolCall?.args || {}).filter(([k]) => k !== "id")
+    // LangChain serialized/live messages and OpenAI function calls.
+    const messages = parseJsonMaybe(action.messageLog);
+    const calls = (Array.isArray(messages) ? messages : []).flatMap((message) =>
+      [message?.kwargs, message?.lc_kwargs, message].flatMap((source) => {
+        const lists = [source?.tool_calls, source?.additional_kwargs?.tool_calls];
+        return lists.flatMap((list) => Array.isArray(list) ? list : []);
+      })
     );
-    lines.push(`${lines.length + 1}. tool=${toolName} | args=${JSON.stringify(args)}`);
+    const toolCall = (callId ? calls.find((call) => call?.id === callId) : null) ||
+      calls.find((call) => (call?.name || call?.function?.name) === action.tool) ||
+      (!callId && !action.tool && calls.length === 1 ? calls[0] : null);
+    const toolName = toolCall?.name || toolCall?.function?.name || action.tool || "Unknown Tool";
+    const candidates = [toolCall?.args, toolCall?.function?.arguments, toolCall?.arguments, action.toolInput];
+    const values = candidates.filter((value) => value != null).map((value) =>
+      typeof value === "string" ? (parseJsonMaybe(value) ?? value) : value
+    );
+    const input = values.find((value) => typeof value !== "object" || Object.keys(value).length > 0) ?? values[0] ?? {};
+    const args = input && typeof input === "object" && !Array.isArray(input)
+      ? Object.fromEntries(Object.entries(input).filter(([k]) => k !== "id"))
+      : input;
+    let line = `${lines.length + 1}. tool=${toolName} | args=${JSON.stringify(args)}`;
+    // Keep the original observation, but only when it contains an actual error field.
+    if (hasError(step?.observation)) {
+      line += ` | observation=${typeof step.observation === "string" ? step.observation : JSON.stringify(step.observation)}`;
+    }
+    lines.push(line);
   }
   return lines.join("\n");
 }
