@@ -156,7 +156,11 @@
       row.append(el('p','HTTP: '+tool.execution.http.method+' '+tool.execution.http.url));
       if(tool.execution.http.auth?.placement!=='none' && tool.execution.http.auth?.placement) {
         const key=input('Ключ HTTP-инструмента · только в этой вкладке','');key.control.type='text';key.control.classList.add('credential-input');key.control.spellcheck=false;key.control.autocomplete='off';key.host.classList.add('ym-hide-content');
-        key.control.addEventListener('change',()=>{try{ToolLibrary.setSecret(row.execution.http.auth.secretId,key.control.value,new URL(row.execution.http.url).origin);key.control.value='';key.control.placeholder='Ключ задан';}catch(error){status(error.message,true);}});row.append(key.host);
+        key.control.placeholder=ToolLibrary.getSecret(row.execution.http.auth.secretId)?'Ключ задан':'Введите ключ';
+        const saveKey=()=>{if(!key.control.value)return;try{ToolLibrary.setSecret(row.execution.http.auth.secretId,key.control.value,new URL(row.execution.http.url).origin);key.control.placeholder='Ключ задан';}catch(error){status(ToolLibrary.redact(error.message),true);}};
+        key.control.addEventListener('input',saveKey);
+        key.control.addEventListener('change',()=>{saveKey();key.control.value='';});
+        row.append(key.host,deleteAction('Удалить ключ',()=>{ToolLibrary.clearSecret(row.execution.http.auth.secretId);key.control.value='';key.control.placeholder='Введите ключ';}));
       }
       row.append(el('p','Копия HTTP-настроек из библиотеки Tools. Для изменения запроса отредактируйте инструмент в Tools и добавьте его заново.'));
     }
@@ -165,6 +169,7 @@
   }
   function select(record,force=false) {
     if(!force&&$('mcp-dirty').classList.contains('dirty')&&!confirm('Перейти к другому MCP и отменить несохранённые изменения?'))return;
+    try { sessionStorage.setItem('ai_mcp_selected',record.id); } catch (_) {}
     invalidate(false);draft=clone(record);$('mcp-tools').replaceChildren();
     $('mcp-title').textContent=draft.title;$('mcp-kind').textContent=draft.builtin?'УЧЕБНЫЙ ПРИМЕР':draft.mode==='remote'?'ПОДКЛЮЧЕНИЕ':'СВОЙ MCP';
     $('mcp-edit-title').value=draft.title;$('mcp-edit-name').value=draft.name;$('mcp-description').value=draft.description;$('mcp-url').value=draft.url||'';$('mcp-token').value='';
@@ -238,5 +243,5 @@
     }catch(error){status(error.message,true);}finally{$('mcp-file').value='';}
   };
   window.addEventListener('storage',event=>{if(['ai_tool_library_v1','ai_mcp_library_v1'].includes(event.key))try{renderPicker();}catch(error){status(error.message,true);}});
-  try{select(lib.list()[0] || lib.empty(),true);if(lib.errors.length)status(lib.errors.join(' · '),true);}catch(error){status(error.message,true);}
+  try{select(lib.list().find(record=>record.id===sessionStorage.getItem('ai_mcp_selected')) || lib.list()[0] || lib.empty(),true);if(lib.errors.length)status(lib.errors.join(' · '),true);}catch(error){status(error.message,true);}
 })();

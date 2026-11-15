@@ -153,7 +153,10 @@
     const schema = validate(record.tool);
     if (typeof record.tool.parameters !== 'string' || Object.values(schema.properties).some(spec => !spec || typeof spec !== 'object' || Array.isArray(spec))) throw new Error('parameters: свойства должны содержать объекты JSON Schema.');
     if (schema.required !== undefined && (!Array.isArray(schema.required) || !schema.required.every(key => typeof key === 'string' && Object.hasOwn(schema.properties, key)))) throw new Error('parameters.required: нужны имена существующих аргументов.');
-    if (!Array.isArray(record.tool.http.mappings || []) || (record.tool.http.mappings || []).some(item => typeof item.key !== 'string' || typeof item.value !== 'string')) throw new Error('HTTP mappings: нужны строковые key и value.');
+    if (!Array.isArray(record.tool.http.mappings || [])) throw new Error('HTTP mappings: нужен массив параметров.');
+    (record.tool.http.mappings || []).forEach((item, index) => {
+      if (!item || typeof item.key !== 'string' || typeof item.value !== 'string') throw new Error('HTTP mappings[' + index + '] (' + (item?.key || '?') + '): нужны строковые key и value. Для аргумента модели задайте value: "{{имя_аргумента}}"; testValue используется только для проверки.');
+    });
     return clone(record);
   }
   function importRecord(value) {

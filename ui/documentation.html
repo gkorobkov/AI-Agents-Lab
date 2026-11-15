@@ -224,11 +224,11 @@ tx.en.h429='A request or concurrency limit was reached. Wait for running request
 tx.en.securityText='Keep API keys out of URLs, messages and reports. Personal connection settings are saved in this browser.';
 
 
-let lang=localStorage.getItem('n8n_lang')|| (navigator.language.startsWith('ru')?'ru':'en');let activeRoute='n8n';
+let lang=localStorage.getItem('n8n_lang')|| (navigator.language.startsWith('ru')?'ru':'en');let activeRoute='n8n';try{if(sessionStorage.getItem('ai_help_route')==='direct')activeRoute='direct';}catch(_){}
 // Edit Russian text directly in HTML; capture it before applying translations.
 const russianContent = new Map([...document.querySelectorAll('[data-t]')].map(el => [el, el.innerHTML]));
 function applyLang(l){lang=l;localStorage.setItem('n8n_lang',l);document.documentElement.lang=l;russianContent.forEach((html,el)=>{const v=tx[l]?.[el.dataset.t];if(l==='ru'||v==null)el.innerHTML=html;else el.textContent=v});document.getElementById('lang').textContent=l==='ru'?'EN':'RU';document.title=(l==='ru'?'Помощь':'Help')+' — AI Agents Lab';renderRoute();document.querySelectorAll('[data-copy]').forEach(b=>b.textContent=copyLabel[l][0])}
-function renderRoute(){const names={n8n:'n8n webhook',direct:'Direct LLM API'};document.getElementById('route-panel').innerHTML='<small>'+(lang==='ru'?'Выбранный маршрут':'Selected route')+'</small><h3>'+names[activeRoute]+'</h3><p>'+routeText[lang][activeRoute]+'</p>'}
+function renderRoute(){document.querySelectorAll('[data-route]').forEach(b=>{const on=b.dataset.route===activeRoute;b.classList.toggle('active',on);b.setAttribute('aria-selected',on)});const names={n8n:'n8n webhook',direct:'Direct LLM API'};document.getElementById('route-panel').innerHTML='<small>'+(lang==='ru'?'Выбранный маршрут':'Selected route')+'</small><h3>'+names[activeRoute]+'</h3><p>'+routeText[lang][activeRoute]+'</p>'}
 const sectionToggle = document.getElementById('toggle-all-sections');
 const collapsibleSections = [...document.querySelectorAll('main details')];
 collapsibleSections.forEach(section => { section.open = true; });
@@ -265,7 +265,7 @@ syncSectionToggle();
 window.addEventListener('storage', event => {
   if (event.key === 'n8n_lang' && ['ru', 'en'].includes(event.newValue) && event.newValue !== lang) applyLang(event.newValue);
 });
-document.getElementById('lang').onclick=()=>applyLang(lang==='ru'?'en':'ru');document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{activeRoute=b.dataset.route;document.querySelectorAll('.mode').forEach(x=>{const on=x===b;x.classList.toggle('active',on);x.setAttribute('aria-selected',on)});renderRoute()});
+document.getElementById('lang').onclick=()=>applyLang(lang==='ru'?'en':'ru');document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{activeRoute=b.dataset.route;try{sessionStorage.setItem('ai_help_route',activeRoute);}catch(_){}document.querySelectorAll('.mode').forEach(x=>{const on=x===b;x.classList.toggle('active',on);x.setAttribute('aria-selected',on)});renderRoute()});
 let theme=localStorage.getItem('n8n_theme')||'dark';function applyTheme(v){theme=v;document.documentElement.dataset.theme=v;localStorage.setItem('n8n_theme',v)}document.getElementById('theme').onclick=()=>applyTheme(theme==='dark'?'light':'dark');
 document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{const value=b.parentElement.querySelector('pre').innerText;try{await navigator.clipboard.writeText(value)}catch(e){const t=document.createElement('textarea');t.value=value;document.body.append(t);t.select();document.execCommand('copy');t.remove()}b.textContent=copyLabel[lang][1];b.classList.add('done');setTimeout(()=>{b.textContent=copyLabel[lang][0];b.classList.remove('done')},1600)});applyTheme(theme);applyLang(lang);
 </script>

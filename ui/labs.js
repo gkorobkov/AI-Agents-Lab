@@ -377,6 +377,7 @@
   function selectLab(id, push = false) {
     const next = labs.get(id);
     if (!next) { $('catalog-status').textContent = 'Лабораторная не найдена. Выберите работу в полосе «Лабы» или загрузите её JSON.'; return; }
+    try { sessionStorage.setItem('ai_labs_selected', id); } catch (_) {}
     selected = next; report = readReport(next); renderCatalog(); renderLab();
     $('lab-links').querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     if (push) {
@@ -457,7 +458,10 @@
     $('catalog-status').textContent = errors.length ? 'Часть лабораторных не загружена. ' + errors.join(' · ') : 'Выберите лабораторную. JSON-файл добавляет новую работу; JSON-отчёт восстанавливает ответы.';
     renderCatalog(); ready = true;
     if (pendingOpen) { window.openLab(...pendingOpen); pendingOpen = null; }
-    else if (labs.size) selectLab(new URL(location.href).searchParams.get('lab') || labs.keys().next().value);
+    else if (labs.size) {
+      let saved; try { saved = sessionStorage.getItem('ai_labs_selected'); } catch (_) {}
+      selectLab(new URL(location.href).searchParams.get('lab') || (labs.has(saved) ? saved : labs.keys().next().value));
+    }
     else $('catalog-status').textContent += ' Загрузите JSON лабораторной, чтобы начать.';
     jumpToHash();
   }

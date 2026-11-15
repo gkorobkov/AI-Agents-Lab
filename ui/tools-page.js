@@ -173,6 +173,7 @@
     }
     if (controller) { status(tr('Сначала остановите текущий запрос.', 'Stop the current request before switching tools.'), true); return; }
     clearTimeout(saveTimer); selecting = true;
+    try { sessionStorage.setItem('ai_tools_selected', record.id); } catch (_) {}
     draft = clone(record); draft.tool.http ||= { url:'', method:'GET', mappings:[], body:'' }; draft.tool.http.auth ||= { placement:'none', name:'', prefix:'', secretId:lib.newId() };
     draft.tool.http.auth.secretId ||= lib.newId();
     Object.entries(fields).forEach(([key, id]) => { $(id).value = draft[key] || ''; });
@@ -191,6 +192,7 @@
     if (draft.apiKeyInstructions) {
       const hint = document.createElement('p'); hint.id = 'api-key-instructions'; hint.className = 'hint'; hint.textContent = draft.apiKeyInstructions; keyHelp.after(hint);
     }
+    $('edit-key').placeholder = lib.getSecret(draft.tool.http.auth.secretId) ? tr('Ключ задан', 'Key is set') : tr('Введите ключ', 'Enter key');
     $('key-state').textContent = lib.getSecret(draft.tool.http.auth.secretId) ? tr('Ключ уже задан в сессии.', 'A session key is configured.') : tr('Ключ не задан.', 'No key configured.');
     $('mappings').replaceChildren(); (draft.tool.http.mappings || []).forEach(mappingRow);
     $('delete-tool').hidden = !!draft.builtin || !lib.get(draft.id);
@@ -249,7 +251,14 @@
     record.title = tr('Новый инструмент', 'New tool') + (n > 2 ? ' ' + (n - 1) : '');
     select(lib.save(record, true), true);
   };
-  $('clear-key').onclick = () => { lib.clearSecret(draft.tool.http.auth.secretId); $('edit-key').value = ''; $('key-state').textContent = tr('Ключ удалён из сессии.', 'Session key removed.'); updateDirty(); };
+  $('edit-key').addEventListener('input', () => {
+    if (!$('edit-key').value) return;
+    try {
+      storeKey(readDraft());
+      $('key-state').textContent = tr('Ключ сохранён в сессии вкладки.', 'Key saved in this tab session.');
+    } catch (error) { status(lib.redact(error.message), true); }
+  });
+  $('clear-key').onclick = () => { lib.clearSecret(draft.tool.http.auth.secretId); $('edit-key').value = ''; $('edit-key').placeholder = tr('Введите ключ', 'Enter key'); $('key-state').textContent = tr('Ключ удалён из сессии.', 'Session key removed.'); updateDirty(); };
   $('delete-tool').onclick = () => { if (confirm(tr('Удалить этот инструмент из библиотеки?', 'Delete this tool from the library?'))) { try { lib.remove(draft.id); lib.list().length ? select(lib.list()[0], true) : $('create-tool').click(); } catch (error) { status(String(error.message || error), true); } } };
   $('add-agent').onclick = () => {
     try {
@@ -503,7 +512,8 @@
       english = event.newValue === 'en'; applyLanguage(); updateDirty(); lockDefinition();
       FieldHelp.hide(); attachHelp();
       $('tool-kind').textContent = draft.builtin ? tr('ПРЕДУСТАНОВКА', 'BUILT-IN') : tr('ВАШ ИНСТРУМЕНТ', 'CUSTOM TOOL');
-        $('key-state').textContent = lib.getSecret(draft.tool.http.auth.secretId) ? tr('Ключ уже задан в сессии.', 'A session key is configured.') : tr('Ключ не задан.', 'No key configured.');
+        $('edit-key').placeholder = lib.getSecret(draft.tool.http.auth.secretId) ? tr('Ключ задан', 'Key is set') : tr('Введите ключ', 'Enter key');
+    $('key-state').textContent = lib.getSecret(draft.tool.http.auth.secretId) ? tr('Ключ уже задан в сессии.', 'A session key is configured.') : tr('Ключ не задан.', 'No key configured.');
       syncLinks();
       $('mappings').querySelectorAll('[data-key]').forEach(input => input.setAttribute('aria-label', tr('Имя параметра', 'Parameter name')));
       $('mappings').querySelectorAll('[data-value]').forEach(input => input.setAttribute('aria-label', tr('Значение параметра', 'Parameter value')));
@@ -513,6 +523,8 @@
   });
   window.addEventListener('tool-library:change', () => renderPicker());
   window.addEventListener('pagehide', autoSave);
-  if (lib.list().length) select(lib.list()[0], true); else $('create-tool').click();
+  let selectedTool;
+  try { selectedTool = lib.get(sessionStorage.getItem('ai_tools_selected')); } catch (_) {}
+  if (lib.list().length) select(selectedTool || lib.list()[0], true); else $('create-tool').click();
   if (lib.errors.length) status(lib.errors.join(' · '), true);
 })();

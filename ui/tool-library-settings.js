@@ -101,8 +101,14 @@
       const caption=document.createElement('span');caption.textContent=text('API key инструмента · только в этой вкладке','Tool API key · this tab only');
       const input=document.createElement('input');input.type='text';input.autocomplete='off';input.spellcheck=false;input.setAttribute('data-lpignore','true');input.setAttribute('data-1p-ignore','');input.className='api-input credential-input';
       input.placeholder=ToolLibrary.getSecret(tool.http.auth.secretId)?text('Ключ задан','Key is set'):text('Введите ключ','Enter key');
-      input.addEventListener('change',()=>{try{ToolLibrary.setSecret(tool.http.auth.secretId,input.value,new URL(ToolLibrary.resolveHttpUrl(readToolHttpEditor(row))).origin);input.value='';input.placeholder=text('Ключ задан','Key is set');}catch(error){toast(ToolLibrary.redact(error.message));}});
-      label.append(caption,input); intro.append(label);
+      const saveKey=()=>{if(!input.value)return;try{ToolLibrary.setSecret(tool.http.auth.secretId,input.value,new URL(ToolLibrary.resolveHttpUrl(readToolHttpEditor(row))).origin);input.placeholder=text('Ключ задан','Key is set');}catch(error){toast(ToolLibrary.redact(error.message));}};
+      input.addEventListener('input',saveKey);
+      input.addEventListener('change',()=>{saveKey();input.value='';});
+      const clear=document.createElement('button');clear.type='button';clear.className='cfg-btn';
+      clear.title=text('Удалить ключ','Delete key');clear.setAttribute('aria-label',clear.title);
+      clear.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>';
+      clear.onclick=()=>{ToolLibrary.clearSecret(tool.http.auth.secretId);input.value='';input.placeholder=text('Введите ключ','Enter key');};
+      label.append(caption,input); intro.append(label,clear);
     }
     syncLibraryOverrides();
   };
