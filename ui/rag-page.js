@@ -10,6 +10,12 @@
   try { saved = JSON.parse(localStorage.getItem('ai_rag_settings') || '{}'); } catch (_) {}
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) saved = {};
   Object.entries(fields).forEach(([name, id]) => { $(id).value = typeof saved[name] === typeof cfg[name] ? saved[name] : cfg[name]; });
+  ModelPicker.attach($('model'), {
+    language: () => 'ru',
+    connection: () => ({baseUrl: urlValue('neuraldeep-url'), headers: $('neuraldeep-key').value.trim() ? {Authorization:'Bearer ' + $('neuraldeep-key').value.trim()} : {}}),
+    timeout: cfg.timeoutMs,
+    sources: [$('neuraldeep-url'), $('neuraldeep-key')]
+  });
   $('metadata').value = cfg.metadata;
   $('text-field-note').textContent = `Поле «${cfg.textField}» хранит текст документа и не должно повторяться в метаданных. Остальные поля payload сохраняются при загрузке в редактор.`;
   const status = (message, error = false) => { $('status').textContent = message; $('status').classList.toggle('error', error); };
@@ -35,7 +41,7 @@
   }));
   function urlValue(id) {
     let url;
-    try { url = new URL($(id).value.trim()); } catch (_) { throw new Error('Укажите корректный URL в поле «' + (id === 'qdrant-url' ? 'REST URL кластера Qdrant' : 'Base URL NeuralDeep') + '».'); }
+    try { url = new URL($(id).value.trim()); } catch (_) { throw new Error('Укажите корректный URL в поле «' + (id === 'qdrant-url' ? 'REST URL кластера Qdrant' : 'Base URL OpenAI API') + '».'); }
     if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error('URL должен использовать HTTP(S) и не содержать логин, пароль, параметры или якорь.');
     if (url.hostname === 'cloud.qdrant.io') throw new Error('Укажите REST URL вашего кластера из Qdrant Cloud, а не адрес панели cloud.qdrant.io.');
     return url.href.replace(/\/+$/, '');
@@ -94,7 +100,7 @@
   }
   async function embedTexts(texts, vector, isQuery = false) {
     const key = $('neuraldeep-key').value.trim(), model = $('model').value.trim();
-    if (!key || !model) throw new Error('Укажите API key NeuralDeep и модель эмбеддингов.');
+    if (!key || !model) throw new Error('Укажите API Key и модель эмбеддингов.');
     const prefix = $(isQuery ? 'query-prefix' : 'document-prefix').value;
     const data = await request(urlValue('neuraldeep-url'), '/embeddings', 'POST', {model, input:texts.map(text => prefix + text)}, {Authorization:'Bearer ' + key});
     if (!Array.isArray(data.data) || data.data.length !== texts.length) throw new Error('NeuralDeep вернул неполный набор эмбеддингов.');

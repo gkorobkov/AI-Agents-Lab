@@ -7,9 +7,11 @@
   <script>if (window === window.parent) location.replace('./?page=rag');</script>
   <link rel="stylesheet" href="tools-page.css">
   <link rel="stylesheet" href="rag-page.css?v=file-import">
+  <link rel="stylesheet" href="model-picker.css">
   <link rel="stylesheet" href="scrollbars.css">
   <link rel="stylesheet" href="credential-fields.css">
   <script src="app-content.js?v=rag-workbench"></script>
+  <script src="model-picker.js" defer></script>
   <script src="rag-page.js?v=file-import" defer></script>
 </head>
 <body>
@@ -26,12 +28,11 @@
             <label>RAG-система<select id="rag-provider"><option value="qdrant">Qdrant</option></select></label>
             <label>REST URL кластера Qdrant<input id="rag-qdrant-url" type="url" placeholder="https://your-cluster.cloud.qdrant.io:6333" autocomplete="off" spellcheck="false"></label>
             <label>API key Qdrant<input id="rag-qdrant-key" type="password" class="credential-input ym-disable-keys ym-hide-content" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
-            <label>Base URL NeuralDeep<input id="rag-neuraldeep-url" type="url" autocomplete="off" spellcheck="false"></label>
-            <label>API key NeuralDeep<input id="rag-neuraldeep-key" type="password" class="credential-input ym-disable-keys ym-hide-content" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
+            <label>Base URL OpenAI API<input id="rag-neuraldeep-url" type="url" autocomplete="off" spellcheck="false"></label>
+            <label>API Key<input id="rag-neuraldeep-key" type="password" class="credential-input ym-disable-keys ym-hide-content" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
             <button id="rag-clear-keys" type="button" class="small">Очистить ключи</button>
             <p class="hint">Ключи остаются только в памяти этой страницы. Адреса и параметры сохраняются в этом браузере. Для Qdrant нужен адрес кластера, а не cloud.qdrant.io.</p>
-            <label>Модель эмбеддингов<input id="rag-model" spellcheck="false" list="rag-models"></label>
-            <datalist id="rag-models"><option value="bge-m3"></option><option value="e5-large"></option><option value="frida"></option></datalist>
+            <label>Модель эмбеддингов<input id="rag-model" spellcheck="false" autocomplete="off"></label>
             <div class="rag-pair"><label>Размерность<input id="rag-dimensions" type="number" min="1" step="1"></label><label>Имя вектора<input id="rag-vector-name" placeholder="Без имени" spellcheck="false"></label></div>
             <details><summary>Префиксы модели</summary><label>Префикс документа<input id="rag-document-prefix" spellcheck="false"></label><label>Префикс запроса<input id="rag-query-prefix" spellcheck="false"></label><p class="hint">Для bge-m3 оставьте пустыми. Для e5-large: «passage: » и «query: ». Для frida: «search_document: » и «search_query: ». Пробел в конце важен. Для других моделей укажите префиксы из документации.</p></details>
             <div class="official-links"><a href="https://cloud.qdrant.io/" target="_blank" rel="noopener noreferrer">Qdrant Cloud ↗</a><a href="https://neuraldeep.ru/docs#vector" target="_blank" rel="noopener noreferrer">NeuralDeep API ↗</a></div>
