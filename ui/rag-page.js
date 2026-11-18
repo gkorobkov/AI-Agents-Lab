@@ -88,14 +88,14 @@
     }
     return data.result === undefined ? data : data.result;
   }
-  const qdrant = (ctx, suffix, method = 'GET', body) => request(ctx.base, suffix.startsWith('/collections') ? suffix : ctx.path + suffix, method, body, {'api-key':ctx.key});
+  const qdrant = (ctx, suffix, method = 'GET', body) => request(ctx.base, suffix.startsWith('/collections') || suffix === '/aliases' || suffix === '/cluster' ? suffix : ctx.path + suffix, method, body, {'api-key':ctx.key});
   async function collectionVector(ctx) {
     const info = await qdrant(ctx, '');
     const vectors = info.config?.params?.vectors;
     const name = $('vector-name').value.trim();
     const definition = name ? vectors?.[name] : vectors;
     if (!definition || !Number.isInteger(definition.size)) throw new Error('Не найден плотный вектор. Для именованного вектора заполните поле «Имя вектора».');
-    if ((name && Object.keys(vectors).length !== 1) || Object.keys(info.config?.params?.sparse_vectors || {}).length) throw new Error('Эта страница работает с одним плотным вектором. Коллекции с несколькими векторами или sparse-векторами пока не поддерживаются.');
+    if (definition.multivector_config) throw new Error('Для multivector используйте редактор точки JSON.');
     return { name, size:definition.size };
   }
   async function embedTexts(texts, vector, isQuery = false) {
@@ -182,6 +182,7 @@
     return points[0];
   }
   function loadPoint(point) {
+    const editor = $('id').closest('details'); if (editor) editor.open = true;
     $('id').value = point.id;
     const payload = point.payload || {};
     $('text').value = typeof payload[cfg.textField] === 'string' ? payload[cfg.textField] : '';
@@ -226,16 +227,19 @@
   }
   const on = (id, message, action) => $(id).addEventListener('click', () => run(message, action));
   $('new').addEventListener('click', () => { clearEditor(); status('Новый документ. При создании пустой ID будет заменён UUID.'); $('text').focus(); });
-  $('clear-keys').addEventListener('click', () => { $('qdrant-key').value = ''; $('neuraldeep-key').value = ''; status('Ключи удалены из памяти страницы.'); });
+  $('clear-keys').addEventListener('click', () => { $('qdrant-key').value = ''; $('neuraldeep-key').value = ''; window.RagConsole?.clearKeys(); status('Ключи удалены из сессии вкладки.'); });
   on('connect', 'Получение коллекций…', async () => {
     const ctx = context(false), result = await qdrant(ctx, '/collections');
     if (!Array.isArray(result.collections)) throw new Error('Qdrant вернул неожиданный список коллекций.');
     $('collections').replaceChildren(...result.collections.map(item => { const option = node('option'); option.value = item.name; return option; }));
-    status('Подключено. Коллекций: ' + result.collections.length + '. Выберите имя в поле «Имя коллекции».');
+    await window.RagConsole?.connected(ctx, result);
+    status('Подключено. Коллекций: ' + result.collections.length + '.');
   });
   on('create-collection', 'Создание коллекции…', async () => {
     const ctx = context(), size = integer('dimensions', 'Размерность'), name = $('vector-name').value.trim();
-    await qdrant(ctx, '', 'PUT', {vectors:name ? {[name]:{size, distance:'Cosine'}} : {size, distance:'Cosine'}});
+    const distance = document.getElementById('rag-distance')?.value || cfg.distance;
+    await qdrant(ctx, '', 'PUT', {vectors:name ? {[name]:{size, distance}} : {size, distance}});
+    await window.RagConsole?.refresh(ctx.collection);
     const option = node('option'); option.value = ctx.collection; $('collections').append(option);
     resetRecords(); status('Коллекция «' + ctx.collection + '» создана. Размерность: ' + size + '.');
   });
@@ -255,7 +259,10 @@
     if (update && !existing) throw new Error('Документ не найден. Для нового ID нажмите «Создать документ».');
     if (!update && existing) throw new Error('ID уже существует. Прочитайте документ и используйте кнопку «Обновить по ID».');
     const vector = await collectionVector(ctx), embedding = await embed(text, vector);
-    await qdrant(ctx, '/points?wait=true', 'PUT', {points:[{id, vector:vector.name ? {[vector.name]:embedding} : embedding, payload:{...metadata, [cfg.textField]:text}}]});
+    if (update && vector.name) {
+      await qdrant(ctx, '/points/vectors?wait=true', 'PUT', {points:[{id,vector:{[vector.name]:embedding}}]});
+      await qdrant(ctx, '/points/payload?wait=true', 'PUT', {points:[id],payload:{...metadata,[cfg.textField]:text}});
+    } else await qdrant(ctx, '/points?wait=true', 'PUT', {points:[{id, vector:vector.name ? {[vector.name]:embedding} : embedding, payload:{...metadata, [cfg.textField]:text}}]});
     resetRecords(); status('Документ ' + id + (update ? ' обновлён.' : ' создан.') + ' Обновите список документов.');
   }
   on('create', 'Векторизация и создание документа…', () => write(false));
@@ -278,4 +285,5 @@
     renderPoints($('results'), result.points, 'По этому запросу документов не найдено.');
     status('Поиск завершён. Найдено: ' + result.points.length + '.');
   });
+  window.RagWorkbench = {get signal() { return controller?.signal; }, cancel: () => controller?.abort(), run, context, qdrant, loadPoint, browse, resetRecords, clearEditor, persist, status, pointId};
 })();

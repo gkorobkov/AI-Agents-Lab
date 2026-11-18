@@ -215,6 +215,7 @@
   <p>Ваши сообщения могут передаваться поставщикам AI-LLM моделей (в частности, Anthropic) для генерации ответов. На эти данные распространяется политика конфиденциальности соответствующих поставщиков. Мы не продаём и не передаём ваши данные рекламным или иным третьим сторонам.</p>
 
   <h2>4. Хранение данных</h2>
+  <p>В RAG адреса и параметры подключения сохраняются в localStorage. Ключи Qdrant и API эмбеддингов сохраняются в sessionStorage вкладки с привязкой к адресу сервера и удаляются кнопками «Удалить ключ» или «Очистить ключи». Документы, векторы, индексы, алиасы и снимки обрабатываются выбранным кластером Qdrant. Для векторизации текст отправляется выбранному API эмбеддингов.</p>
   <p>История чата и Debug сохраняются локально в sessionStorage вкладки и восстанавливаются после обновления страницы. Кнопка «Очистить чат» удаляет сохранённую историю. Выбранные элементы каталогов и вкладки окон также запоминаются в сессии браузера. При обычном закрытии вкладки её sessionStorage очищается. Сообщения отправляются выбранному внешнему сервису при выполнении запроса.</p>
 
   <h2>5. Права пользователя</h2>
@@ -287,6 +288,7 @@
   <p>Your messages may be forwarded to AI model providers (in particular, Anthropic) in order to generate responses. These data are subject to the respective providers' privacy policies. We do not sell or share your data with advertisers or other third parties.</p>
 
   <h2>4. Data Retention</h2>
+  <p>RAG connection addresses and parameters are saved in localStorage. Qdrant and embedding API keys are saved in the tab's sessionStorage, bound to the server origin, and removed using Delete key or Clear keys. Documents, vectors, indexes, aliases and snapshots are processed by the selected Qdrant cluster. Text is sent to the selected embedding API for vectorization.</p>
   <p>Chat history and Debug are saved locally in the tab's sessionStorage and restored after reload. Clear chat removes the saved transcript. Selected catalog entries and window tabs are also remembered in the browser session. Closing the tab normally clears its sessionStorage. Messages are sent to the selected external service when a request is made.</p>
 
   <h2>5. Your Rights</h2>

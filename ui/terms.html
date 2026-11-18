@@ -226,6 +226,7 @@
   </ul>
 
   <h2>4. Ответственность за контент</h2>
+  <p>Операции RAG выполняются на выбранном пользователем кластере Qdrant. Удаление коллекций, записей и снимков, замена payload и восстановление снимка изменяют данные кластера. Перед такими действиями интерфейс запрашивает подтверждение. Для просмотра и управления данными ключ API эмбеддингов не требуется.</p>
   <p>История чата, Debug и выбранные вкладки восстанавливаются после обновления страницы в пределах сессии вкладки браузера. Очистка чата удаляет сохранённую историю. Прерванные обновлением запросы автоматически не повторяются.</p>
   <p>Прогресс лабораторных отмечается пользователем и не является оценкой преподавателя. Отчёты сохраняются в браузере; экспортируйте копию для резервного хранения и отправляйте её преподавателю самостоятельно. Не включайте ключи доступа в материалы отчёта.</p>
   <p>Конструктор MCP предназначен для учебных экспериментов. Проверка шаблонов в браузере не публикует сервер. Скачанный сервер запускается пользователем отдельно; подключение удалённого MCP и выполнение HTTP-инструментов обращаются к выбранным внешним сервисам.</p>
@@ -290,6 +291,7 @@
   </ul>
 
   <h2>4. Content Responsibility</h2>
+  <p>RAG operations run against the Qdrant cluster selected by the user. Deleting collections, points or snapshots, replacing payload and restoring a snapshot change cluster data. The interface asks for confirmation before these actions. Browsing and managing data does not require an embedding API key.</p>
   <p>Chat history, Debug and selected tabs are restored after reload within the browser tab session. Clear chat removes the saved transcript. Requests interrupted by reload are not automatically retried.</p>
   <p>Lab progress is self-reported and is not an instructor's grade. Reports are saved in your browser; export a copy for backup and send it to your instructor yourself. Do not include access keys in report attachments.</p>
   <p>The MCP constructor is intended for learning. Testing templates in the browser does not publish a server. Users run downloaded servers separately; remote MCP connections and HTTP tools contact the selected external services.</p>

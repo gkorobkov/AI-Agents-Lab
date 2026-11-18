@@ -40,3 +40,59 @@
 @media(max-width:900px) { .rag-columns { grid-template-columns:250px minmax(0,1fr); gap:16px; } .rag-columns aside { padding-right:14px; } }
 @media(max-width:640px) { .rag-layout { padding:12px; } .rag-columns { grid-template-columns:minmax(0,1fr); gap:14px; } .rag-columns aside { border-right:0; border-bottom:1px solid var(--border); padding-right:0; } .rag-heading h1 span { display:block; margin-top:5px; } .rag-badge { align-self:start; } }
 @media(max-width:400px) { .rag-layout { padding:10px; } .rag-heading { gap:5px; } .rag-heading h1 { font-size:19px; } .rag-badge { font-size:10px; } .rag-editor-actions button { flex:1 1 130px; } .rag-pair { gap:8px; } }
+
+/* Collection console: compact inventory, contextual tools, quiet settings. */
+.rag-layout {max-width:1400px;}
+.rag-console-bar {display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 12px;padding:8px 0;border-bottom:1px solid var(--border);}
+.rag-connection-state {font:11px var(--mono);color:var(--muted);margin-right:auto;overflow-wrap:anywhere;min-width:0;}
+.rag-connection-state.online {color:var(--accent);}
+.rag-connection-state.online::before {content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:7px;}
+.rag-settings-panel {border:1px solid var(--border);padding:12px!important;margin-bottom:14px;background:var(--surface);border-radius:5px;}
+.rag-settings-grid {display:flex;flex-direction:column;gap:16px;}
+.rag-settings-grid>div {min-width:0;}
+.rag-settings-grid>div+div {border-top:1px solid var(--border);padding-top:12px;}
+.rag-settings-panel .rag-pair {grid-template-columns:minmax(0,1fr);}
+.rag-settings-panel label {font:10px var(--mono);color:var(--muted);gap:6px;}
+.rag-settings-panel input,.rag-settings-panel select {font:11px var(--mono);background:var(--bg);color:var(--text);}
+.rag-console-bar {min-height:34px;padding:5px 9px;border:1px solid var(--border);border-radius:4px;background:var(--surface);}
+.rag-console-bar .rag-provider-control {display:flex;flex-direction:row;align-items:center;gap:8px;margin:0;font:10px var(--mono);color:var(--muted);}
+.rag-provider-control select {width:150px;min-height:28px;padding:3px 8px;font:11px var(--mono);color:var(--cyan);background:var(--bg);border-color:var(--cyan);}
+.rag-console-bar .rag-connection-state {margin-left:8px;}
+#rag-settings-toggle {display:inline-flex;align-items:center;gap:8px;}
+.rag-settings-chevron {transition:transform .15s;}
+#rag-settings-toggle[aria-expanded=true] .rag-settings-chevron {transform:rotate(180deg);}
+.rag-field-caption {display:inline-flex;align-items:center;gap:2px;}
+.rag-layout .api-help {font:10px/1 var(--mono);color:var(--muted);border-color:var(--muted);}
+.rag-layout .api-help:hover,.rag-layout .api-help:focus-visible {color:var(--cyan);border-color:var(--cyan);}
+@media(max-width:640px){.rag-console-bar .rag-provider-control{flex:1 1 auto}.rag-console-bar .rag-connection-state{margin-left:0;flex:0 1 auto}.rag-provider-control select{width:130px}}
+.rag-settings-grid h3 {font:11px var(--mono);color:var(--accent);letter-spacing:.04em;margin:8px 0;}
+.rag-console-tabs {display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:12px;}
+.rag-console-tabs button {background:transparent;border-color:transparent;border-radius:3px;min-height:30px;}
+.rag-console-tabs button[aria-selected=true] {color:var(--cyan);background:var(--tint);border-color:var(--border);box-shadow:inset 0 -2px var(--cyan);}
+#rag-workbench>section {border:0;padding-top:0;}
+#rag-inventory>input {margin:9px 0;max-width:480px;}
+.rag-table-scroll {overflow-x:auto;max-width:100%;border:1px solid var(--border);border-radius:4px;}
+.rag-table-scroll:empty {display:none;}
+.rag-collection-table {border-collapse:collapse;width:100%;font-size:12px;min-width:690px;}
+.rag-collection-table th {font:10px var(--mono);color:var(--muted);text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+.rag-collection-table td {padding:10px 12px;border-bottom:1px solid var(--border);max-width:260px;overflow-wrap:anywhere;}
+.rag-collection-table tr:last-child td {border-bottom:0;}
+.rag-collection-table tbody tr:hover {background:var(--tint);}
+.rag-collection-status {display:inline-flex;align-items:center;gap:6px;font:11px var(--mono);color:var(--muted);}
+.rag-collection-status::before {content:'';width:6px;height:6px;border-radius:50%;background:currentColor;}
+.rag-collection-status[data-status=green] {color:var(--accent);}
+.rag-collection-status[data-status=yellow] {color:#d9af53;}
+.rag-collection-status[data-status=red] {color:#ff8199;}
+.rag-collection-table td:first-child button {padding:0;border:0;background:none;color:var(--cyan);text-align:left;font-weight:600;}
+.rag-empty {border:1px dashed var(--border);padding:28px 18px;margin:10px 0;color:var(--muted);font-size:12px;}
+.rag-empty h3 {color:var(--text);margin-bottom:6px;}
+.rag-create-form {border:1px solid var(--border);background:var(--surface);padding:12px;max-width:600px;margin:10px 0;}
+.rag-stat-strip {display:flex;flex-wrap:wrap;gap:24px;margin:8px 0 14px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);font:13px var(--mono);}
+.rag-stat-strip small {display:block;color:var(--muted);font:9px var(--mono);margin-bottom:4px;}
+.rag-entity-row {display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding:9px 0;font-size:12px;}
+.rag-entity-row>span {margin-right:auto;min-width:0;overflow-wrap:anywhere;flex:1 1 240px;}
+#rag-aliases-panel>label,#rag-tab-indexes>label {max-width:480px;}
+#rag-tab-points>section:first-child {padding-top:0;}
+#rag-tab-points textarea,#rag-tab-config textarea {min-height:100px;}
+.rag-layout button>svg {margin-right:5px;vertical-align:middle;}
+@media(max-width:640px){.rag-settings-grid{grid-template-columns:minmax(0,1fr);gap:12px}.rag-console-bar>button{flex:1 1 auto}.rag-connection-state{flex-basis:100%}.rag-stat-strip{gap:16px}.rag-settings-panel{padding:10px!important}.rag-console-tabs button{font-size:11px;padding:4px 7px}.rag-entity-row>span{flex-basis:100%}.rag-empty{padding:20px 12px}}
