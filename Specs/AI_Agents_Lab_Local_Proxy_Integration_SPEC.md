@@ -12,8 +12,6 @@
 
 Save this entire document to `architecture/proxy_integration_spec.md` in the AI Agents Lab repository. Start an isolated branch `feature/proxy-integration` from current main. Follow `AGENTS.md` and `ui/AGENTS.md`. Implement UI, transport module, persistence and tests; do not stop at an analysis. Do not deploy production or merge without separate permission. Existing Direct behavior, credentials, Alternative URL, site consent and Debug must be preserved. Commit tested work in logical increments; report untested browser scenarios truthfully.
 
-The repository has already been examined. Do not substitute a generic investigation task for the concrete integration points below; inspect their current signatures only to account for newer commits.
-
 ## 1. Goal and UX
 
 В UI поле URL (сейчас пусть это будут настройки OpenAI API, Tools, RAG, к остальным потом придумаем как добавить) на который идет запрос, может иметь рядом справа чекбокс (по умолчанию вазде выключен) `Use Proxy` (иконка статуса) и (?) как наш обычный попап подсказка, в котором есть поле для задания proxy URL и описание и статус. Сейчас пусть этот proxy url будет один общий для всех, для простоты и во всех попапах, поэтому напиши в попапе "Это один общий Proxy только для запросов, где выбран чек бокс `Use Proxy`. При изменении будет применен ко всем поляам/запросам где выбран чек бокс `Use Proxy`" - ну или более красиво напиши на двух языках как надо. 
