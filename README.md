@@ -133,7 +133,7 @@ RAG-модуль показывает полный путь документа:
 - измеряются timing и token usage;
 - JavaScript-узлы проверяются тестами в [`Workflows/`](Workflows/);
 - webhook диагностируется через [`webhook-check.js`](webhook-check.js) и [`run-check.mjs`](run-check.mjs);
-- UI собирается в `.build/ui/` и разворачивается существующими скриптами.
+- UI подготавливается непосредственно в `ui/` и разворачивается существующими скриптами.
 
 ## Как работать с лабораторией
 
@@ -161,8 +161,9 @@ Response JSON
 ```bat
 ui-start.cmd              rem UI на http://localhost:8080/
 ui-start.cmd 3000         rem другой локальный порт
-ui-build.cmd              rem увеличить версию и собрать .build/ui/
-ui-deploy.cmd             rem загрузить собранный UI на сервер
+ui-build.cmd              rem увеличить версию и подготовить ui/
+ui-build.cmd --set-version 2.0.0  rem установить версию и обновить ссылки ресурсов
+ui-deploy.cmd             rem загрузить UI из ui/ на сервер
 ui-build-deploy.cmd       rem собрать и развернуть UI
 ```
 

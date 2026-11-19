@@ -19,4 +19,4 @@ if "!DEPLOY_PATH!"=="" ( echo ERROR: DEPLOY_PATH not set in .env & exit /b 1 )
 
 echo Deploying to !DEPLOY_USER!@!DEPLOY_HOST!:!DEPLOY_PATH!
 
-ssh-copy-remote.cmd --user=!DEPLOY_USER! --server=!DEPLOY_HOST! --from=./.build/ui/ --to=!DEPLOY_PATH!  --remote_full_sync_delete
+ssh-copy-remote.cmd --user=!DEPLOY_USER! --server=!DEPLOY_HOST! --from=./ui/ --to=!DEPLOY_PATH!  --remote_full_sync_delete

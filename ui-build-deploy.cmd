@@ -15,6 +15,7 @@ exit /b 0
     echo.
     echo Forwarded to ui-build.cmd:
     echo   --quiet, -q
+    echo   --set-version VALUE
     echo   --no-increment
     echo   --skip-version
     echo   --no-version-bump
