@@ -10,17 +10,24 @@
   try { saved = JSON.parse(localStorage.getItem('ai_rag_settings') || '{}'); } catch (_) {}
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) saved = {};
   Object.entries(fields).forEach(([name, id]) => { $(id).value = typeof saved[name] === typeof cfg[name] ? saved[name] : cfg[name]; });
+  const qdrantProxy = ProxyControls.mount($('qdrant-url'), {onChange:() => { persist(); window.RagConsole?.invalidate(); }});
+  const embeddingProxy = ProxyControls.mount($('neuraldeep-url'), {onChange:() => persist()});
+  qdrantProxy.set(saved.qdrantUseProxy);
+  embeddingProxy.set(saved.embeddingUseProxy);
+  const proxyAddressChanged = () => { if (qdrantProxy.read()) window.RagConsole?.invalidate(); };
+  window.addEventListener('ai-proxy:url-change', proxyAddressChanged);
+  window.addEventListener('storage', event => { if (event.key === LocalProxyTransport.storageKey) proxyAddressChanged(); });
   ModelPicker.attach($('model'), {
     language: () => 'ru',
-    connection: () => ({baseUrl: urlValue('neuraldeep-url'), headers: $('neuraldeep-key').value.trim() ? {Authorization:'Bearer ' + $('neuraldeep-key').value.trim()} : {}}),
+    connection: () => ({baseUrl: urlValue('neuraldeep-url'), useProxy:embeddingProxy.read(), headers: $('neuraldeep-key').value.trim() ? {Authorization:'Bearer ' + $('neuraldeep-key').value.trim()} : {}}),
     timeout: cfg.timeoutMs,
-    sources: [$('neuraldeep-url'), $('neuraldeep-key')]
+    sources: [$('neuraldeep-url'), $('neuraldeep-key'), embeddingProxy.input]
   });
   $('metadata').value = cfg.metadata;
   $('text-field-note').textContent = `Поле «${cfg.textField}» хранит текст документа и не должно повторяться в метаданных. Остальные поля payload сохраняются при загрузке в редактор.`;
   const status = (message, error = false) => { $('status').textContent = message; $('status').classList.toggle('error', error); };
   const persist = () => {
-    const settings = {};
+    const settings = {qdrantUseProxy:qdrantProxy.read(), embeddingUseProxy:embeddingProxy.read()};
     Object.entries(fields).forEach(([name, id]) => { settings[name] = typeof cfg[name] === 'number' ? Number($(id).value) : $(id).value; });
     try { localStorage.setItem('ai_rag_settings', JSON.stringify(settings)); } catch (_) {}
   };
@@ -51,7 +58,7 @@
     if (needsCollection && !collection) throw new Error('Укажите имя коллекции.');
     const key = $('qdrant-key').value.trim();
     if (!key) throw new Error('Укажите API key Qdrant.');
-    return { base:urlValue('qdrant-url'), key, collection, path:'/collections/' + encodeURIComponent(collection) };
+    return { base:urlValue('qdrant-url'), useProxy:qdrantProxy.read(), key, collection, path:'/collections/' + encodeURIComponent(collection) };
   }
   function integer(id, name, max = Number.MAX_SAFE_INTEGER) {
     const n = Number($(id).value);
@@ -69,12 +76,13 @@
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) return value;
     throw new Error('Укажите ID: UUID или неотрицательное целое число.');
   }
-  async function request(base, path, method, body, headers) {
+  async function request(base, path, method, body, headers, useProxy) {
     let response;
     try {
-      response = await fetch(base + path, { method, headers:{ ...headers, ...(body === undefined ? {} : {'Content-Type':'application/json'}) }, body:body === undefined ? undefined : JSON.stringify(body), signal:controller.signal, credentials:'omit', redirect:'error', referrerPolicy:'no-referrer' });
+      response = await LocalProxyTransport.fetch(base + path, { method, headers:{ ...headers, ...(body === undefined ? {} : {'Content-Type':'application/json'}) }, body:body === undefined ? undefined : JSON.stringify(body), signal:controller.signal, credentials:'omit', redirect:'error', referrerPolicy:'no-referrer' }, useProxy);
     } catch (error) {
       if (controller.signal.aborted) throw new Error('Превышено время ожидания запроса. Проверьте доступность сервисов и повторите операцию.');
+      if (useProxy) throw error;
       throw new Error('Не удалось связаться с сервисом. Проверьте URL, сеть и CORS: сервер должен разрешать origin ' + location.origin + ', методы запроса и заголовки api-key / Authorization / Content-Type.');
     }
     let data;
@@ -88,7 +96,7 @@
     }
     return data.result === undefined ? data : data.result;
   }
-  const qdrant = (ctx, suffix, method = 'GET', body) => request(ctx.base, suffix.startsWith('/collections') || suffix === '/aliases' || suffix === '/cluster' ? suffix : ctx.path + suffix, method, body, {'api-key':ctx.key});
+  const qdrant = (ctx, suffix, method = 'GET', body) => request(ctx.base, suffix.startsWith('/collections') || suffix === '/aliases' || suffix === '/cluster' ? suffix : ctx.path + suffix, method, body, {'api-key':ctx.key}, ctx.useProxy);
   async function collectionVector(ctx) {
     const info = await qdrant(ctx, '');
     const vectors = info.config?.params?.vectors;
@@ -102,7 +110,7 @@
     const key = $('neuraldeep-key').value.trim(), model = $('model').value.trim();
     if (!key || !model) throw new Error('Укажите API Key и модель эмбеддингов.');
     const prefix = $(isQuery ? 'query-prefix' : 'document-prefix').value;
-    const data = await request(urlValue('neuraldeep-url'), '/embeddings', 'POST', {model, input:texts.map(text => prefix + text)}, {Authorization:'Bearer ' + key});
+    const data = await request(urlValue('neuraldeep-url'), '/embeddings', 'POST', {model, input:texts.map(text => prefix + text)}, {Authorization:'Bearer ' + key}, embeddingProxy.read());
     if (!Array.isArray(data.data) || data.data.length !== texts.length) throw new Error('NeuralDeep вернул неполный набор эмбеддингов.');
     const ordered = [...data.data].sort((a, b) => a.index - b.index);
     return ordered.map((item, index) => {
@@ -229,11 +237,17 @@
   $('new').addEventListener('click', () => { clearEditor(); status('Новый документ. При создании пустой ID будет заменён UUID.'); $('text').focus(); });
   $('clear-keys').addEventListener('click', () => { $('qdrant-key').value = ''; $('neuraldeep-key').value = ''; window.RagConsole?.clearKeys(); status('Ключи удалены из сессии вкладки.'); });
   on('connect', 'Получение коллекций…', async () => {
-    const ctx = context(false), result = await qdrant(ctx, '/collections');
-    if (!Array.isArray(result.collections)) throw new Error('Qdrant вернул неожиданный список коллекций.');
-    $('collections').replaceChildren(...result.collections.map(item => { const option = node('option'); option.value = item.name; return option; }));
-    await window.RagConsole?.connected(ctx, result);
-    status('Подключено. Коллекций: ' + result.collections.length + '.');
+    window.RagConsole?.connecting();
+    try {
+      const ctx = context(false), result = await qdrant(ctx, '/collections');
+      if (!Array.isArray(result.collections)) throw new Error('Qdrant вернул неожиданный список коллекций.');
+      $('collections').replaceChildren(...result.collections.map(item => { const option = node('option'); option.value = item.name; return option; }));
+      await window.RagConsole?.connected(ctx, result);
+      status('Подключено. Коллекций: ' + result.collections.length + '.');
+    } catch (error) {
+      window.RagConsole?.connectionFailed();
+      throw error;
+    }
   });
   on('create-collection', 'Создание коллекции…', async () => {
     const ctx = context(), size = integer('dimensions', 'Размерность'), name = $('vector-name').value.trim();

@@ -37,7 +37,7 @@
     const payload = buildOpenAIRequest(requestConfig, [], prompt);
     const headers = isServerOpenAIProfile(config) ? {'Content-Type':'application/json'} : {'Content-Type':'application/json',Authorization:'Bearer ' + config.apiKey};
     onRequest?.({method:'POST',url:openAIRequestEndpoint(requestConfig),headers:isServerOpenAIProfile(config) ? {'Content-Type':'application/json'} : {'Content-Type':'application/json',Authorization:'Bearer [REDACTED]'},body:clone(payload)});
-    const response = await fetch(openAIRequestEndpoint(requestConfig), {method:'POST',headers,body:JSON.stringify(payload),signal:AbortSignal.timeout(60000)});
+    const response = await LocalProxyTransport.fetch(openAIRequestEndpoint(requestConfig), {method:'POST',headers,body:JSON.stringify(payload),signal:AbortSignal.timeout(60000)},requestConfig.useProxy);
     const data = await response.json();
     if (!response.ok) throw new Error(data.error?.message || 'HTTP ' + response.status);
     return data;

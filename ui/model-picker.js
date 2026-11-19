@@ -62,16 +62,17 @@
       const timer = setTimeout(() => request.abort(),options.timeout);
       try {
         const connection = options.connection();
+        const proxyUrl = connection.useProxy ? LocalProxyTransport.getUrl() : null;
         const url = new URL(connection.baseUrl,location.href);
         if (!connection.baseUrl || !['http:','https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error(text('Проверьте Base URL API.','Check the API Base URL.'));
         url.pathname = url.pathname.replace(/\/+$/,'').replace(/\/(chat\/completions|embeddings|models)$/,'') + '/models';
-        const response = await fetch(url.href,{method:'GET',headers:connection.headers,signal:request.signal,credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'});
+        const response = await LocalProxyTransport.fetch(url.href,{method:'GET',headers:connection.headers,signal:request.signal,credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'},connection.useProxy);
         if (!response.ok) throw new Error('HTTP ' + response.status + '. ' + text('Проверьте Base URL, ключ и доступ к списку моделей.','Check Base URL, API key and access to the model list.'));
         const data = await response.json();
         if (controller !== request || popup.hidden) return;
         // Ignore results if credentials or endpoint changed while loading.
         const current = options.connection();
-        if (current.baseUrl !== connection.baseUrl || JSON.stringify(current.headers) !== JSON.stringify(connection.headers)) return close();
+        if (current.baseUrl !== connection.baseUrl || JSON.stringify(current.headers) !== JSON.stringify(connection.headers) || current.useProxy !== connection.useProxy || (proxyUrl && proxyUrl !== LocalProxyTransport.getUrl())) return close();
         const models = Array.isArray(data) ? data : data?.data ?? data?.models;
         if (!Array.isArray(models)) throw new Error(text('API вернул некорректный список моделей.','The API returned an invalid model list.'));
         ids = [...new Set(models.map(model => typeof model === 'string' ? model : model?.id).filter(id => typeof id === 'string' && id.trim()))].sort((a,b) => a.localeCompare(b));
@@ -103,8 +104,8 @@
   const input = document.getElementById('openai-model');
   if (input) attach(input,{
     language: () => lang,
-    connection: () => { const config = readOpenAIForm(); return {baseUrl:config.baseUrl,headers:openAIRequestHeaders(config)}; },
+    connection: () => { const config = readOpenAIForm(); return {baseUrl:config.baseUrl,headers:openAIRequestHeaders(config),useProxy:config.useProxy}; },
     timeout: CFG_REQUEST_TIMEOUT_MS,
-    sources: [document.getElementById('openai-base-url'),document.getElementById('openai-api-key'),document.getElementById('openai-profile-select')]
+    sources: [document.getElementById('openai-base-url'),document.getElementById('openai-api-key'),document.getElementById('openai-profile-select'),openAIProxyControl.input]
   });
 })();

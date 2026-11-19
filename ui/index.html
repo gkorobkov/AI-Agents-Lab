@@ -12,6 +12,9 @@ const APP_VERSION = '1.5.15';
 // ║                   CONFIGURABLE DEFAULTS                  ║
 // ╚══════════════════════════════════════════════════════════╝
 
+const CFG_LOCAL_PROXY_DEFAULT_URL = 'http://localhost:8080';
+const CFG_LOCAL_PROXY_HEALTH_TIMEOUT_MS = 5000;
+
 // Default debug panel state for new users: "expanded" | "collapsed" | "hidden"
 const CFG_DEBUG_DEFAULT_MODE = 'collapsed';
 
@@ -358,13 +361,29 @@ const CFG_OPENAI_PROVIDERS = [
   .autosave-status { min-height: 18px; color: var(--text-muted); font: 9px var(--font-mono); }
   .autosave-status.saved { color: var(--accent); }
   .autosave-status.error { color: var(--error); }
-  .openai-toolbar { display: flex; flex-wrap: nowrap; align-items: center; gap: 7px; padding-bottom: 7px; }
+  #openai-settings .openai-toolbar { justify-content: flex-start; gap: 6px 8px; padding-bottom: 7px; margin-bottom: 3px; }
+  #openai-settings .openai-inline-title { display: flex; flex: 0 1 auto; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-width: 0; }
+  #openai-settings .openai-profile-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; width: min(100%, 390px); margin: 0 0 9px; }
+  #openai-settings .profile-combo { flex: 1 1 auto; min-width: 0; }
+  #openai-settings .profile-action { flex: 0 0 auto; }
+  #openai-settings .openai-toolbar .api-docs-link { margin: 0; }
+  #openai-settings .openai-credentials, #openai-settings .lab-parameters {
+    grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 10px;
+  }
+  .openai-credentials > .api-field { flex: 0 1 218px; width: 100%; margin: 0; }
+  .openai-credentials > .proxy-field { flex: 0 1 364px; width: 100%; }
+  #openai-settings .openai-prompt { grid-column: 1 / -1; width: min(100%, 780px); display: flex; flex-direction: column; margin: 4px 0; }
+  #openai-settings .openai-prompt-size { margin-left: auto; padding: 2px 6px; font-size: 9px; }
+  #openai-system-prompt { height: 130px; }
+  #openai-system-prompt.prompt-expanded { height: min(60dvh, 420px); }
+  #openai-settings .lab-parameters > .api-field { flex: 0 1 140px; width: 100%; }
+  #openai-settings .lab-parameters > .client-behavior { flex: 0 1 780px; }
+  @media (max-width: 400px) {
+    #openai-settings .lab-parameters > .api-field { flex-basis: min(140px, calc(50% - 5px)); }
+  }
   .openai-toolbar .panel-collapse, .openai-toolbar .api-pin { flex: 0 0 30px; width: 30px; height: 30px; padding: 0; justify-content: center; }
   .openai-toolbar .api-pin span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  .openai-inline-title { min-width: 150px; max-width: 430px; height: 30px; flex: 0 1 430px; display: flex; align-items: center; gap: 7px; overflow: hidden; white-space: nowrap; }
-  .openai-inline-title .api-kicker { flex: 0 0 auto; margin: 0; font: 600 13px var(--font-ui); letter-spacing: .02em; text-transform: none; color: color-mix(in srgb, var(--text) 85%, var(--accent2)); }
-  .openai-inline-title .api-kicker::after { content: ' ·'; color: var(--text-muted); }
-  .openai-inline-title .api-settings-title { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .openai-inline-title .api-settings-title { font-size: 13px; }
   .profile-combo { position: relative; min-width: 170px; flex: 1 1 320px; }
   .profile-combo .api-input { height: 30px; padding: 5px 34px 5px 9px; }
   .profile-combo-edit { position: absolute; inset: 0; z-index: 2; display: none; }
@@ -378,8 +397,6 @@ const CFG_OPENAI_PROVIDERS = [
   .openai-panel-footer { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .openai-panel-footer .api-validation { flex: 1; min-width: 0; }
   .openai-panel-footer .api-actions { flex: 0 0 auto; position: static; margin: 0; padding: 0; border: 0; background: transparent; }
-  .openai-section-label { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin: 1px 0 9px; color: var(--accent2); font: 700 9px var(--font-mono); letter-spacing: .13em; text-transform: uppercase; }
-  .openai-section-label::after { content: ''; height: 1px; flex: 1; background: linear-gradient(90deg, rgba(0,200,255,.32), transparent); }
   .client-behavior { grid-column: 1 / -1; justify-self: end; align-self: start; width: 100%; margin: 1px 0 4px; padding: 4px 0; }
   .client-behavior-head { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
   .client-behavior-title { min-width: 0; display: flex; align-items: flex-start; gap: 8px; }
@@ -416,8 +433,6 @@ const CFG_OPENAI_PROVIDERS = [
   .parameter-undo::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: var(--accent); transform-origin: left; animation: parameterUndoCountdown 3s linear forwards; }
   @keyframes parameterUndoCountdown { to { transform: scaleX(0); } }
   .api-field { display: block; margin-bottom: 10px; min-width: 0; }
-  #openai-settings > .api-field:nth-of-type(4) { grid-column: 1 / 3; display: flex; flex-direction: column; }
-  #openai-system-prompt { flex: 1 0 auto; height: 130px; min-height: 130px; }
   .mode-control-cluster { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
   .transport-settings-control { width: 22px; height: 22px; color: color-mix(in srgb, var(--accent) 68%, var(--text-muted)); border-color: color-mix(in srgb, currentColor 30%, transparent); background: color-mix(in srgb, currentColor 8%, transparent); }
   body[data-transport="openai"] .transport-settings-control { color: color-mix(in srgb, var(--accent2) 68%, var(--text-muted)); }
@@ -1484,8 +1499,7 @@ const CFG_OPENAI_PROVIDERS = [
     }
     .transport-settings-panel { top: 68px; left: 0; right: 0; width: 100%; max-width: none; grid-template-columns: 1fr 1fr; padding-inline: 12px; gap: 0 10px; overflow-y: auto; }
     .transport-settings-panel.open, .transport-settings-panel.open.preview-expanded { max-height: calc(100dvh - 145px); padding-top: 8px; padding-bottom: 10px; }
-    #openai-settings > .api-field:nth-of-type(4), .api-note, .api-validation, .api-actions { grid-column: 1 / -1; }
-    #openai-settings > .api-field:nth-of-type(4) { grid-row: auto; }
+    .api-note, .api-validation, .api-actions { grid-column: 1 / -1; }
     .api-grid, .api-toggle-row { grid-column: auto; }
     .tool-builder { grid-column: 1 / -1; }
     .client-behavior { grid-column: 1 / -1; }
@@ -1493,11 +1507,8 @@ const CFG_OPENAI_PROVIDERS = [
     .webhook-panel-copy, .webhook-panel-actions { grid-column: 1 / -1; }
     .demo-controls { grid-template-columns: 1fr 1fr; }
     .openai-toolbar { flex-wrap: wrap; row-gap: 6px; }
-    .openai-inline-title { max-width: none; flex: 1 1 calc(100% - 76px); height: auto; flex-wrap: wrap; gap: 2px 7px; white-space: normal; }
-    .openai-inline-title .api-settings-title { white-space: normal; }
     .api-grid.lab-parameters { grid-column: 1 / -1; }
-    .profile-combo { order: 2; min-width: 130px; flex: 1 1 180px; }
-    .profile-action { order: 2; width: 38px; height: 38px; }
+    .profile-action { width: 38px; height: 38px; }
     .profile-combo .api-input { height: 38px; }
     .profile-pencil { width: 34px; height: 34px; }
     .openai-panel-footer { flex-wrap: wrap; }
@@ -1969,6 +1980,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
 <script src="metrika.js?v=1.5.18" defer></script>
   <link rel="stylesheet" href="scrollbars.css?v=1.5.18">
   <link rel="stylesheet" href="credential-fields.css?v=1.5.18">
+<link rel="stylesheet" href="local_proxy_controls.css">
 <link rel="stylesheet" href="model-picker.css?v=1.5.18">
 <link rel="stylesheet" href="json-viewer.css?v=1.5.18">
 <script src="json-viewer.js?v=1.5.18"></script>
@@ -2138,18 +2150,20 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
   <div class="api-settings-head openai-toolbar">
     <button class="panel-collapse" type="button" onclick="closeOpenAISettings(true)" data-i18n-title="collapsePanel" data-i18n-aria-label="collapsePanel"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 5-5 5 5"/></svg></button>
     <button class="cfg-btn api-pin" id="openai-pin-btn" type="button" onclick="toggleOpenAISettingsPin()" aria-pressed="false" data-i18n-title="openaiPinTitle" title="Pin settings"><svg class="api-pin-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 2 4 4M9.5 2.5l4 4-2.2 1.1-.9 3.2-5.2-5.2 3.2-.9L9.5 2.5Z"/><path d="m6.5 9.5-4 4"/></svg><span id="openai-pin-label" data-i18n="openaiPin">Pin</span></button>
-    <div class="openai-inline-title"><span class="api-kicker">OpenAI compatible</span><span class="api-settings-title" id="openai-settings-title" data-i18n="openaiSettingsTitle">OpenAI API settings</span></div>
+    <div class="openai-inline-title"><span class="api-settings-title" id="openai-settings-title" data-i18n="openaiSettingsTitle">OpenAI API settings</span><a class="api-docs-link" href="docs.html#openai-api" data-app-beside="settings" data-i18n="openaiDocsLink">OpenAI compatible: description →</a></div>
+  </div>
+  <div class="openai-profile-row">
     <div class="profile-combo" id="openai-profile-combo"><select class="api-input" id="openai-profile-select" onchange="loadOpenAIProfile(this.value)" data-i18n-aria-label="profileSelect"></select><input class="api-input profile-combo-edit" id="openai-profile-name" maxlength="32" autocomplete="off" data-i18n-placeholder="profileName" placeholder="Profile name" onkeydown="handleOpenAIProfileNameKey(event)" onblur="commitOpenAIProfileName()"><button class="profile-pencil" type="button" onclick="beginOpenAIProfileNameEdit()" data-i18n-title="profileEdit" data-i18n-aria-label="profileEdit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button></div>
     <button class="cfg-btn profile-action profile-clone" id="openai-profile-clone" type="button" onclick="cloneOpenAIProfile()" title="Clone">Clone</button>
     <button class="cfg-btn profile-action" id="openai-profile-add" type="button" onclick="createOpenAIProfile()" data-i18n-title="profileAdd" data-i18n-aria-label="profileAdd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
     <button class="cfg-btn profile-action" id="openai-profile-delete" type="button" onclick="deleteOpenAIProfile()" data-i18n-title="profileDeleteAction" data-i18n-aria-label="profileDeleteAction" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg></button>
   </div>
-  <div class="openai-section-label" data-i18n="openaiApiSection">OpenAI API request</div>
-  <a class="api-docs-link" href="docs.html#openai-api" data-app-beside="settings" data-i18n="openaiDocsLink">OpenAI API: пояснения и справочник →</a>
-  <label class="api-field"><span data-i18n="openaiBaseUrl">Base URL</span><input class="api-input" id="openai-base-url" type="text" inputmode="url" value="" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"></label>
-  <label class="api-field"><span data-i18n="openaiApiKey">API key · saved in this browser</span><div class="api-secret-wrap"><input class="api-input credential-input" id="openai-api-key" type="text" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="api-eye" id="openai-eye-btn" type="button" onclick="toggleApiKeyVisibility()" data-i18n-title="openaiShowKey" data-i18n-aria-label="openaiShowKey" title="Show key" aria-label="Show key"><svg id="openai-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></label>
-  <label class="api-field"><span data-i18n="openaiModel">Model</span><input class="api-input" id="openai-model" type="text" value="qwen3.8-27b" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true"></label>
-  <label class="api-field"><span data-i18n="openaiSystem">System prompt</span><textarea class="api-textarea" id="openai-system-prompt" autocomplete="off" spellcheck="true" data-1p-ignore data-lpignore="true"></textarea></label>
+  <div class="openai-credentials">
+    <label class="api-field"><span data-i18n="openaiBaseUrl">Base URL</span><input class="api-input" id="openai-base-url" type="text" inputmode="url" value="" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"></label>
+    <label class="api-field"><span data-i18n="openaiApiKey">API key · saved in this browser</span><div class="api-secret-wrap"><input class="api-input credential-input" id="openai-api-key" type="text" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="api-eye" id="openai-eye-btn" type="button" onclick="toggleApiKeyVisibility()" data-i18n-title="openaiShowKey" data-i18n-aria-label="openaiShowKey" title="Show key" aria-label="Show key"><svg id="openai-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></label>
+    <label class="api-field"><span data-i18n="openaiModel">Model</span><input class="api-input" id="openai-model" type="text" value="qwen3.8-27b" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true"></label>
+  </div>
+  <label class="api-field openai-prompt"><span data-i18n="openaiSystem">System prompt</span><textarea class="api-textarea" id="openai-system-prompt" autocomplete="off" spellcheck="true" data-1p-ignore data-lpignore="true"></textarea></label>
   <div class="api-grid lab-parameters">
     <label class="api-field"><span data-i18n="openaiTemperature">Temperature (0–2)</span><input class="api-input" id="openai-temperature" type="number" min="0" max="2" step="0.1" value="0.7"></label>
     <label class="api-field"><span data-i18n="openaiTopP">Top p (0–1)</span><input class="api-input" id="openai-top-p" type="number" min="0" max="1" step="0.1" value="1"></label>
@@ -2397,6 +2411,9 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
   <button id="consent-btn" onclick="acceptConsent()"></button>
 </div>
 
+<script src="local_proxy_transport.js"></script>
+<script src="field-help.js?v=1.5.18"></script>
+<script src="local_proxy_controls.js"></script>
 <script>
 // ── UTILS ──
 function copyText(text) {
@@ -2421,7 +2438,9 @@ const i18n = {
     libraryAdd: 'Add from library',
     toolsCollapseAll: 'Collapse all functions',
     toolsExpandAll: 'Expand all functions',
-    openaiDocsLink: 'OpenAI API: explanation and reference →',
+    openaiDocsLink: 'OpenAI compatible: description →',
+    openaiExpandPrompt: 'Expand field',
+    openaiCollapsePrompt: 'Collapse field',
     navHelp: 'Help',
     navDocs: 'Docs',
     navLabs: 'Labs',
@@ -2545,7 +2564,6 @@ const i18n = {
     openaiParsedArguments:'Parsed arguments',
     openaiRawArguments: 'Raw argument string',
     openaiInvalidArguments:'Raw arguments · invalid JSON',
-    openaiApiSection:   'OpenAI API request',
     openaiContext:      'Send previous messages to the OpenAI API',
     clientHistoryCore:  'Previous messages come from OpenAI turns currently visible in this page’s chat. This browser UI adds them to messages[]; this is not a separate OpenAI API parameter.',
     clientHistoryHow:   'How it is built',
@@ -2675,7 +2693,9 @@ const i18n = {
     libraryAdd: 'Добавить из библиотеки',
     toolsCollapseAll: 'Свернуть все функции',
     toolsExpandAll: 'Развернуть все функции',
-    openaiDocsLink: 'OpenAI API: пояснения и справочник →',
+    openaiDocsLink: 'OpenAI compatible: описание →',
+    openaiExpandPrompt: 'Расширить поле',
+    openaiCollapsePrompt: 'Свернуть поле',
     navHelp: 'Помощь',
     navDocs: 'Доки',
     navLabs: 'Лабы',
@@ -2799,7 +2819,6 @@ const i18n = {
     openaiParsedArguments:'Разобранные аргументы',
     openaiRawArguments: 'Исходная строка аргументов',
     openaiInvalidArguments:'Исходные аргументы · невалидный JSON',
-    openaiApiSection:   'Запрос OpenAI API',
     openaiContext:      'Отправлять предыдущие сообщения в OpenAI API',
     clientHistoryCore:  'Предыдущие сообщения берутся из сообщений OpenAI, видимых сейчас в чате этой страницы. Браузерный UI добавляет их в messages[]; отдельного параметра OpenAI API для этого нет.',
     clientHistoryHow:   'Как формируется запрос',
@@ -2963,6 +2982,7 @@ function applyLang(l, silent) {
   document.getElementById('seg-en').classList.toggle('active', l === 'en');
   if (!silent) toast(l === 'en' ? '🌐 English' : '🌐 Русский');
   if (typeof renderConsentBanner === 'function') renderConsentBanner();
+  ProxyControls.refresh();
   if (!silent) updateTransportUI();
   if (document.querySelector('#webhook-hist-dropdown.open')) renderHistoryDropdown();
   if (typeof updateOpenAIRequestPreview === 'function') queueMicrotask(() => {
@@ -3321,6 +3341,7 @@ function normalizeOpenAIConfig(value = {}) {
     merged.parameterDefaults = Object.fromEntries(Object.keys(CFG_OPENAI_PARAMETER_FIELDS).map(key => [key, merged[key]]));
   }
   merged.baseUrl = normalizeOpenAIBaseUrl(merged.baseUrl);
+  merged.useProxy = value.useProxy === true;
   if (!Array.isArray(merged.tools)) merged.tools = [];
   else merged.tools = merged.tools.map(tool => ({ ...CFG_OPENAI_EMPTY_TOOL, ...tool }));
   return merged;
@@ -3739,8 +3760,16 @@ function saveDemoSettings() {
   setAutosaveStatus('demo-autosave-status', '');
 }
 let openAIFormInitialized = false;
+let openAIProxyPointer = false;
+document.addEventListener('pointerdown', event => {
+  openAIProxyPointer = Boolean(event.target.closest('#openai-settings .proxy-option'));
+}, true);
+document.addEventListener('click', () => { openAIProxyPointer = false; }, true);
+document.addEventListener('pointercancel', () => { openAIProxyPointer = false; }, true);
+const openAIProxyControl = ProxyControls.mount(document.getElementById('openai-base-url'), {onChange:() => commitOpenAISettings()});
 function populateOpenAIForm() {
   document.getElementById('openai-base-url').value = isServerOpenAIProfile() ? '' : openAIConfig.baseUrl;
+  openAIProxyControl.set(!isServerOpenAIProfile() && openAIConfig.useProxy);
   syncOpenAIKeyAccess();
   document.getElementById('openai-model').value = openAIConfig.model;
   document.getElementById('openai-system-prompt').value = openAIConfig.systemPrompt;
@@ -3818,6 +3847,7 @@ function readOpenAIForm() {
   };
   return {
     id: localStorage.getItem('ai_openai_active_profile') || openAIConfig.id,
+    useProxy: !isServerOpenAIProfile() && openAIProxyControl.read(),
     parameterDefaults: openAIConfig.parameterDefaults,
     parameterOverrides: openAIConfig.parameterOverrides,
     baseUrl: isServerOpenAIProfile() ? openAIConfig.baseUrl : normalizeOpenAIBaseUrl(document.getElementById('openai-base-url').value, openAIConfig.serverProfile),
@@ -3865,6 +3895,8 @@ function renderToolHttpEditor(row, http = {}) {
     input.value = value; label.append(caption, input); return label;
   };
   box.append(field('HTTP URL', 'url', http.url || ''), field(toolHttpText('Метод', 'Method'), 'method', http.method || 'GET', 'select'));
+  row.proxyControl = ProxyControls.mount(box.querySelector('[data-http-field="url"]'));
+  row.proxyControl.set(http.useProxy);
   const hint = document.createElement('p'); hint.className = 'api-note';
   hint.textContent = toolHttpText('Значение {{name}} берётся из аргументов LLM модели. Вложенные поля: {{location.latitude}}. GET: query-параметры. POST: JSON из полей ниже или своего шаблона. URL вызывается только кнопкой в чате; сервер должен разрешать CORS.', 'Values such as {{name}} come from model arguments; nested paths: {{location.latitude}}. GET: query parameters. POST: JSON from the fields below or a custom template. Run the URL with the chat button; the server must allow CORS.');
   box.appendChild(hint);
@@ -3890,7 +3922,7 @@ function renderToolHttpEditor(row, http = {}) {
 }
 function readToolHttpEditor(row) {
   const get = key => row.querySelector(`[data-http-field="${key}"]`)?.value || '';
-  return { ...(row.toolHttpEndpoints || {}), url: get('url').trim(), method: get('method') || 'GET', body: get('body'), mappings: [...row.querySelectorAll('.tool-http-mapping')].map(item => ({ ...item.mappingOptions, key: item.querySelector('[data-http-field="key"]').value.trim(), value: item.querySelector('[data-http-field="value"]').value })) };
+  return { ...(row.toolHttpEndpoints || {}), useProxy:row.proxyControl.read(), url: get('url').trim(), method: get('method') || 'GET', body: get('body'), mappings: [...row.querySelectorAll('.tool-http-mapping')].map(item => ({ ...item.mappingOptions, key: item.querySelector('[data-http-field="key"]').value.trim(), value: item.querySelector('[data-http-field="value"]').value })) };
 }
 function toolArgumentAt(args, path) {
   let value = args;
@@ -3975,7 +4007,7 @@ function attachToolHttpRunner(row, input, call, turn) {
         return;
       }
       const authorized = ToolLibrary.authorizeRequest(request, tool.http);
-      const response = await fetch(authorized.url, { method: authorized.method, headers: authorized.headers, body: authorized.body, credentials: 'omit', redirect: 'error', signal: controller.signal });
+      const response = await LocalProxyTransport.fetch(authorized.url, { method: authorized.method, headers: authorized.headers, body: authorized.body, credentials: 'omit', redirect: 'error', signal: controller.signal }, tool.http.useProxy);
       const body = ToolLibrary.redact(await response.text());
       if (!response.ok) throw new Error(`HTTP ${response.status}: ${body.slice(0, 300)}`);
       if (pendingOpenAIToolTurn !== turn) return;
@@ -4306,6 +4338,7 @@ function loadOpenAIProfile(id) {
   openAIConversationId = profile.id;
   sessionStorage.setItem('ai_openai_conversation', openAIConversationId);
   document.getElementById('openai-base-url').value = isServerOpenAIProfile() ? '' : openAIConfig.baseUrl;
+  openAIProxyControl.set(!isServerOpenAIProfile() && openAIConfig.useProxy);
   document.getElementById('openai-model').value = openAIConfig.model;
   document.getElementById('openai-system-prompt').value = openAIConfig.systemPrompt;
   document.getElementById('openai-temperature').value = openAIConfig.temperature;
@@ -5346,11 +5379,13 @@ function adaptStubDebug(raw, { filename, delay, elapsed, message, showDebug }) {
     rawResponse: raw
   });
 }
-function adaptOpenAIDebug(data, { endpoint, payload, status, statusText, elapsed }) {
+function adaptOpenAIDebug(data, { endpoint, payload, status, statusText, elapsed, useProxy }) {
+  const proxy = LocalProxyTransport.metadata(useProxy);
+  if (proxy) data = redactProxyDebug(data, endpoint);
   const choice = data?.choices?.[0];
   return createDebugContract({
     summary: { status: status >= 200 && status < 300 ? 'ok' : 'error', transport: 'openai', model: data?.model ?? payload.model, response_id: data?.id, finish_reason: choice?.finish_reason },
-    request: { method: 'POST', endpoint, headers: { Authorization: 'Bearer $OPENAI_API_KEY', 'Content-Type': 'application/json' }, body: payload },
+    request: { method: 'POST', endpoint:proxy ? proxyDebugEndpoint(endpoint) : endpoint, ...(proxy ? {proxy} : {}), headers: { Authorization: 'Bearer $OPENAI_API_KEY', 'Content-Type': 'application/json' }, body: payload },
     response: { http_status: status, status_text: statusText, output_role: choice?.message?.role, tool_calls_count: choice?.message?.tool_calls?.length || 0 },
     agentLogic: extractLegacyReplyPayload(choice?.message?.content, true)?.agent_logic ?? null,
     usage: data?.usage,
@@ -5485,7 +5520,7 @@ function readRequestLog() {
   } catch (_) { return []; }
 }
 function safeRequestLogValue(value) {
-  const secret = /^(authorization|proxy-authorization|cookie|set-cookie|x-api-key|api[_-]?key|token|access_token|password|secret)$/i;
+  const secret = /^(x-proxy-target-url|authorization|proxy-authorization|cookie|set-cookie|x-api-key|api[_-]?key|token|access_token|password|secret)$/i;
   const clean = item => {
     if (Array.isArray(item)) return item.map(clean);
     if (item && typeof item === 'object') return Object.fromEntries(Object.entries(item).map(([key, val]) => [key, secret.test(key) ? '[REDACTED]' : clean(val)]));
@@ -5511,12 +5546,27 @@ function captureRequestLog(value) {
   return typeof text === 'string' && text.length > CFG_REQUEST_LOG_BODY_MAX_CHARS
     ? text.slice(0, CFG_REQUEST_LOG_BODY_MAX_CHARS) + '\n[TRUNCATED]' : text;
 }
-function beginRequestLog(endpoint, options, owner = null) {
+function proxyDebugEndpoint(endpoint) {
+  try {
+    const url = new URL(endpoint, location.href);
+    return url.origin + url.pathname + (url.search ? '?[REDACTED]' : '');
+  } catch (_) { return '[REDACTED]'; }
+}
+function redactProxyDebug(value, endpoint) {
+  if (Array.isArray(value)) return value.map(item => redactProxyDebug(item, endpoint));
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [
+    key, /^(x-proxy-target-url|authorization|proxy-authorization|cookie|set-cookie)$/i.test(key) ? '[REDACTED]' : redactProxyDebug(item, endpoint)
+  ]));
+  if (typeof value === 'string' && endpoint && value.includes(endpoint)) return value.split(endpoint).join(proxyDebugEndpoint(endpoint));
+  return value;
+}
+function beginRequestLog(endpoint, options, owner = null, proxy = null) {
   const entry = {
     id: owner?.requestId || crypto.randomUUID(), startedAt: owner?.timestamp || new Date().toISOString(), status: 'pending',
     request: { method: options.method || 'GET', url: safeRequestLogValue(endpoint), headers: safeRequestLogValue(Object.fromEntries(new Headers(options.headers).entries())), body: captureRequestLog(options.body ?? null) },
     response: null, error: null
   };
+  if (proxy) entry.request.proxy = proxy;
   requestLogEntries.unshift(entry);
   requestLogEntries = requestLogEntries.slice(0, CFG_REQUEST_LOG_MAX);
   persistRequestLog();
@@ -5561,8 +5611,9 @@ function renderRequestLog() {
   });
 }
 
-async function fetchWithRequestDebug(endpoint, options, owner = null) {
-  const request = { method: options.method, endpoint, headers: { ...options.headers } };
+async function fetchWithRequestDebug(endpoint, options, owner = null, useProxy = false) {
+  const proxy = LocalProxyTransport.metadata(useProxy);
+  const request = { method: options.method, endpoint:proxy ? proxyDebugEndpoint(endpoint) : endpoint, headers: { ...options.headers }, ...(proxy ? {proxy} : {}) };
   if (owner?.requestId) { request.requestId = owner.requestId; request.timestamp = owner.timestamp; }
   if (typeof options.body === 'string') request.body_text = options.body;
   if (request.headers.Authorization) request.headers.Authorization = 'Bearer $OPENAI_API_KEY';
@@ -5580,18 +5631,21 @@ async function fetchWithRequestDebug(endpoint, options, owner = null) {
     row.remove();
   }
   const started = performance.now();
-  const logEntry = beginRequestLog(endpoint, options, owner);
+  const logEntry = beginRequestLog(request.endpoint, options, owner, proxy);
   try {
-    const response = await fetch(endpoint, options);
-    updateRequestLog(logEntry, { response: { status: response.status, statusText: response.statusText, headers: safeRequestLogValue(Object.fromEntries(response.headers.entries())), body: null } });
+    const response = await LocalProxyTransport.fetch(endpoint, options, useProxy);
+    const headers = Object.fromEntries(response.headers.entries());
+    const debugHeaders = proxy ? redactProxyDebug(headers, endpoint) : headers;
+    updateRequestLog(logEntry, { response: { status: response.status, statusText: response.statusText, headers: safeRequestLogValue(debugHeaders), body: null } });
     // Keep the request visible through body parsing and HTTP/parse errors.
     contract.summary.status = response.ok ? 'ok' : 'error';
-    contract.response = { http_status: response.status, status_text: response.statusText, headers: Object.fromEntries(response.headers.entries()) };
+    contract.response = { http_status: response.status, status_text: response.statusText, headers: debugHeaders };
     // Preserve the received body even when parsing or reply validation later fails.
-    const receivedBody = await response.clone().text();
+    const rawBody = await response.clone().text();
+    const receivedBody = proxy ? redactProxyDebug(rawBody, endpoint) : rawBody;
     updateRequestLog(logEntry, { status: response.ok ? 'completed' : 'http_error', finishedAt: new Date().toISOString(), elapsedMs: Math.round(performance.now() - started), response: { ...logEntry.response, body: captureRequestLog(receivedBody) } });
-    contract.raw_response_text = receivedBody;
-    try { contract.raw_response = JSON.parse(receivedBody); }
+    contract.raw_response_text = proxy ? safeRequestLogValue(receivedBody) : receivedBody;
+    try { const raw = JSON.parse(receivedBody); contract.raw_response = proxy ? redactProxyDebug(raw, endpoint) : raw; }
     catch (_) { contract.raw_response = receivedBody; }
     const data = contract.raw_response;
     contract.summary.model = data?.model ?? contract.summary.model;
@@ -6168,7 +6222,7 @@ async function continueOpenAIWithToolResults() {
   const timeoutId = setTimeout(() => abortCtrl.abort(), CFG_REQUEST_TIMEOUT_MS);
   const started = performance.now();
   try {
-    const res = await fetchWithRequestDebug(openAIRequestEndpoint(requestConfig), { method: 'POST', headers: openAIRequestHeaders(requestConfig), body: JSON.stringify(payload), signal: abortCtrl.signal });
+    const res = await fetchWithRequestDebug(openAIRequestEndpoint(requestConfig), { method: 'POST', headers: openAIRequestHeaders(requestConfig), body: JSON.stringify(payload), signal: abortCtrl.signal }, null, requestConfig.useProxy);
     clearTimeout(timeoutId);
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status}: ${res.statusText}`);
@@ -6191,7 +6245,7 @@ async function continueOpenAIWithToolResults() {
     const row = appendMessage('agent', reply, `OpenAI · ${requestConfig.model}`);
     row.dataset.openaiMessage = JSON.stringify(choice.message);
     addResponseView(row, rawReply, legacyPayload);
-    appendDebug(row, adaptOpenAIDebug(data, { endpoint: openAIRequestEndpoint(requestConfig), payload, status: res.status, statusText: res.statusText, elapsed }));
+    appendDebug(row, adaptOpenAIDebug(data, { endpoint: openAIRequestEndpoint(requestConfig), useProxy:requestConfig.useProxy, payload, status: res.status, statusText: res.statusText, elapsed }));
     if (calls.length) showOpenAIToolResults(calls, payload, choice.message, row, requestConfig); else resetOpenAIToolTurn();
   } catch (err) {
     if (toolChain.active) stopToolChain(toolHttpText('Ошибка LLM модели. Повторите шаг вручную.', 'Model error. Retry the step manually.'));
@@ -6229,7 +6283,7 @@ async function sendOpenAIMessage(text) {
       method: 'POST',
       headers: openAIRequestHeaders(requestConfig),
       body: JSON.stringify(payload), signal: abortCtrl.signal
-    });
+    }, null, requestConfig.useProxy);
     clearTimeout(timeoutId);
     const responseText = await res.text();
     let data;
@@ -6249,7 +6303,7 @@ async function sendOpenAIMessage(text) {
     row.dataset.openaiMessage = JSON.stringify(choice.message);
     addResponseView(row, rawReply, legacyPayload);
     const debugPayload = adaptOpenAIDebug(data, {
-          endpoint: openAIRequestEndpoint(requestConfig), payload,
+          endpoint: openAIRequestEndpoint(requestConfig), useProxy:requestConfig.useProxy, payload,
           status: res.status, statusText: res.statusText, elapsed
         });
     appendDebug(row, debugPayload);
@@ -6679,6 +6733,22 @@ document.addEventListener('app:pagechange', closeSuggestionMenu);
 inputEl.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} });
 inputEl.addEventListener('input', () => { resizeTextarea(inputEl); updateOpenAIRequestPreview(); });
 initOpenAIParameterToggles();
+const openAIPrompt = document.getElementById('openai-system-prompt');
+const openAIPromptSize = document.createElement('button');
+openAIPromptSize.type = 'button';
+openAIPromptSize.className = 'cfg-btn openai-prompt-size';
+openAIPromptSize.setAttribute('aria-controls', openAIPrompt.id);
+openAIPromptSize.setAttribute('aria-expanded', 'false');
+openAIPromptSize.dataset.i18n = 'openaiExpandPrompt';
+openAIPromptSize.textContent = t('openaiExpandPrompt');
+openAIPrompt.closest('label').querySelector('.parameter-heading').append(openAIPromptSize);
+openAIPromptSize.addEventListener('click', event => {
+  event.preventDefault();
+  const expanded = openAIPrompt.classList.toggle('prompt-expanded');
+  openAIPromptSize.setAttribute('aria-expanded', String(expanded));
+  openAIPromptSize.dataset.i18n = expanded ? 'openaiCollapsePrompt' : 'openaiExpandPrompt';
+  openAIPromptSize.textContent = t(openAIPromptSize.dataset.i18n);
+});
 ['openai-base-url','openai-model','openai-system-prompt','openai-temperature','openai-top-p','openai-max-completion-tokens','openai-n','openai-context','openai-tools-enabled','openai-tool-choice','openai-forced-tool','openai-parallel-tools'].forEach(id => {
   const field = document.getElementById(id);
   field.addEventListener('input', () => { updateOpenAIRequestPreview(); updateComposerDestination(); validateOpenAIDraft(); });
@@ -6686,7 +6756,11 @@ initOpenAIParameterToggles();
 });
 ['openai-base-url','openai-api-key','openai-model','openai-system-prompt','openai-temperature','openai-top-p','openai-max-completion-tokens','openai-n','openai-forced-tool'].forEach(id => {
   const field = document.getElementById(id);
-  field.addEventListener('blur', commitOpenAISettings);
+  field.addEventListener('blur', event => {
+    // A synchronous validation pass can move the proxy control before pointerup.
+    if (openAIProxyPointer || event.relatedTarget?.closest('.proxy-option')) { scheduleOpenAIAutosave(); return; }
+    commitOpenAISettings();
+  });
   if (field.tagName !== 'TEXTAREA') field.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); field.blur(); } });
 });
 document.getElementById('openai-context').addEventListener('change', commitOpenAISettings);
@@ -6882,7 +6956,6 @@ function acceptConsent() {
 <script src="model-picker.js?v=1.5.18"></script>
 <script src="chat-session.js?v=1.5.18"></script>
 <script src="app-navigation.js?v=1.5.18"></script>
-<script src="field-help.js?v=1.5.18"></script>
 <script src="openai-field-help.js?v=1.5.18"></script>
 </body>
 </html>
