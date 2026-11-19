@@ -373,18 +373,24 @@ const CFG_OPENAI_PROVIDERS = [
   #openai-settings .profile-combo { flex: 1 1 auto; min-width: 0; }
   #openai-settings .profile-action { flex: 0 0 auto; }
   #openai-settings .openai-toolbar .api-docs-link { margin: 0; }
-  #openai-settings :is(.openai-credentials, .openai-prompt, .lab-parameters, .client-behavior, .tool-builder, .request-preview, .api-note) {
+  #openai-settings :is(.openai-credentials, .openai-prompt, .openai-number-group, .client-behavior, .tool-builder, .request-preview, .api-note) {
     grid-column: 1 / -1;
     width: 100%;
     justify-self: start;
   }
-  #openai-settings .openai-credentials { display: grid; gap: 10px; }
-  .openai-credential-row { --settings-field-min: 24rem; }
-  .openai-credential-row + .openai-credential-row { --settings-field-min: 16rem; }
+  #openai-settings :is(.openai-credentials, .openai-number-group) { container-type: inline-size; }
+  .openai-credential-row {
+    display: grid; grid-template-columns: minmax(0, 1fr);
+    align-items: start; gap: 8px 12px;
+  }
   .openai-credential-row > * { min-width: 0; }
-  .openai-credential-row > .openai-provider-field { width: min(100%, 24rem); }
-  .openai-credential-row > .proxy-field { width: min(100%, 25rem); }
-  .openai-credential-row > .api-field { width: min(100%, 16rem); margin: 0; }
+  .openai-credential-row > .api-field { margin: 0; }
+  @container (min-width: 40rem) {
+    .openai-credential-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @container (min-width: 76rem) {
+    .openai-credential-row { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.35fr) repeat(2, minmax(0, 1fr)); }
+  }
   #openai-settings .openai-profile-heading {
     display: flex; align-items: center; min-height: 20px; margin-bottom: 4px;
     font-size: var(--settings-font-title);
@@ -402,8 +408,14 @@ const CFG_OPENAI_PROVIDERS = [
   #openai-settings .openai-prompt-size { margin-left: auto; padding: 2px 6px; font-size: var(--settings-font-control); }
   #openai-system-prompt { height: 124px; }
   #openai-system-prompt.prompt-expanded { height: min(60dvh, 420px); }
-  #openai-settings .lab-parameters { --settings-field-min: 8.75rem; }
-  #openai-settings .lab-parameters > .api-field { width: min(100%, 8.75rem); min-width: 0; }
+  .lab-parameters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px 12px; }
+  @container (min-width: 18.25rem) {
+    .lab-parameters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @container (min-width: 37.25rem) {
+    .lab-parameters { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+  #openai-settings .lab-parameters > .api-field { min-width: 0; }
   #openai-settings .lab-parameters .parameter-heading {
     display: grid; grid-template-columns: auto min-content; justify-content: start; gap: 3px 5px;
     min-height: 42px; align-content: end;
@@ -2182,7 +2194,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
     <div class="openai-inline-title"><span class="api-settings-title" id="openai-settings-title" data-i18n="openaiSettingsTitle">OpenAI API settings</span><a class="api-docs-link" href="docs.html#openai-api" data-app-beside="settings" data-i18n="openaiDocsLink">OpenAI compatible: description →</a></div>
   </div>
   <div class="openai-credentials">
-    <div class="openai-credential-row settings-field-grid">
+    <div class="openai-credential-row">
       <div class="openai-provider-field">
         <strong class="openai-profile-heading" id="openai-profile-heading" data-i18n="openaiProvider">OpenAI API provider</strong>
         <div class="openai-profile-row">
@@ -2193,18 +2205,18 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
         </div>
       </div>
       <label class="api-field"><span data-i18n="openaiBaseUrl">Base URL</span><input class="api-input" id="openai-base-url" type="text" inputmode="url" value="" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"></label>
-    </div>
-    <div class="openai-credential-row settings-field-grid">
       <label class="api-field"><span data-i18n="openaiApiKey">API key</span><div class="api-secret-wrap"><input class="api-input credential-input" id="openai-api-key" type="text" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="api-eye" id="openai-eye-btn" type="button" onclick="toggleApiKeyVisibility()" data-i18n-title="openaiShowKey" data-i18n-aria-label="openaiShowKey" title="Show key" aria-label="Show key"><svg id="openai-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></label>
       <label class="api-field"><span data-i18n="openaiModel">Model</span><input class="api-input" id="openai-model" type="text" value="qwen3.8-27b" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true"></label>
     </div>
   </div>
   <label class="api-field openai-prompt"><span data-i18n="openaiSystem">System prompt</span><textarea class="api-textarea" id="openai-system-prompt" autocomplete="off" spellcheck="true" data-1p-ignore data-lpignore="true"></textarea></label>
-  <div class="settings-field-grid lab-parameters">
-    <label class="api-field"><span data-i18n="openaiTemperature">Temperature</span><input class="api-input" id="openai-temperature" type="number" min="0" max="2" step="0.1" value="0.7"></label>
-    <label class="api-field"><span data-i18n="openaiTopP">Top p</span><input class="api-input" id="openai-top-p" type="number" min="0" max="1" step="0.1" value="1"></label>
-    <label class="api-field"><span data-i18n="openaiMaxCompletionTokens">Max completion tokens</span><input class="api-input" id="openai-max-completion-tokens" type="number" min="1" step="1" value="10000"></label>
-    <label class="api-field"><span data-i18n="openaiN">Responses · n (1–128)</span><input class="api-input" id="openai-n" type="number" min="1" max="128" step="1" value="1"></label>
+  <div class="openai-number-group">
+    <div class="lab-parameters">
+      <label class="api-field"><span data-i18n="openaiTemperature">Temperature</span><input class="api-input" id="openai-temperature" type="number" min="0" max="2" step="0.1" value="0.7"></label>
+      <label class="api-field"><span data-i18n="openaiTopP">Top p</span><input class="api-input" id="openai-top-p" type="number" min="0" max="1" step="0.1" value="1"></label>
+      <label class="api-field"><span data-i18n="openaiMaxCompletionTokens">Max completion tokens</span><input class="api-input" id="openai-max-completion-tokens" type="number" min="1" step="1" value="10000"></label>
+      <label class="api-field"><span data-i18n="openaiN">Responses · n (1–128)</span><input class="api-input" id="openai-n" type="number" min="1" max="128" step="1" value="1"></label>
+    </div>
   </div>
   <section class="client-behavior" aria-labelledby="client-history-label">
       <div class="client-behavior-head"><div class="client-behavior-title"><div><label class="client-behavior-label" id="client-history-label" for="openai-context" data-i18n="openaiContext">Send previous messages to the OpenAI API</label></div></div><label class="switch"><input type="checkbox" id="openai-context" aria-labelledby="client-history-label" checked><span class="slider"></span></label></div>
