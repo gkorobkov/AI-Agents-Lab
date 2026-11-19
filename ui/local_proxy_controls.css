@@ -1,0 +1,84 @@
+.settings-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--settings-field-min)), 1fr));
+  align-items: start;
+  gap: 8px 12px;
+  width: 100%;
+  min-width: 0;
+}
+.proxy-field {
+  display: grid;
+  grid-template-columns: minmax(5rem, 1fr) auto;
+  align-items: start;
+  gap: 6px;
+  min-width: 0;
+}
+.proxy-field:has(> label[hidden]) { display: none; }
+.proxy-field > label { min-width: 0; margin-bottom: 0; }
+.proxy-option, .proxy-option > label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  white-space: nowrap;
+}
+.proxy-option {
+  align-self: start; min-height: 28px; margin-top: 24px;
+  color: var(--text-muted, var(--muted)); font-size: var(--settings-font-label, inherit);
+}
+.proxy-option input[type="checkbox"] { width: 13px; height: 13px; min-height: 0; margin: 0; padding: 0; accent-color: var(--accent2, var(--cyan)); color-scheme: dark; }
+html[data-theme="light"] .proxy-option input[type="checkbox"] { color-scheme: light; }
+.proxy-option button.proxy-help {
+  flex: 0 0 15px; width: 15px; height: 15px; min-height: 0;
+  margin: 0; padding: 0; color: inherit; background: transparent;
+  border: 1px solid currentColor; border-radius: 50%; font: 10px/1 var(--font-ui, sans-serif);
+}
+.proxy-option button.proxy-help:hover, .proxy-option button.proxy-help:focus-visible {
+  color: var(--accent2, var(--cyan));
+}
+.proxy-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted, var(--text-muted, #8c96a6));
+}
+.proxy-dot[data-state="checking"] { background: #7aaaff; }
+.proxy-dot[data-state="connected"] { background: var(--accent, #50cf90); }
+.proxy-dot[data-state="unreachable"], .proxy-dot[data-state="offline"] { background: #e6a343; }
+.proxy-dot[data-state="blocked"] { background: #bd92ff; }
+.proxy-dot[data-state="invalid"] { background: #f17075; }
+.proxy-popover { width: min(300px, calc(100vw - 46px)); }
+.proxy-popover p { margin: 0 0 6px; }
+.proxy-popover form { display: flex; flex-wrap: wrap; align-items: end; gap: 4px 6px; }
+.proxy-popover label { display: grid; flex: 1 1 135px; min-width: 0; margin: 0; gap: 3px; }
+.proxy-popover input, .proxy-popover button {
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 28px;
+  margin: 0;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font: inherit;
+}
+.proxy-popover input {
+  color: var(--text);
+  background: var(--bg);
+}
+.proxy-popover button {
+  --proxy-action-color: var(--accent2, var(--cyan));
+  color: var(--proxy-action-color);
+  background: color-mix(in srgb, var(--proxy-action-color) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--proxy-action-color) 48%, var(--border));
+  font-weight: 600;
+  cursor: pointer;
+}
+.proxy-popover button:hover {
+  background: color-mix(in srgb, var(--proxy-action-color) 19%, var(--surface));
+  border-color: var(--proxy-action-color);
+}
+.proxy-popover small { display: block; overflow-wrap: anywhere; }
+.proxy-popover [role="alert"] { width: 100%; color: #f17075; }
+.proxy-popover [role="alert"]:empty { display: none; }

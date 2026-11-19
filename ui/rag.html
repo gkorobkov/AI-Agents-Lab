@@ -9,12 +9,15 @@
   <link rel="stylesheet" href="rag-page.css?v=file-import">
   <link rel="stylesheet" href="model-picker.css">
   <link rel="stylesheet" href="field-help.css">
+  <link rel="stylesheet" href="local_proxy_controls.css">
   <link rel="stylesheet" href="scrollbars.css">
   <link rel="stylesheet" href="credential-fields.css">
   <script src="app-content.js?v=rag-workbench"></script>
+  <script src="field-help.js" defer></script>
+  <script src="local_proxy_transport.js" defer></script>
+  <script src="local_proxy_controls.js" defer></script>
   <script src="model-picker.js" defer></script>
   <script src="rag-page.js?v=file-import" defer></script>
-  <script src="field-help.js" defer></script>
   <script src="rag-console.js" defer></script>
   <script src="rag-field-help.js" defer></script>
 </head>
@@ -23,23 +26,37 @@
   <main class="rag-layout">
     <div class="rag-heading"><div><div class="eyebrow">БАЗЫ ЗНАНИЙ</div><h1>RAG <span>/ документы и векторный поиск</span></h1></div><span class="rag-badge">Qdrant × NeuralDeep</span></div>
     <p class="hint rag-intro">Текст → эмбеддинг NeuralDeep → коллекция Qdrant. Хранение и CRUD выполняет Qdrant, векторизацию — NeuralDeep.</p>
-    <div id="rag-status" role="status" aria-live="polite">Укажите адрес кластера и ключи, затем получите список коллекций.</div>
+    <div id="rag-status" role="status" aria-live="polite"></div>
     <fieldset id="rag-workbench">
+      <details id="rag-vectorization">
+        <summary>Настройки векторизации и поиска</summary>
+        <p class="hint">Для существующей коллекции используйте ту же модель и правила подготовки текста, что и при индексации.</p>
+        <div class="settings-field-grid rag-vectorization-row">
+          <label>Модель эмбеддингов<input id="rag-model" spellcheck="false" autocomplete="off"></label>
+          <label>Имя вектора в коллекции<input id="rag-vector-name" placeholder="Без имени" spellcheck="false"></label>
+        </div>
+        <details id="rag-model-prefixes">
+          <summary>Префиксы модели</summary>
+          <p class="hint">Добавляются перед текстом документа или поискового запроса. Оставьте поля пустыми, если модель не требует префиксов.</p>
+          <div class="settings-field-grid rag-vectorization-row">
+            <label>Префикс документа<input id="rag-document-prefix" spellcheck="false"></label>
+            <label>Префикс запроса<input id="rag-query-prefix" spellcheck="false"></label>
+          </div>
+        </details>
+      </details>
       <div class="rag-columns">
         <aside>
           <details class="rag-connection" open>
             <summary>01 · Подключение и векторизация</summary>
             <label>RAG-система<select id="rag-provider"><option value="qdrant">Qdrant</option></select></label>
             <label>REST URL кластера Qdrant<input id="rag-qdrant-url" type="url" placeholder="https://your-cluster.cloud.qdrant.io:6333" autocomplete="off" spellcheck="false"></label>
-            <label>API key Qdrant<input id="rag-qdrant-key" type="password" class="credential-input ym-disable-keys ym-hide-content" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
-            <label>Base URL OpenAI API<input id="rag-neuraldeep-url" type="url" autocomplete="off" spellcheck="false"></label>
-            <label>API Key<input id="rag-neuraldeep-key" type="password" class="credential-input ym-disable-keys ym-hide-content" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
-            <button id="rag-clear-keys" type="button" class="small">Очистить ключи</button>
-            <p class="hint">Ключи остаются только в памяти этой страницы. Адреса и параметры сохраняются в этом браузере. Для Qdrant нужен адрес кластера, а не cloud.qdrant.io.</p>
-            <label>Модель эмбеддингов<input id="rag-model" spellcheck="false" autocomplete="off"></label>
-            <div class="rag-pair"><label>Размерность<input id="rag-dimensions" type="number" min="1" step="1"></label><label>Имя вектора<input id="rag-vector-name" placeholder="Без имени" spellcheck="false"></label></div>
-            <details><summary>Префиксы модели</summary><label>Префикс документа<input id="rag-document-prefix" spellcheck="false"></label><label>Префикс запроса<input id="rag-query-prefix" spellcheck="false"></label><p class="hint">Для bge-m3 оставьте пустыми. Для e5-large: «passage: » и «query: ». Для frida: «search_document: » и «search_query: ». Пробел в конце важен. Для других моделей укажите префиксы из документации.</p></details>
-            <div class="official-links"><a href="https://cloud.qdrant.io/" target="_blank" rel="noopener noreferrer">Qdrant Cloud ↗</a><a href="https://neuraldeep.ru/docs#vector" target="_blank" rel="noopener noreferrer">NeuralDeep API ↗</a></div>
+            <label>API-ключ Qdrant<input id="rag-qdrant-key" type="password" class="credential-input ym-disable-keys ym-hide-content" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
+            <label class="rag-embedding-provider"><span>Провайдер OpenAI API</span><select id="rag-embedding-provider"><option value="">Custom</option></select></label>
+            <label>Базовый URL OpenAI API<input id="rag-neuraldeep-url" type="url" autocomplete="off" spellcheck="false"></label>
+            <label>API-ключ<input id="rag-neuraldeep-key" type="password" class="credential-input ym-disable-keys ym-hide-content" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
+            <span id="rag-embedding-status" role="status"></span>
+            <label>Размерность<input id="rag-dimensions" type="number" min="1" step="1"></label>
+            <a id="rag-qdrant-cloud" href="https://cloud.qdrant.io/" target="_blank" rel="noopener noreferrer">Qdrant Cloud ↗</a>
           </details>
           <section>
             <h2>02 · Коллекция</h2>

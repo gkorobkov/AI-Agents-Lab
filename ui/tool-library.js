@@ -12,9 +12,16 @@
       let selected;
       try { selected = localStorage.getItem('ai_tool_url_selection:' + record.id); } catch (_) {}
       if (selected === 'true' || selected === 'false') record.tool.http.useAlternativeUrl = selected === 'true';
+      const proxy = localStorage.getItem('ai_tool_use_proxy:' + record.id);
+      if (proxy !== null) record.tool.http.useProxy = proxy === 'true';
       return record;
     });
     return [...builtins, ...saved.map(item => ({ ...item, builtin:false }))];
+  }
+  function setPresetProxy(id, enabled) {
+    if (!presets.some(record => record.id === id)) throw new Error('Built-in tool not found.');
+    localStorage.setItem('ai_tool_use_proxy:' + id, String(enabled === true));
+    window.dispatchEvent(new Event('tool-library:change'));
   }
   function setPresetUrlSelection(id, selected) {
     if (!presets.some(record => record.id === id)) throw new Error('Built-in tool not found.');
@@ -169,5 +176,5 @@
     presets = result.records.map(record => ({...record, builtin:true})); errors.push(...result.errors);
     window.dispatchEvent(new Event('tool-library:change'));
   });
-  window.ToolLibrary = {ready,errors,validateRecord,importRecord,list,get,newId,validate,save,remove,snapshot,setPresetUrlSelection,resolveHttpUrl,buildRequest,authorizeRequest,setSecret,getSecret,clearSecret,redact};
+  window.ToolLibrary = {ready,errors,validateRecord,importRecord,list,get,newId,validate,save,remove,snapshot,setPresetUrlSelection,setPresetProxy,resolveHttpUrl,buildRequest,authorizeRequest,setSecret,getSecret,clearSecret,redact};
 })();

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const preset = require('../ui/mcp-student-example.json');
 
 function storage() {
   const values = new Map();
@@ -11,6 +12,7 @@ function storage() {
 function environment(fetch = async () => { throw new Error('Unexpected fetch'); }) {
   const sandbox = { fetch, URL, AbortController, AbortSignal, DOMException, TextDecoder, structuredClone, setTimeout, clearTimeout, Event, crypto:require('node:crypto').webcrypto, localStorage:storage(), sessionStorage:storage(), dispatchEvent() {}, location:{origin:'https://lab.example'}, ToolLibrary:{authorizeRequest:request=>request,redact:value=>value,validate() {}} };
   sandbox.window = sandbox;
+  sandbox.MaterialCatalog = {load:async (_manifest, _kind, validate) => ({records:[validate(structuredClone(preset))],errors:[]})};
   const context = vm.createContext(sandbox);
   for (const name of ['mcp-runtime.js','mcp-library.js','mcp-client.js','mcp-export.js']) vm.runInContext(fs.readFileSync(path.join(__dirname,'../ui',name),'utf8'),context,{filename:name});
   return context;
@@ -20,7 +22,8 @@ const tool = {name:'echo',description:'Echo',inputSchema:{type:'object',properti
 const json = (id,result,headers={}) => new Response(JSON.stringify({jsonrpc:'2.0',id,result}),{headers:{'Content-Type':'application/json',...headers}});
 
 test('workshop lifecycle and typed template substitution preserve arbitrary input',async()=>{
-  const env=environment(), record=env.McpLibrary.builtin();
+  const env=environment(); await env.McpLibrary.ready;
+  const record=env.McpLibrary.builtin();
   record.tools[0].inputSchema.properties.count={type:'integer',minimum:0};
   record.tools[0].execution.template='{"message":"Привет, {{name}}!","count":"{{count}}"}';
   const trace=[], client=new env.McpClient(record,(direction,message)=>trace.push({direction,message}));
@@ -32,7 +35,8 @@ test('workshop lifecycle and typed template substitution preserve arbitrary inpu
 });
 
 test('invalid arguments return tool errors before running a handler',async()=>{
-  const env=environment(), client=new env.McpClient(env.McpLibrary.builtin());
+  const env=environment(); await env.McpLibrary.ready;
+  const client=new env.McpClient(env.McpLibrary.builtin());
   const result=await client.call('greet_student',{name:42});
   assert.equal(result.isError,true);assert.match(result.content[0].text,/неверный тип/);
   const extra=await client.call('greet_student',{name:'Анна',other:true});assert.equal(extra.isError,true);
@@ -92,7 +96,7 @@ test('repeated pagination cursors fail instead of looping',async()=>{
 });
 
 test('SSE accepts bare CR line endings split across chunks',async()=>{
-  const env=environment();const client=new env.McpClient(env.McpLibrary.builtin());
+  const env=environment();await env.McpLibrary.ready;const client=new env.McpClient(env.McpLibrary.builtin());
   const text='data: {"jsonrpc":"2.0","id":7,"result":{"ok":true}}\r\r';
   const stream=new ReadableStream({start(controller){for(const char of text)controller.enqueue(new TextEncoder().encode(char));controller.close();}});
   const reply=await client.readSSE(new Response(stream),7);assert.equal(reply.result.ok,true);
@@ -118,6 +122,7 @@ test('cancellation aborts an outstanding remote request',async()=>{
 
 test('server export contains executable handlers and no browser credential values',async()=>{
   const env=environment();const remoteRecord=remote();env.McpLibrary.setToken(remoteRecord,'never-export-me');
+  await env.McpLibrary.ready;
   const record=env.McpLibrary.builtin();const source=await env.McpExport.server(record);
   assert(source.includes('StreamableHTTPServerTransport'));assert(source.includes('StdioServerTransport'));assert(source.includes('127.0.0.1'));assert(source.includes('https://lab.example'));
   assert(!source.includes('never-export-me'));assert(!source.includes('sessionStorage'));assert(!source.includes('window.'));

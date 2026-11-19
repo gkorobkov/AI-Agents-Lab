@@ -67,7 +67,7 @@
       let button = [...host.querySelectorAll('.api-help')].find(el => el.dataset.helpKey === key);
       if (!button) {
         button = document.createElement('span'); button.className = 'api-help'; button.tabIndex = 0; button.role = 'button'; button.textContent = '?'; button.dataset.helpKey = key;
-        FieldHelp.attach(button);
+        FieldHelp.attach(button, null, field.closest('.proxy-field') || field.closest('.api-field, .profile-combo, .client-behavior-head, .tool-builder > summary') || field);
         const toggle = host.querySelector(':scope > .parameter-toggle');
         if (toggle) toggle.before(button); else host.append(button);
       }

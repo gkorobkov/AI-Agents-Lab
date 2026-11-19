@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Доки — AI Agents Lab</title>
-<meta name="description" content="Доки AI Agents Lab: OpenAI API Chat Completions и устройство MCP, запросы и ответы протоколов.">
+<meta name="description" content="Доки AI Agents Lab: OpenAI API Chat Completions, векторизация текста и устройство MCP.">
 <link rel="canonical" href="https://ai-agents-lab.gkorobkov.ru/docs.html">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
 <body>
 <header><a class="brand" href="index.html"><span class="brand-mark">AI</span><span>Agents Lab</span><span class="page-label" data-ru="Доки" data-en="Docs">Доки</span></a><div class="controls"><button class="control" id="lang" type="button">EN</button><button class="control" id="theme" type="button" aria-label="Сменить тему">◐</button><a class="back" href="index.html" data-ru="← В лабу" data-en="← Back to lab">← В лабу</a></div></header>
 <div class="layout">
-<nav class="toc" aria-label="Содержание"><div class="toc-heading"><strong data-ru="Доки" data-en="Docs">Доки</strong><button id="toggle-all-sections" type="button" aria-label="Раскрыть все разделы" title="Раскрыть все разделы" aria-expanded="false">▸</button></div><a href="#openai-api">OpenAI API · Chat Completions</a><a href="#mcp">MCP · Model Context Protocol</a></nav>
+<nav class="toc" aria-label="Содержание"><div class="toc-heading"><strong data-ru="Доки" data-en="Docs">Доки</strong><button id="toggle-all-sections" type="button" aria-label="Раскрыть все разделы" title="Раскрыть все разделы" aria-expanded="false">▸</button></div><a href="#openai-api">OpenAI API · Chat Completions</a><a href="#embeddings" data-ru="Векторизация · Embeddings" data-en="Embeddings">Векторизация · Embeddings</a><a href="#mcp">MCP · Model Context Protocol</a></nav>
 <main>
 <section class="section" id="openai-api">
   <p class="eyebrow">OpenAI API · Chat Completions</p>
@@ -34,6 +34,20 @@
     <p>Inspect the JSON preview before sending, then compare <code>choices</code>, <code>finish_reason</code> and <code>usage</code> in the provider response.</p>
   </div>
   <p><a href="https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create" target="_blank" rel="noopener noreferrer" class="external-source">OpenAI · Chat Completions reference</a><br><a href="https://developers.openai.com/api/docs/guides/function-calling" target="_blank" rel="noopener noreferrer" class="external-source">OpenAI · Function calling</a></p>
+</section>
+<section class="section" id="embeddings">
+  <h2 data-ru="Векторизация · Embeddings" data-en="Embeddings">Векторизация · Embeddings</h2>
+  <div class="api-doc-ru">
+    <p>Эмбеддинг — числовой вектор текста. Запрос <code>POST /embeddings</code> передаёт имя модели в <code>model</code> и текст или массив текстов в <code>input</code>. В ответе <code>data[].embedding</code> содержит вектор для каждого текста.</p>
+    <p>В RAG приложение сохраняет в Qdrant векторы документов. При поиске оно преобразует запрос той же моделью и ищет ближайшие векторы. Размерность ответа модели должна совпадать с размерностью вектора коллекции. Если в коллекции несколько именованных векторов, имя выбирает, куда записывать и где искать.</p>
+    <p>Некоторые модели требуют разные префиксы для документов и запросов. Приложение добавляет их в начало текста перед отправкой. В настройках векторизации и поиска укажите значения из документации своей модели.</p>
+  </div>
+  <div class="api-doc-en">
+    <p>An embedding is a numeric vector representing text. A <code>POST /embeddings</code> request passes the model name in <code>model</code> and a string or array of strings in <code>input</code>. The response contains one vector per input in <code>data[].embedding</code>.</p>
+    <p>In RAG, the app stores document vectors in Qdrant. For search it embeds the query with the same model and looks up the nearest vectors. The model output size must match the collection's vector dimension. In a collection with named vectors, the name selects the vector to write and search.</p>
+    <p>Some models require different prefixes for documents and queries. The app prepends them before sending text. Use the prefixes listed for your model in the vectorization and search settings.</p>
+  </div>
+  <p><a href="https://neuraldeep.ru/docs#vector" target="_blank" rel="noopener noreferrer" class="external-source" data-ru="NeuralDeep API · пример векторизации ↗" data-en="NeuralDeep API · embeddings example ↗">NeuralDeep API · пример векторизации ↗</a></p>
 </section>
 <section class="section" id="mcp">
 <p class="eyebrow">MCP · Model Context Protocol</p>

@@ -9,6 +9,7 @@
   <script>try { document.documentElement.dataset.theme = localStorage.getItem('n8n_theme') === 'light' ? 'light' : 'dark'; } catch (_) {}</script>
   <link rel="stylesheet" href="tools-page.css">
   <link rel="stylesheet" href="field-help.css">
+  <link rel="stylesheet" href="local_proxy_controls.css">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
   <script src="app-content.js?v=rag-workbench"></script>
   <link rel="stylesheet" href="scrollbars.css">
@@ -40,8 +41,10 @@
         <section>
           <h3><span>2</span> <span data-i18n="http">Параметры запроса</span></h3>
           <div class="fields endpoint"><label><span data-i18n="method">Метод</span><select id="edit-method"><option>GET</option><option>POST</option></select></label><label><span>URL</span><input id="edit-url" type="url" required spellcheck="false"></label></div>
+          <details id="legacy-alternative-url"><summary data-i18n="alternativeUrl">Альтернативный URL</summary>
           <label><span data-i18n="alternativeUrl">Альтернативный URL</span><input id="edit-alternative-url" type="text" spellcheck="false"></label>
           <label class="check"><input id="edit-use-alternative-url" type="checkbox"><span data-i18n="useAlternativeUrl">Использовать альтернативный URL</span></label>
+          </details>
           <div class="subhead"><strong data-i18n="query">Параметры URL</strong><button id="add-mapping" type="button" class="small" data-i18n="addParameter">+ Параметр</button></div>
           <p class="hint" data-i18n="mappingHint">Введите значение для проверки. Включите «Заполняет модель», чтобы добавить параметр в JSON Schema.</p>
           <div class="tool-table-scroll"><table class="tool-table mapping-table"><thead><tr><th scope="col" data-i18n="parameterColumn">Параметр</th><th scope="col" data-i18n="valueColumn">Значение</th><th scope="col" data-i18n="modelColumn">Заполняет модель</th><th scope="col"><span class="sr-only" data-i18n="actionsColumn">Действия</span></th></tr></thead><tbody id="mappings"></tbody></table></div>
@@ -90,6 +93,8 @@
 <script src="tool-gdelt.js?v=1.5.7"></script>
 <script src="tool-library.js"></script>
   <script src="field-help.js"></script>
+  <script src="local_proxy_transport.js"></script>
+  <script src="local_proxy_controls.js"></script>
   <link rel="stylesheet" href="json-viewer.css">
   <script src="json-viewer.js"></script>
   <script src="tools-page.js"></script>

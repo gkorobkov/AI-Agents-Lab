@@ -6,7 +6,7 @@
     'qdrant-url': ['Qdrant · REST URL', 'Поле REST URL кластера Qdrant содержит адрес HTTP API вашего кластера, включая порт, если он нужен. Используйте адрес кластера, а не панели cloud.qdrant.io. Не добавляйте путь /collections.'],
     'qdrant-key': ['Qdrant · API key', 'Поле API key Qdrant задаёт ключ доступа к выбранному кластеру. Для изменений нужны права записи. Ключ сохраняется в сессии вкладки с привязкой к серверу. Кнопка Удалить ключ удаляет сохранённый ключ.'],
     'neuraldeep-url': ['Векторизация · Base URL', 'Поле Base URL OpenAI API задаёт базовый адрес сервиса эмбеддингов, обычно с окончанием /v1. Приложение добавляет путь /embeddings для векторизации и /models для списка моделей.'],
-    'neuraldeep-key': ['Векторизация · API Key', 'Поле API Key задаёт ключ сервиса эмбеддингов. Он нужен при создании текстовых векторов и семантическом поиске. Ключ сохраняется в сессии вкладки с привязкой к серверу.'],
+    'neuraldeep-key': ['Векторизация · API Key', 'Ключ нужен для создания текстовых векторов и семантического поиска. Для сохранённого провайдера ключ берётся из настроек OpenAI API. Ключ Custom сохраняется в сессии вкладки с привязкой к серверу.'],
     model: ['Векторизация · model', 'Поле Модель эмбеддингов задаёт модель, преобразующую текст в числовой вектор. Кнопка раскрытия получает список моделей API. Выберите модель эмбеддингов, совместимую с размерностью коллекции. Для существующих данных используйте ту же модель, которой они были созданы.'],
     'vector-name': ['Qdrant · named vector', 'Поле Имя вектора выбирает именованный вектор внутри коллекции. Для коллекции с одним безымянным вектором оставьте поле пустым. Доступные имена подставляются после открытия коллекции.'],
     'document-prefix': ['Векторизация · префикс документа', 'Поле Префикс документа содержит служебный текст, который добавляется перед каждым документом или фрагментом файла при получении эмбеддинга. Заполняйте только если это требуется вашей моделью. Сохраняйте пробел в конце, если он указан в документации модели.'],
@@ -30,24 +30,24 @@
     patch: ['Коллекция · PATCH', 'Поле Изменить параметры принимает JSON-объект с поддерживаемыми вашей версией Qdrant изменениями конфигурации. Отправляются только указанные поля.'],
     'snapshot-file': ['Снимок · snapshot', 'Поле Файл .snapshot выбирает резервный снимок для восстановления выбранной коллекции. Восстановление заменяет данные и требует подтверждения имени коллекции.']
   };
-  function attach(host, title, path, text) {
+  function attach(host, title, path, text, anchor) {
     const icon = document.createElement('span'); icon.className = 'api-help'; icon.role = 'button'; icon.tabIndex = 0; icon.textContent = '?';
     icon.setAttribute('aria-label', 'Справка: ' + title); icon.dataset.helpPath = path; icon.dataset.helpText = text;
-    host.append(icon); FieldHelp.attach(icon);
+    host.append(icon); FieldHelp.attach(icon, null, anchor);
   }
   for (const [id, [path, text]] of Object.entries(help)) {
     const input = document.getElementById('rag-' + id), label = input?.closest('label');
     if (!label) continue;
     if (label.classList.contains('sr-only')) {
       const summary = input.closest('details')?.querySelector('summary');
-      if (summary) attach(summary, label.textContent.trim(), path, text);
+      if (summary) attach(summary, label.textContent.trim(), path, text, input);
       continue;
     }
     const nodes = [...label.childNodes].filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
     const caption = document.createElement('span'); caption.className = 'rag-field-caption';
     const title = nodes.map(node => node.textContent.trim()).join(' '); caption.append(document.createTextNode(title));
-    nodes.forEach(node => node.remove()); label.prepend(caption); attach(caption, title, path, text);
+    nodes.forEach(node => node.remove()); label.prepend(caption); attach(caption, title, path, text, label.closest('.proxy-field, .rag-credential-slot') || label);
   }
-  const summary = [...document.querySelectorAll('#rag-settings summary')].find(node => node.textContent.trim() === 'Префиксы модели');
-  if (summary) attach(summary, 'Префиксы модели', 'Векторизация · подготовка текста', 'Раздел Префиксы модели задаёт служебные строки, добавляемые к текстам перед векторизацией. Префикс документа используется для сохранения документов, префикс запроса — для семантического поиска. Оставьте поля пустыми, если документация вашей модели не требует таких строк.');
+  const summary = document.querySelector('#rag-model-prefixes > summary');
+  if (summary) attach(summary, 'Префиксы модели', 'Векторизация · подготовка текста', 'Раздел Префиксы модели задаёт служебные строки, добавляемые к текстам перед векторизацией. Префикс документа используется для сохранения документов, префикс запроса — для семантического поиска. Оставьте поля пустыми, если документация вашей модели не требует таких строк.', summary.closest('details'));
 })();

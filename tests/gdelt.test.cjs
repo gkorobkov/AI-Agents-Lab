@@ -18,7 +18,7 @@ function environment(fetch = async () => json(), overrides = {}) {
     fetch:async (...args) => { calls.push(args); return fetch(...args); },MaterialCatalog:{load:async()=>({records:[record],errors:[]})}};
   env.window = env; env.parent = env;
   vm.createContext(env);
-  for (const file of ['tool-gdelt.js','tool-library.js']) vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),env,{filename:file});
+  for (const file of ['local_proxy_transport.js','tool-gdelt.js','tool-library.js']) vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),env,{filename:file});
   return {env,events,calls};
 }
 test('Moscow defaults, Petersburg 7d, topic-only and city + keywords',async()=>{

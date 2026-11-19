@@ -154,7 +154,7 @@
             const timer = setTimeout(abort,cfg.timeoutMs);
             onProgress?.({stage:'request',attempt:attempt+1,timeout_ms:cfg.timeoutMs});
             try {
-              const response = await fetch(request.url,{method:'GET',credentials:'omit',redirect:'error',signal:controller.signal});
+              const response = await LocalProxyTransport.fetch(request.url,{method:'GET',credentials:'omit',redirect:'error',signal:controller.signal},tool.http.useProxy);
               externalStatus = response.status;
               if (!response.ok) {
                 const header = response.headers.get('Retry-After');
@@ -175,7 +175,7 @@
         } catch (error) {
           if (signal?.aborted) throw Object.assign(new Error('GDELT request cancelled.'),{category:'cancelled'});
           const category = error.category || (error.name === 'AbortError' ? 'timeout' : 'unavailable');
-          if (attempt >= cfg.retries || error.retryable === false || error.category && !error.retryable) throw Object.assign(new Error(error.category ? error.message : category === 'timeout' ? 'GDELT request timed out. Try a shorter period or a simpler query.' : 'No readable HTTP response from GDELT. Possible network failure or browser CORS block, including a rate-limit response without CORS headers. Check DevTools Network and retry later.'),{category});
+          if (attempt >= cfg.retries || error.retryable === false || error.category && !error.retryable) throw Object.assign(new Error(error.category ? error.message : tool.http.useProxy === true && category === 'unavailable' ? error.message : category === 'timeout' ? 'GDELT request timed out. Try a shorter period or a simpler query.' : 'No readable HTTP response from GDELT. Possible network failure or browser CORS block, including a rate-limit response without CORS headers. Check DevTools Network and retry later.'),{category});
           onProgress?.({stage:'retry',attempt:attempt+2,wait_ms:retryMs});
           await pause(retryMs,signal);
         }

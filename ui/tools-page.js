@@ -25,6 +25,10 @@
   if (english) $('test-args').value = '{"name":"Berlin"}';
   if (!lib) { $('page-status').textContent = tr('Не удалось загрузить библиотеку инструментов.', 'Could not load the tool library.'); return; }
   await lib.ready;
+  const proxyControl = ProxyControls.mount($('edit-url'), {onChange:enabled => {
+    if (draft?.builtin) lib.setPresetProxy(draft.id, enabled);
+    updateDirty();
+  }});
   const httpBodyViews = Object.fromEntries(['request-body','response-output'].map(id => {
     const pre = $(id);
     return [id,JsonViewer.create({pre,heading:pre.parentElement.querySelector('summary'),language:() => english ? 'en' : 'ru'})];
@@ -41,7 +45,7 @@
     delete next.summary;
     next.tool.parameters = $('edit-schema').value;
     next.tool.strict = $('edit-strict').checked;
-    next.tool.http = { ...next.tool.http, url:$('edit-url').value.trim(), alternativeUrl:$('edit-alternative-url').value.trim(), useAlternativeUrl:$('edit-use-alternative-url').checked, method:$('edit-method').value,
+    next.tool.http = { ...next.tool.http, useProxy:proxyControl.read(), url:$('edit-url').value.trim(), alternativeUrl:$('edit-alternative-url').value.trim(), useAlternativeUrl:$('edit-use-alternative-url').checked, method:$('edit-method').value,
       mappings:Array.from($('mappings').children).map(row => ({ ...row.mappingOptions, key:row.querySelector('[data-key]').value.trim(), value:row.querySelector('[data-value]').value, testValue:row.querySelector('.local-test-value').value })).filter(item => item.key),
       body:$('edit-body').value, auth:{ ...next.tool.http.auth, placement:$('edit-auth').value, name:$('edit-auth-name').value.trim(), prefix:$('edit-auth-prefix').value } };
     return next;
@@ -145,7 +149,7 @@
   }
   function syncHttpPreview() {
     $('copy-request-url').disabled = true;
-    $('request-method').textContent = $('edit-method').value;
+    $('request-method').textContent = $('edit-method').value + (proxyControl.read() ? tr(' · через прокси', ' · via proxy') : '');
     $('request-url').textContent = '—'; $('request-preview').textContent = '—'; httpBodyViews['request-body'].update('—');
     try {
       const invalid = [...$('mappings').querySelectorAll('.local-test-value')].find(input => !input.validity.valid);
@@ -182,6 +186,8 @@
     syncLinks();
     $('edit-name').value = draft.tool.name || ''; $('edit-description').value = [...new Set([draft.summary, draft.tool.description].filter(value => value?.trim()).map(value => value.trim()))].join('\n\n'); $('edit-schema').value = typeof draft.tool.parameters === 'string' ? draft.tool.parameters : JSON.stringify(draft.tool.parameters, null, 2);
     $('edit-strict').checked = !!draft.tool.strict; $('edit-url').value = draft.tool.http.url || ''; $('edit-method').value = draft.tool.http.method || 'GET'; $('edit-body').value = draft.tool.http.body || '';
+    proxyControl.set(draft.tool.http.useProxy);
+    $('legacy-alternative-url').open = false;
     $('edit-alternative-url').value = draft.tool.http.alternativeUrl || ''; $('edit-use-alternative-url').checked = !!draft.tool.http.useAlternativeUrl;
     $('edit-auth').value = draft.tool.http.auth.placement || 'none'; $('edit-auth-name').value = draft.tool.http.auth.name || ''; $('edit-auth-prefix').value = draft.tool.http.auth.prefix || ''; $('edit-key').value = '';
     const keyHelp = $('api-key-help');
@@ -325,7 +331,7 @@
   };
   $('run-test').onclick = async () => {
     if (controller) return;
-    let fetchRequest = null, responseReceived = false;
+    let fetchRequest = null, responseReceived = false, useProxy = false;
     $('test-error-details').hidden = true;
     try {
       if (!Array.from($('mappings').querySelectorAll('.local-test-value')).every(input => input.reportValidity())) return;
@@ -353,7 +359,8 @@
         return;
       }
       fetchRequest = authorized;
-      const response = await fetch(authorized.url, { method:authorized.method, headers:authorized.headers, body:authorized.body || undefined, signal:active.signal, credentials:'omit', redirect:'error' });
+      useProxy = record.tool.http.useProxy;
+      const response = await LocalProxyTransport.fetch(authorized.url, { method:authorized.method, headers:authorized.headers, body:authorized.body || undefined, signal:active.signal, credentials:'omit', redirect:'error' }, useProxy);
       responseReceived = true;
       $('response-headers').textContent = lib.redact([...response.headers].map(([name,value]) => name + ': ' + value).join('\n')) || tr('(нет доступных заголовков)', '(no exposed headers)');
       const body = await response.text();
@@ -362,7 +369,7 @@
       $('test-status').textContent = 'HTTP ' + response.status + ' · ' + Math.round(performance.now() - started) + ' ms'; $('test-status').classList.toggle('error', !response.ok);
     } catch (error) {
       $('test-status').textContent = error.name === 'AbortError' ? tr('Запрос остановлен.', 'Request stopped.') : lib.redact(String(error.message || error)); $('test-status').classList.add('error');
-      if (fetchRequest && !responseReceived && error.name !== 'AbortError') {
+      if (fetchRequest && !useProxy && !responseReceived && error.name !== 'AbortError') {
         $('test-status').textContent = tr('Браузер не смог получить ответ сервиса.', 'The browser could not receive the service response.');
         const target = new URL(fetchRequest.url), crossOrigin = target.origin !== location.origin;
         const lines = [tr('Страница открыта на ', 'Page origin is ') + location.origin + tr('. Запрос направлен на ', '. Request destination is ') + target.origin + '.'];
@@ -389,6 +396,7 @@
     const locked = !!draft.builtin;
     document.body.classList.toggle('tool-readonly', locked);
     $('tool-form').querySelectorAll('section:not(#http-test-section):not(#llm-test-section) input, section:not(#http-test-section):not(#llm-test-section) textarea, section:not(#http-test-section):not(#llm-test-section) select, section:not(#http-test-section):not(#llm-test-section) button').forEach(input => {
+      if (input.closest('.proxy-option')) return;
       if (input.id === 'edit-use-alternative-url') { input.disabled = false; return; }
       if (['edit-key','clear-key'].includes(input.id) || input.classList.contains('help-button') || input.classList.contains('local-test-value')) return;
       if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT' && input.type !== 'checkbox') input.readOnly = locked || ['edit-schema','tool-definition-json'].includes(input.id);
@@ -420,7 +428,7 @@
         button.setAttribute('aria-label', tr('Справка: ', 'Help: ') + caption);
         button.dataset.helpPath = 'tools[].function.parameters.' + (property === 'required' ? 'required' : 'properties[' + JSON.stringify(key) + ']' + (property ? '.' + property : ''));
         button.dataset.helpText = tr(...texts);
-        FieldHelp.attach(button); span.append(' ',button);
+        FieldHelp.attach(button, null, input); span.append(' ',button);
         input.setAttribute('aria-label',caption);
         const index = row.children.length;
         const header = $('schema-table').tHead.rows[0].cells[index];
@@ -488,7 +496,7 @@
       let button = caption.querySelector('.api-help');
       if (!button) {
         button = document.createElement('span'); button.className = 'api-help'; button.tabIndex = 0; button.role = 'button'; button.textContent = '?';
-        FieldHelp.attach(button); caption.append(button);
+        FieldHelp.attach(button, null, host.closest('.proxy-field') || host); caption.append(button);
       }
       button.dataset.helpText = tr(...texts).replace(/(?<!LLM )\bmodel(s)?\b/gi, 'LLM model$1');
       const paths = {

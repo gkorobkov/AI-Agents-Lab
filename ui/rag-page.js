@@ -2,6 +2,8 @@
   'use strict';
   if (window === window.parent) return;
   const cfg = parent.ragDefaults;
+  Object.entries(parent.settingsFontSizes || {}).forEach(([role, size]) =>
+    document.documentElement.style.setProperty('--settings-font-' + role, size + 'px'));
   if (!cfg) return;
   const $ = id => document.getElementById('rag-' + id);
   const node = (tag, text) => { const item = document.createElement(tag); if (text !== undefined) item.textContent = text; return item; };
@@ -10,18 +12,95 @@
   try { saved = JSON.parse(localStorage.getItem('ai_rag_settings') || '{}'); } catch (_) {}
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) saved = {};
   Object.entries(fields).forEach(([name, id]) => { $(id).value = typeof saved[name] === typeof cfg[name] ? saved[name] : cfg[name]; });
+  const qdrantProxy = ProxyControls.mount($('qdrant-url'), {onChange:() => { persist(); window.RagConsole?.invalidate(); }});
+  const embeddingProxy = ProxyControls.mount($('neuraldeep-url'), {onChange:() => persist()});
+  qdrantProxy.set(saved.qdrantUseProxy);
+  embeddingProxy.set(saved.embeddingUseProxy);
+  const proxyAddressChanged = () => { if (qdrantProxy.read()) window.RagConsole?.invalidate(); };
+  window.addEventListener('ai-proxy:url-change', proxyAddressChanged);
+  window.addEventListener('storage', event => { if (event.key === LocalProxyTransport.storageKey) proxyAddressChanged(); });
+  const providerSelect = $('embedding-provider');
+  const embeddingUrl = $('neuraldeep-url');
+  const embeddingKeyField = $('neuraldeep-key');
+  const embeddingStatus = $('embedding-status');
+  let customEmbeddingUrl = embeddingUrl.value;
+  function embeddingBaseUrl() {
+    return urlValue('neuraldeep-url').replace(/\/(?:chat\/completions|embeddings|models)$/, '');
+  }
+  function embeddingConnectionStatus(state = '', message = '') {
+    embeddingStatus.dataset.state = state;
+    embeddingStatus.textContent = message;
+  }
+  function embeddingKey() {
+    if (!providerSelect.value) return embeddingKeyField.value.trim();
+    const profile = parent.allOpenAIProfiles().find(item => item.id === providerSelect.value);
+    return profile ? parent.openAIRequestHeaders(profile).Authorization?.slice('Bearer '.length).trim() || '' : '';
+  }
+  function syncEmbeddingKeyDisplay() {
+    embeddingKeyField.placeholder = providerSelect.value && embeddingKey() ? '••••••••' : '';
+  }
+  function updateEmbeddingProvider() {
+    const selected = providerSelect.selectedOptions[0];
+    const url = selected.dataset.baseUrl || customEmbeddingUrl;
+    const managed = Boolean(selected.value);
+    const changed = embeddingUrl.value !== url || embeddingUrl.disabled !== managed;
+    embeddingUrl.disabled = embeddingKeyField.disabled = managed;
+    if (managed) embeddingKeyField.value = '';
+    syncEmbeddingKeyDisplay();
+    if (changed) {
+      embeddingUrl.value = url;
+      embeddingUrl.dispatchEvent(new Event('input', {bubbles:true}));
+      embeddingUrl.dispatchEvent(new Event('change', {bubbles:true}));
+    }
+  }
+  function refreshEmbeddingProviders(selected) {
+    const profiles = parent.allOpenAIProfiles().filter(profile => typeof profile.baseUrl === 'string' && profile.baseUrl.trim());
+    providerSelect.replaceChildren(new Option('Custom', ''), ...profiles.map(profile => {
+      const option = new Option(profile.name, profile.id);
+      option.dataset.baseUrl = profile.baseUrl;
+      return option;
+    }));
+    providerSelect.value = profiles.some(profile => profile.id === selected) ? selected : '';
+    updateEmbeddingProvider();
+  }
+  providerSelect.addEventListener('change', () => { updateEmbeddingProvider(); persist(); });
+  embeddingUrl.addEventListener('input', () => { if (!providerSelect.value) customEmbeddingUrl = embeddingUrl.value; });
+  const embeddingSources = [providerSelect, embeddingUrl, embeddingKeyField, embeddingProxy.input];
+  for (const source of embeddingSources) {
+    source.addEventListener('input', () => embeddingConnectionStatus());
+    source.addEventListener('change', () => embeddingConnectionStatus());
+  }
+  window.addEventListener('ai-proxy:url-change', () => { if (embeddingProxy.read()) embeddingConnectionStatus(); });
+  window.addEventListener('storage', event => {
+    if (event.key === 'ai_openai_profiles') { refreshEmbeddingProviders(providerSelect.value); persist(); }
+    if (event.key === 'ai_openai_key' && providerSelect.value) {
+      syncEmbeddingKeyDisplay();
+      embeddingKeyField.dispatchEvent(new Event('change'));
+    }
+    if (event.key === LocalProxyTransport.storageKey && embeddingProxy.read()) embeddingConnectionStatus();
+  });
   ModelPicker.attach($('model'), {
     language: () => 'ru',
-    connection: () => ({baseUrl: urlValue('neuraldeep-url'), headers: $('neuraldeep-key').value.trim() ? {Authorization:'Bearer ' + $('neuraldeep-key').value.trim()} : {}}),
+    connection: () => {
+      const key = embeddingKey();
+      if (providerSelect.value && !key) throw new Error('Укажите API-ключ в настройках OpenAI API.');
+      return {baseUrl:embeddingBaseUrl(), useProxy:embeddingProxy.read(), headers:key ? {Authorization:'Bearer ' + key} : {}};
+    },
     timeout: cfg.timeoutMs,
-    sources: [$('neuraldeep-url'), $('neuraldeep-key')]
+    sources: embeddingSources,
+    onResult(state, message) {
+      embeddingConnectionStatus(state, message);
+      return state === 'error';
+    }
   });
   $('metadata').value = cfg.metadata;
   $('text-field-note').textContent = `Поле «${cfg.textField}» хранит текст документа и не должно повторяться в метаданных. Остальные поля payload сохраняются при загрузке в редактор.`;
   const status = (message, error = false) => { $('status').textContent = message; $('status').classList.toggle('error', error); };
   const persist = () => {
-    const settings = {};
+    const settings = {qdrantUseProxy:qdrantProxy.read(), embeddingUseProxy:embeddingProxy.read()};
     Object.entries(fields).forEach(([name, id]) => { settings[name] = typeof cfg[name] === 'number' ? Number($(id).value) : $(id).value; });
+    settings.embeddingProfileId = providerSelect.value;
+    settings.neuraldeepUrl = customEmbeddingUrl;
     try { localStorage.setItem('ai_rag_settings', JSON.stringify(settings)); } catch (_) {}
   };
   function resetRecords() {
@@ -39,6 +118,7 @@
       status('Настройки изменены. Повторите запрос к выбранной коллекции.');
     }
   }));
+  refreshEmbeddingProviders(saved.embeddingProfileId);
   function urlValue(id) {
     let url;
     try { url = new URL($(id).value.trim()); } catch (_) { throw new Error('Укажите корректный URL в поле «' + (id === 'qdrant-url' ? 'REST URL кластера Qdrant' : 'Base URL OpenAI API') + '».'); }
@@ -51,7 +131,7 @@
     if (needsCollection && !collection) throw new Error('Укажите имя коллекции.');
     const key = $('qdrant-key').value.trim();
     if (!key) throw new Error('Укажите API key Qdrant.');
-    return { base:urlValue('qdrant-url'), key, collection, path:'/collections/' + encodeURIComponent(collection) };
+    return { base:urlValue('qdrant-url'), useProxy:qdrantProxy.read(), key, collection, path:'/collections/' + encodeURIComponent(collection) };
   }
   function integer(id, name, max = Number.MAX_SAFE_INTEGER) {
     const n = Number($(id).value);
@@ -69,12 +149,13 @@
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) return value;
     throw new Error('Укажите ID: UUID или неотрицательное целое число.');
   }
-  async function request(base, path, method, body, headers) {
+  async function request(base, path, method, body, headers, useProxy) {
     let response;
     try {
-      response = await fetch(base + path, { method, headers:{ ...headers, ...(body === undefined ? {} : {'Content-Type':'application/json'}) }, body:body === undefined ? undefined : JSON.stringify(body), signal:controller.signal, credentials:'omit', redirect:'error', referrerPolicy:'no-referrer' });
+      response = await LocalProxyTransport.fetch(base + path, { method, headers:{ ...headers, ...(body === undefined ? {} : {'Content-Type':'application/json'}) }, body:body === undefined ? undefined : JSON.stringify(body), signal:controller.signal, credentials:'omit', redirect:'error', referrerPolicy:'no-referrer' }, useProxy);
     } catch (error) {
       if (controller.signal.aborted) throw new Error('Превышено время ожидания запроса. Проверьте доступность сервисов и повторите операцию.');
+      if (useProxy) throw error;
       throw new Error('Не удалось связаться с сервисом. Проверьте URL, сеть и CORS: сервер должен разрешать origin ' + location.origin + ', методы запроса и заголовки api-key / Authorization / Content-Type.');
     }
     let data;
@@ -83,12 +164,12 @@
       const detail = data.status?.error || data.error?.message || (typeof data.error === 'string' ? data.error : 'Проверьте ключ, права и параметры.');
       // A server error can echo a key. Redact keys before showing any response text.
       let message = String(detail);
-      [$('qdrant-key').value.trim(), $('neuraldeep-key').value.trim()].filter(Boolean).forEach(key => { message = message.split(key).join('[ключ скрыт]'); });
+      [$('qdrant-key').value.trim(), embeddingKey()].filter(Boolean).forEach(key => { message = message.split(key).join('[ключ скрыт]'); });
       throw new Error('HTTP ' + response.status + ': ' + message);
     }
     return data.result === undefined ? data : data.result;
   }
-  const qdrant = (ctx, suffix, method = 'GET', body) => request(ctx.base, suffix.startsWith('/collections') || suffix === '/aliases' || suffix === '/cluster' ? suffix : ctx.path + suffix, method, body, {'api-key':ctx.key});
+  const qdrant = (ctx, suffix, method = 'GET', body) => request(ctx.base, suffix.startsWith('/collections') || suffix === '/aliases' || suffix === '/cluster' ? suffix : ctx.path + suffix, method, body, {'api-key':ctx.key}, ctx.useProxy);
   async function collectionVector(ctx) {
     const info = await qdrant(ctx, '');
     const vectors = info.config?.params?.vectors;
@@ -99,10 +180,11 @@
     return { name, size:definition.size };
   }
   async function embedTexts(texts, vector, isQuery = false) {
-    const key = $('neuraldeep-key').value.trim(), model = $('model').value.trim();
+    const key = embeddingKey(), model = $('model').value.trim();
+    if (providerSelect.value && !key) throw new Error('Укажите API-ключ в настройках OpenAI API.');
     if (!key || !model) throw new Error('Укажите API Key и модель эмбеддингов.');
     const prefix = $(isQuery ? 'query-prefix' : 'document-prefix').value;
-    const data = await request(urlValue('neuraldeep-url'), '/embeddings', 'POST', {model, input:texts.map(text => prefix + text)}, {Authorization:'Bearer ' + key});
+    const data = await request(embeddingBaseUrl(), '/embeddings', 'POST', {model, input:texts.map(text => prefix + text)}, {Authorization:'Bearer ' + key}, embeddingProxy.read());
     if (!Array.isArray(data.data) || data.data.length !== texts.length) throw new Error('NeuralDeep вернул неполный набор эмбеддингов.');
     const ordered = [...data.data].sort((a, b) => a.index - b.index);
     return ordered.map((item, index) => {
@@ -227,13 +309,18 @@
   }
   const on = (id, message, action) => $(id).addEventListener('click', () => run(message, action));
   $('new').addEventListener('click', () => { clearEditor(); status('Новый документ. При создании пустой ID будет заменён UUID.'); $('text').focus(); });
-  $('clear-keys').addEventListener('click', () => { $('qdrant-key').value = ''; $('neuraldeep-key').value = ''; window.RagConsole?.clearKeys(); status('Ключи удалены из сессии вкладки.'); });
   on('connect', 'Получение коллекций…', async () => {
-    const ctx = context(false), result = await qdrant(ctx, '/collections');
-    if (!Array.isArray(result.collections)) throw new Error('Qdrant вернул неожиданный список коллекций.');
-    $('collections').replaceChildren(...result.collections.map(item => { const option = node('option'); option.value = item.name; return option; }));
-    await window.RagConsole?.connected(ctx, result);
-    status('Подключено. Коллекций: ' + result.collections.length + '.');
+    window.RagConsole?.connecting();
+    try {
+      const ctx = context(false), result = await qdrant(ctx, '/collections');
+      if (!Array.isArray(result.collections)) throw new Error('Qdrant вернул неожиданный список коллекций.');
+      $('collections').replaceChildren(...result.collections.map(item => { const option = node('option'); option.value = item.name; return option; }));
+      await window.RagConsole?.connected(ctx, result);
+      status('Подключено. Коллекций: ' + result.collections.length + '.');
+    } catch (error) {
+      window.RagConsole?.connectionFailed();
+      throw error;
+    }
   });
   on('create-collection', 'Создание коллекции…', async () => {
     const ctx = context(), size = integer('dimensions', 'Размерность'), name = $('vector-name').value.trim();
