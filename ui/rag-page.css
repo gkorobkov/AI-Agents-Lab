@@ -17,6 +17,8 @@
 .rag-layout h2,.rag-connection > summary { color:var(--cyan); font-size:14px; font-weight:600; line-height:1.5; letter-spacing:0; }
 .rag-layout h2 { margin:0 0 8px; }
 .rag-section-head h2 { margin:0; }
+.rag-layout [data-rag-invalid] { border-color:var(--error); outline:1px solid var(--error); }
+.rag-field-error { display:block; flex-basis:100%; margin-top:5px; color:var(--error); font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
 .rag-collection-head { flex-direction:column; align-items:flex-start; gap:8px; }
 .rag-collection-head h2 { max-width:100%; font-size:18px; overflow-wrap:anywhere; }
 .rag-layout label { font-size:12px; }

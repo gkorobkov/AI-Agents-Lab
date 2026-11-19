@@ -155,6 +155,7 @@
   for(const id of ['delete','clear-files']){const b=$(id);if(!b.querySelector('svg'))b.insertAdjacentHTML('afterbegin',trash);}
   window.RagConsole={
     connected:connectedTo,refresh,invalidate,
+    revealField:field=>{if(settings.contains(field))setSettings(true);},
     connecting:()=>setConnection('connecting','Проверка подключения к кластеру…'),
     connectionFailed:()=>{
       if(connection.dataset.state==='connecting') setConnection('error','Ошибка подключения. Подробности доступны в строке состояния RAG.');

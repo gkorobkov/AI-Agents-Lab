@@ -391,7 +391,7 @@
     },
     highlightField(id, options = {}) {
       const field = typeof id === 'string' ? document.getElementById(id) : id;
-      if (!field || (!workspace.contains(field) && !['transport-select-trigger', 'transport-select-menu', 'mode-settings-btn', 'header-transport-select-trigger', 'header-transport-select-menu', 'header-chat-settings-btn', 'header-webhook-url', 'panel-side-btn'].includes(field.id))) return;
+      if (!field || (!workspace.contains(field) && !workspace.contains(field.ownerDocument.defaultView?.frameElement) && !['transport-select-trigger', 'transport-select-menu', 'mode-settings-btn', 'header-transport-select-trigger', 'header-transport-select-menu', 'header-chat-settings-btn', 'header-webhook-url', 'panel-side-btn'].includes(field.id))) return;
       for (let parent = options.reveal === false ? null : field.parentElement; parent && parent !== workspace; parent = parent.parentElement) {
         if (parent.tagName === 'DETAILS') parent.open = true;
       }
@@ -414,7 +414,7 @@
         const style = getComputedStyle(el);
         return [style.color, style.backgroundColor, style.borderTopColor].some(isGreen);
       });
-      const color = theme.getPropertyValue(green ? CFG_HELP_HIGHLIGHT_ALTERNATE_COLOR : CFG_HELP_HIGHLIGHT_COLOR).trim();
+      const color = theme.getPropertyValue(options.error ? '--error' : green ? CFG_HELP_HIGHLIGHT_ALTERNATE_COLOR : CFG_HELP_HIGHLIGHT_COLOR).trim();
       field._helpAnimation = field.animate([
         { outline: '3px solid transparent', outlineOffset: '-3px', boxShadow: 'none', offset: 0 },
         { outline: '3px solid ' + color, outlineOffset: '-3px', boxShadow: 'inset 0 0 12px ' + color, offset: .35 },

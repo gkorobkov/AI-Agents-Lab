@@ -83,7 +83,7 @@
     language: () => 'ru',
     connection: () => {
       const key = embeddingKey();
-      if (providerSelect.value && !key) throw new Error('Укажите API-ключ в настройках OpenAI API.');
+      if (providerSelect.value && !key) throw fieldError('neuraldeep-key', 'Укажите API-ключ в настройках OpenAI API.');
       return {baseUrl:embeddingBaseUrl(), useProxy:embeddingProxy.read(), headers:key ? {Authorization:'Bearer ' + key} : {}};
     },
     timeout: cfg.timeoutMs,
@@ -103,6 +103,38 @@
     settings.neuraldeepUrl = customEmbeddingUrl;
     try { localStorage.setItem('ai_rag_settings', JSON.stringify(settings)); } catch (_) {}
   };
+  const fieldError = (id, message) => Object.assign(new Error(message), { fieldId:id });
+  function clearFieldError(field) {
+    if (!field?.hasAttribute('data-rag-invalid')) return;
+    field._helpAnimation?.cancel();
+    document.getElementById(field.id + '-error')?.remove();
+    field.removeAttribute('data-rag-invalid');
+    field.removeAttribute('aria-invalid');
+    const described = (field.getAttribute('aria-describedby') || '').split(' ').filter(id => id && id !== field.id + '-error');
+    if (described.length) field.setAttribute('aria-describedby', described.join(' '));
+    else field.removeAttribute('aria-describedby');
+  }
+  function showFieldError(error, fallback) {
+    const field = error.fieldId ? $(error.fieldId) : fallback;
+    if (!field || field === document.body) return status(error.message, true);
+    clearFieldError(field);
+    document.documentElement.style.setProperty('--error', parent.getComputedStyle(parent.document.documentElement).getPropertyValue('--error'));
+    window.RagConsole?.revealField(field);
+    for (let ancestor = field.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      if (ancestor.tagName === 'DETAILS') ancestor.open = true;
+    }
+    const message = node('span', error.message); message.id = field.id + '-error';
+    message.className = 'rag-field-error'; message.setAttribute('role', 'alert');
+    (field.closest('label') || field.parentElement).append(message);
+    field.setAttribute('data-rag-invalid', '');
+    field.setAttribute('aria-invalid', 'true');
+    field.setAttribute('aria-describedby', [field.getAttribute('aria-describedby'), message.id].filter(Boolean).join(' '));
+    status('');
+    field.scrollIntoView({block:'center', behavior:'smooth'});
+    parent.appWorkspace?.highlightField(field, { error:true, scroll:false });
+  }
+  document.addEventListener('input', event => clearFieldError(event.target));
+  document.addEventListener('change', event => clearFieldError(event.target));
   function resetRecords() {
     nextOffset = null; $('next').hidden = true;
     $('records').replaceChildren(node('p', 'Документы ещё не загружены.'));
@@ -121,21 +153,21 @@
   refreshEmbeddingProviders(saved.embeddingProfileId);
   function urlValue(id) {
     let url;
-    try { url = new URL($(id).value.trim()); } catch (_) { throw new Error('Укажите корректный URL в поле «' + (id === 'qdrant-url' ? 'REST URL кластера Qdrant' : 'Base URL OpenAI API') + '».'); }
-    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error('URL должен использовать HTTP(S) и не содержать логин, пароль, параметры или якорь.');
-    if (url.hostname === 'cloud.qdrant.io') throw new Error('Укажите REST URL вашего кластера из Qdrant Cloud, а не адрес панели cloud.qdrant.io.');
+    try { url = new URL($(id).value.trim()); } catch (_) { throw fieldError(id, 'Укажите корректный URL в поле «' + (id === 'qdrant-url' ? 'REST URL кластера Qdrant' : 'Base URL OpenAI API') + '».'); }
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw fieldError(id, 'URL должен использовать HTTP(S) и не содержать логин, пароль, параметры или якорь.');
+    if (url.hostname === 'cloud.qdrant.io') throw fieldError(id, 'Укажите REST URL вашего кластера из Qdrant Cloud, а не адрес панели cloud.qdrant.io.');
     return url.href.replace(/\/+$/, '');
   }
   function context(needsCollection = true) {
     const collection = $('collection').value.trim();
     if (needsCollection && !collection) throw new Error('Укажите имя коллекции.');
     const key = $('qdrant-key').value.trim();
-    if (!key) throw new Error('Укажите API key Qdrant.');
+    if (!key) throw fieldError('qdrant-key', 'Укажите API key Qdrant.');
     return { base:urlValue('qdrant-url'), useProxy:qdrantProxy.read(), key, collection, path:'/collections/' + encodeURIComponent(collection) };
   }
   function integer(id, name, max = Number.MAX_SAFE_INTEGER) {
     const n = Number($(id).value);
-    if (!Number.isSafeInteger(n) || n < 1 || n > max) throw new Error(name + ': введите целое число от 1 до ' + max + '.');
+    if (!Number.isSafeInteger(n) || n < 1 || n > max) throw fieldError(id, name + ': введите целое число от 1 до ' + max + '.');
     return n;
   }
   function pointId(generate = false) {
@@ -147,7 +179,7 @@
       return id;
     }
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) return value;
-    throw new Error('Укажите ID: UUID или неотрицательное целое число.');
+    throw fieldError('id', 'Укажите ID: UUID или неотрицательное целое число.');
   }
   async function request(base, path, method, body, headers, useProxy) {
     let response;
@@ -174,15 +206,25 @@
     const info = await qdrant(ctx, '');
     const vectors = info.config?.params?.vectors;
     const name = $('vector-name').value.trim();
-    const definition = name ? vectors?.[name] : vectors;
-    if (!definition || !Number.isInteger(definition.size)) throw new Error('Не найден плотный вектор. Для именованного вектора заполните поле «Имя вектора».');
-    if (definition.multivector_config) throw new Error('Для multivector используйте редактор точки JSON.');
+    const unnamed = Number.isInteger(vectors?.size);
+    const names = unnamed ? [] : Object.keys(vectors || {}).filter(key => Number.isInteger(vectors[key]?.size));
+    const definition = name ? (unnamed ? null : vectors?.[name]) : (unnamed ? vectors : null);
+    if (!definition || !Number.isInteger(definition.size)) {
+      const message = unnamed
+        ? 'В этой коллекции плотный вектор без имени. Очистите поле «Имя вектора».'
+        : names.length
+          ? (name ? 'Вектор «' + name + '» не найден.' : 'В этой коллекции используются именованные векторы.') + ' Укажите в поле «Имя вектора»: ' + names.join(', ') + '.'
+          : 'В коллекции нет плотного вектора для семантического поиска. Создайте коллекцию с плотным вектором или выберите другую коллекцию.';
+      throw fieldError('vector-name', message);
+    }
+    if (definition.multivector_config) throw fieldError('vector-name', 'Для multivector используйте редактор точки JSON.');
     return { name, size:definition.size };
   }
   async function embedTexts(texts, vector, isQuery = false) {
     const key = embeddingKey(), model = $('model').value.trim();
-    if (providerSelect.value && !key) throw new Error('Укажите API-ключ в настройках OpenAI API.');
-    if (!key || !model) throw new Error('Укажите API Key и модель эмбеддингов.');
+    if (providerSelect.value && !key) throw fieldError('neuraldeep-key', 'Укажите API-ключ в настройках OpenAI API.');
+    if (!key) throw fieldError('neuraldeep-key', 'Укажите API Key.');
+    if (!model) throw fieldError('model', 'Укажите модель эмбеддингов.');
     const prefix = $(isQuery ? 'query-prefix' : 'document-prefix').value;
     const data = await request(embeddingBaseUrl(), '/embeddings', 'POST', {model, input:texts.map(text => prefix + text)}, {Authorization:'Bearer ' + key}, embeddingProxy.read());
     if (!Array.isArray(data.data) || data.data.length !== texts.length) throw new Error('NeuralDeep вернул неполный набор эмбеддингов.');
@@ -191,7 +233,7 @@
       if (texts.length > 1 && item.index !== index) throw new Error('NeuralDeep вернул некорректный порядок эмбеддингов.');
       const embedding = item.embedding;
       if (!Array.isArray(embedding) || !embedding.length || !embedding.every(Number.isFinite)) throw new Error('NeuralDeep вернул некорректный эмбеддинг.');
-      if (embedding.length !== vector.size) throw new Error('Размерность эмбеддинга ' + embedding.length + ' не совпадает с размерностью коллекции ' + vector.size + '. Выберите совместимую модель.');
+      if (embedding.length !== vector.size) throw fieldError('model', 'Размерность эмбеддинга ' + embedding.length + ' не совпадает с размерностью коллекции ' + vector.size + '. Выберите совместимую модель.');
       return embedding;
     });
   }
@@ -248,7 +290,7 @@
           }));
         }
       }
-    } catch (error) { throw new Error(error.message + ' Фрагменты не записаны в Qdrant.'); }
+    } catch (error) { error.message += ' Фрагменты не записаны в Qdrant.'; throw error; }
     if (controller.signal.aborted) throw new Error('Время загрузки истекло. Фрагменты не записаны в Qdrant.');
     status('Сохранение в коллекцию «' + ctx.collection + '»: ' + total + ' фрагментов.');
     try { await qdrant(ctx, '/points?wait=true', 'PUT', {points}); }
@@ -300,12 +342,16 @@
   }
   async function run(message, action, timeoutMs = cfg.timeoutMs) {
     if (busy) return;
+    const trigger = document.activeElement;
+    document.querySelectorAll('[data-rag-invalid]').forEach(clearFieldError);
     busy = true; $('workbench').disabled = true; $('workbench').setAttribute('aria-busy', 'true');
     controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    let failure;
     status(message);
-    try { await action(); } catch (error) { status(error.message || 'Не удалось выполнить операцию.', true); }
+    try { await action(); } catch (error) { failure = error; }
     finally { clearTimeout(timeout); busy = false; $('workbench').disabled = false; $('workbench').removeAttribute('aria-busy'); controller = null; }
+    if (failure) showFieldError(failure, trigger);
   }
   const on = (id, message, action) => $(id).addEventListener('click', () => run(message, action));
   $('new').addEventListener('click', () => { clearEditor(); status('Новый документ. При создании пустой ID будет заменён UUID.'); $('text').focus(); });
@@ -337,10 +383,10 @@
   });
   async function write(update) {
     const ctx = context(), id = pointId(!update), text = $('text').value;
-    if (!text.trim()) throw new Error('Введите текст документа.');
+    if (!text.trim()) throw fieldError('text', 'Введите текст документа.');
     let metadata;
-    try { metadata = JSON.parse($('metadata').value); } catch (_) { throw new Error('Метаданные должны содержать корректный JSON-объект.'); }
-    if (!metadata || Array.isArray(metadata) || typeof metadata !== 'object') throw new Error('Метаданные должны быть JSON-объектом.');
+    try { metadata = JSON.parse($('metadata').value); } catch (_) { throw fieldError('metadata', 'Метаданные должны содержать корректный JSON-объект.'); }
+    if (!metadata || Array.isArray(metadata) || typeof metadata !== 'object') throw fieldError('metadata', 'Метаданные должны быть JSON-объектом.');
     if (Object.hasOwn(metadata, cfg.textField)) throw new Error('Поле «' + cfg.textField + '» зарезервировано для текста документа.');
     const existing = await read(ctx, id);
     if (update && !existing) throw new Error('Документ не найден. Для нового ID нажмите «Создать документ».');
@@ -365,7 +411,7 @@
   on('next', 'Загрузка следующей страницы…', async () => { const count = await browse(context(), nextOffset); status('Загружена следующая страница. Документов: ' + count + '.'); });
   on('search', 'Векторизация запроса и поиск…', async () => {
     const ctx = context(), query = $('query').value.trim(), limit = integer('top-k', 'Top K', 100);
-    if (!query) throw new Error('Введите поисковый запрос.');
+    if (!query) throw fieldError('query', 'Введите поисковый запрос.');
     const vector = await collectionVector(ctx), embedding = await embed(query, vector, true);
     const result = await qdrant(ctx, '/points/query', 'POST', {query:embedding, limit, with_payload:true, with_vector:false, ...(vector.name ? {using:vector.name} : {})});
     if (!Array.isArray(result.points)) throw new Error('Qdrant вернул неожиданный результат поиска.');
