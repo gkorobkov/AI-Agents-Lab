@@ -1,6 +1,6 @@
 # AI Agents Lab — Proxy Integration Specification
 
-**Version:** 1.0 · **18 November 2026**
+**Version:** 1.0 · **19 November 2026**
 
 **Target repository:** https://github.com/gkorobkov/AI-Agents-Lab
 
