@@ -29,6 +29,8 @@ Match the existing inline HTML/CSS/JavaScript style in `ui/index.html`: two-spac
 
 ## Help and Documentation UI
 
+- Tooltips and settings popovers must never cover their trigger or the field they describe. Anchor them to the entire field group, including its input, and place them in available space outside that group at desktop and mobile widths.
+
 - In Help explanations, always identify the mode explicitly (for example, «Режим ИИ Агента и вызова LLM определяет…» or «Режим расположения окон определяет…»). Avoid an ambiguous «Режим определяет…».
 - Name the kind of UI element explicitly: page «Чат», field «Base URL», button, mode list, or section. End prose sentences with periods, not semicolons.
 - Reuse each element's header SVG, stroke style, and icon color (`help-element-icon`, normally `--accent2`). Never inherit the muted green text color onto icons. Treat icon and caption as one name: omit quotation marks, or enclose both together.

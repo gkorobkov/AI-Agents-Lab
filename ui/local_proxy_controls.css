@@ -1,7 +1,7 @@
 .proxy-field {
   display: grid;
   grid-template-columns: minmax(5rem, 1fr) auto;
-  align-items: end;
+  align-items: start;
   gap: 6px;
   min-width: 0;
 }
@@ -15,9 +15,20 @@
   margin: 0;
   white-space: nowrap;
 }
-.proxy-option { min-height: 28px; font-size: 11px; }
-.proxy-option input[type="checkbox"] { width: auto; min-height: 0; margin: 0; padding: 0; }
-.proxy-option .proxy-help { margin: 0; }
+.proxy-option {
+  align-self: start; min-height: 28px; margin-top: 24px;
+  color: var(--text-muted, var(--muted)); font-size: 11px;
+}
+.proxy-option input[type="checkbox"] { width: 13px; height: 13px; min-height: 0; margin: 0; padding: 0; accent-color: var(--accent2, var(--cyan)); color-scheme: dark; }
+html[data-theme="light"] .proxy-option input[type="checkbox"] { color-scheme: light; }
+.proxy-option button.proxy-help {
+  flex: 0 0 15px; width: 15px; height: 15px; min-height: 0;
+  margin: 0; padding: 0; color: inherit; background: transparent;
+  border: 1px solid currentColor; border-radius: 50%; font: 10px/1 var(--font-ui, sans-serif);
+}
+.proxy-option button.proxy-help:hover, .proxy-option button.proxy-help:focus-visible {
+  color: var(--accent2, var(--cyan));
+}
 .proxy-dot {
   display: inline-block;
   width: 7px;
@@ -30,7 +41,7 @@
 .proxy-dot[data-state="unreachable"], .proxy-dot[data-state="offline"] { background: #e6a343; }
 .proxy-dot[data-state="blocked"] { background: #bd92ff; }
 .proxy-dot[data-state="invalid"] { background: #f17075; }
-.proxy-popover { width: min(310px, calc(100vw - 42px)); }
+.proxy-popover { width: min(300px, calc(100vw - 46px)); }
 .proxy-popover p { margin: 0 0 6px; }
 .proxy-popover form { display: flex; flex-wrap: wrap; align-items: end; gap: 4px 6px; }
 .proxy-popover label { display: grid; flex: 1 1 135px; min-width: 0; gap: 3px; }

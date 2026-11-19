@@ -5,6 +5,7 @@
 .rag-badge { color:var(--cyan); font:11px var(--mono); border:1px solid var(--border); padding:4px 8px; border-radius:4px; }
 .rag-intro { margin:7px 0 10px; }
 #rag-status { border-left:2px solid var(--cyan); background:var(--tint); padding:7px 10px; font-size:12px; min-height:34px; margin-bottom:12px; overflow-wrap:anywhere; }
+#rag-status:empty { display:none; }
 #rag-workbench { padding:0; border:0; margin:0; min-width:0; }
 .rag-columns { display:grid; grid-template-columns:290px minmax(0,1fr); gap:24px; }
 .rag-columns aside,.rag-workspace { min-width:0; }
@@ -45,7 +46,7 @@
 .rag-layout {max-width:1400px;}
 .rag-console-bar {
   display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-height:34px;
-  margin:8px 0 10px; padding:0 7px; border:1px solid var(--border); border-radius:4px; background:var(--surface);
+  width:min(100%, 800px); box-sizing:border-box; margin:8px 0 10px; padding:0 8px; border:1px solid var(--border); border-radius:4px; background:var(--surface);
 }
 .rag-console-bar:has(#rag-settings-toggle[aria-expanded=true]) {margin-bottom:0;border-radius:4px 4px 0 0;}
 .rag-console-bar .rag-provider-control {display:flex;flex-direction:row;align-items:center;gap:6px;margin:0;font:11px var(--mono);color:var(--muted);}
@@ -65,10 +66,11 @@
 .rag-console-bar #rag-settings-toggle svg {width:15px;height:15px;margin:0;}
 .rag-layout .rag-settings-panel {
   border:1px solid var(--border); border-top:0; border-radius:0 0 4px 4px;
-  padding:8px; margin-bottom:10px; background:var(--surface);
+  width:min(100%, 800px); box-sizing:border-box;
+  padding:10px 8px; margin-bottom:10px; background:var(--surface);
 }
 .rag-settings-fields {display:flex; flex-wrap:wrap; gap:6px 10px; align-items:end; min-width:0;}
-.rag-settings-fields + .rag-settings-fields {margin-top:8px;}
+.rag-settings-fields + .rag-settings-fields {margin-top:10px; padding-top:9px; border-top:1px solid var(--border);}
 .rag-settings-fields h3 {flex-basis:100%; margin:0; color:var(--accent); font:11px/1.4 var(--mono);}
 .rag-settings-fields > label,.rag-settings-fields > .rag-url-setting,
 .rag-settings-fields > .rag-credential-slot,.rag-settings-fields > .rag-model-setting {min-width:0; max-width:100%;}
@@ -81,8 +83,9 @@
 .rag-settings-panel .rag-credential-slot svg {margin:0;}
 .rag-settings-panel label {margin:0; font:11px var(--mono); color:var(--muted); gap:4px;}
 .rag-settings-panel input,.rag-settings-panel select {font:11px var(--mono);background:var(--bg);color:var(--text);}
-.rag-settings-panel input:not([type=checkbox]),.rag-settings-panel select {min-height:28px;}
-.rag-settings-panel button.small,#rag-connect {min-height:28px; padding:3px 6px; font-size:11px;}
+.rag-settings-panel input:not([type=checkbox]),.rag-settings-panel select {min-height:30px;}
+.rag-settings-panel button.small,#rag-connect {min-height:28px; padding:3px 8px; font-size:11px;}
+.rag-settings-panel .proxy-option {margin-top:20px;}
 .rag-settings-panel .rag-pair {display:flex; flex-wrap:wrap; gap:6px 10px;}
 .rag-settings-panel .rag-pair label:first-child {width:7rem;}
 .rag-settings-panel .rag-pair label:last-child {width:10rem;}

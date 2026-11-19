@@ -26,7 +26,7 @@
   <main class="rag-layout">
     <div class="rag-heading"><div><div class="eyebrow">БАЗЫ ЗНАНИЙ</div><h1>RAG <span>/ документы и векторный поиск</span></h1></div><span class="rag-badge">Qdrant × NeuralDeep</span></div>
     <p class="hint rag-intro">Текст → эмбеддинг NeuralDeep → коллекция Qdrant. Хранение и CRUD выполняет Qdrant, векторизацию — NeuralDeep.</p>
-    <div id="rag-status" role="status" aria-live="polite">Укажите адрес кластера и ключи, затем получите список коллекций.</div>
+    <div id="rag-status" role="status" aria-live="polite"></div>
     <fieldset id="rag-workbench">
       <div class="rag-columns">
         <aside>
@@ -34,9 +34,9 @@
             <summary>01 · Подключение и векторизация</summary>
             <label>RAG-система<select id="rag-provider"><option value="qdrant">Qdrant</option></select></label>
             <label>REST URL кластера Qdrant<input id="rag-qdrant-url" type="url" placeholder="https://your-cluster.cloud.qdrant.io:6333" autocomplete="off" spellcheck="false"></label>
-            <label>API key Qdrant<input id="rag-qdrant-key" type="password" class="credential-input ym-disable-keys ym-hide-content" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
-            <label>Base URL OpenAI API<input id="rag-neuraldeep-url" type="url" autocomplete="off" spellcheck="false"></label>
-            <label>API Key<input id="rag-neuraldeep-key" type="password" class="credential-input ym-disable-keys ym-hide-content" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
+            <label>API-ключ Qdrant<input id="rag-qdrant-key" type="password" class="credential-input ym-disable-keys ym-hide-content" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
+            <label>Базовый URL OpenAI API<input id="rag-neuraldeep-url" type="url" autocomplete="off" spellcheck="false"></label>
+            <label>API-ключ<input id="rag-neuraldeep-key" type="password" class="credential-input ym-disable-keys ym-hide-content" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
             <button id="rag-clear-keys" type="button" class="small">Очистить ключи</button>
             <p class="hint">Ключи остаются только в памяти этой страницы. Адреса и параметры сохраняются в этом браузере. Для Qdrant нужен адрес кластера, а не cloud.qdrant.io.</p>
             <label>Модель эмбеддингов<input id="rag-model" spellcheck="false" autocomplete="off"></label>

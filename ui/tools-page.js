@@ -428,7 +428,7 @@
         button.setAttribute('aria-label', tr('Справка: ', 'Help: ') + caption);
         button.dataset.helpPath = 'tools[].function.parameters.' + (property === 'required' ? 'required' : 'properties[' + JSON.stringify(key) + ']' + (property ? '.' + property : ''));
         button.dataset.helpText = tr(...texts);
-        FieldHelp.attach(button); span.append(' ',button);
+        FieldHelp.attach(button, null, input); span.append(' ',button);
         input.setAttribute('aria-label',caption);
         const index = row.children.length;
         const header = $('schema-table').tHead.rows[0].cells[index];
@@ -496,7 +496,7 @@
       let button = caption.querySelector('.api-help');
       if (!button) {
         button = document.createElement('span'); button.className = 'api-help'; button.tabIndex = 0; button.role = 'button'; button.textContent = '?';
-        FieldHelp.attach(button); caption.append(button);
+        FieldHelp.attach(button, null, host.closest('.proxy-field') || host); caption.append(button);
       }
       button.dataset.helpText = tr(...texts).replace(/(?<!LLM )\bmodel(s)?\b/gi, 'LLM model$1');
       const paths = {

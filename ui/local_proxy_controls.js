@@ -95,7 +95,7 @@
     const help = document.createElement('button'); help.type = 'button'; help.className = 'api-help proxy-help'; help.textContent = '?';
     host.append(toggleLabel, dot, help);
     field.before(wrapper); wrapper.append(field, host);
-    FieldHelp.attach(help, renderPopup);
+    FieldHelp.attach(help, renderPopup, wrapper);
     const control = {
       input:toggle,
       refresh() {

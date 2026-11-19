@@ -367,20 +367,33 @@ const CFG_OPENAI_PROVIDERS = [
   #openai-settings .profile-combo { flex: 1 1 auto; min-width: 0; }
   #openai-settings .profile-action { flex: 0 0 auto; }
   #openai-settings .openai-toolbar .api-docs-link { margin: 0; }
+  #openai-settings :is(.openai-credentials, .openai-prompt, .lab-parameters, .client-behavior, .tool-builder, .request-preview, .api-note) {
+    grid-column: 1 / -1;
+    width: min(100%, 800px);
+    justify-self: start;
+  }
   #openai-settings .openai-credentials, #openai-settings .lab-parameters {
-    grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 10px;
+    display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px;
   }
-  .openai-credentials > .api-field { flex: 0 1 218px; width: 100%; margin: 0; }
-  .openai-credentials > .proxy-field { flex: 0 1 364px; width: 100%; }
-  #openai-settings .openai-prompt { grid-column: 1 / -1; width: min(100%, 780px); display: flex; flex-direction: column; margin: 4px 0; }
+  .openai-credentials > .api-field { flex: 0 1 206px; min-width: 0; width: 100%; margin: 0; }
+  .openai-credentials > .proxy-field { flex: 0 1 360px; width: 100%; }
+  #openai-settings .openai-credentials .api-input { height: 30px; }
+  .openai-credentials .api-field > span:first-child {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+    min-height: 20px; margin-bottom: 4px;
+  }
+  #openai-settings .openai-prompt { display: flex; flex-direction: column; margin: 9px 0 7px; }
   #openai-settings .openai-prompt-size { margin-left: auto; padding: 2px 6px; font-size: 9px; }
-  #openai-system-prompt { height: 130px; }
+  #openai-system-prompt { height: 124px; }
   #openai-system-prompt.prompt-expanded { height: min(60dvh, 420px); }
-  #openai-settings .lab-parameters > .api-field { flex: 0 1 140px; width: 100%; }
-  #openai-settings .lab-parameters > .client-behavior { flex: 0 1 780px; }
-  @media (max-width: 400px) {
-    #openai-settings .lab-parameters > .api-field { flex-basis: min(140px, calc(50% - 5px)); }
+  #openai-settings .lab-parameters > .api-field { flex: 0 1 min(132px, calc(50% - 5px)); width: 100%; min-width: 0; }
+  #openai-settings .lab-parameters .parameter-heading {
+    display: grid; grid-template-columns: auto min-content; justify-content: start; gap: 3px 4px;
   }
+  #openai-settings .lab-parameters .parameter-toggle { grid-column: 1 / -1; justify-self: start; }
+  #openai-settings .client-behavior { margin: 5px 0 6px; padding: 6px 0; }
+  #openai-settings .client-behavior-head { justify-content: flex-start; gap: 8px; }
+  #openai-settings .tool-builder { margin-bottom: 5px; }
   .openai-toolbar .panel-collapse, .openai-toolbar .api-pin { flex: 0 0 30px; width: 30px; height: 30px; padding: 0; justify-content: center; }
   .openai-toolbar .api-pin span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .openai-inline-title .api-settings-title { font-size: 13px; }
@@ -2169,11 +2182,11 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
     <label class="api-field"><span data-i18n="openaiTopP">Top p (0–1)</span><input class="api-input" id="openai-top-p" type="number" min="0" max="1" step="0.1" value="1"></label>
     <label class="api-field"><span data-i18n="openaiMaxCompletionTokens">Max completion tokens</span><input class="api-input" id="openai-max-completion-tokens" type="number" min="1" step="1" value="10000"></label>
     <label class="api-field"><span data-i18n="openaiN">Responses · n (1–128)</span><input class="api-input" id="openai-n" type="number" min="1" max="128" step="1" value="1"></label>
-    <section class="client-behavior" aria-labelledby="client-history-label">
+  </div>
+  <section class="client-behavior" aria-labelledby="client-history-label">
       <div class="client-behavior-head"><div class="client-behavior-title"><div><label class="client-behavior-label" id="client-history-label" for="openai-context" data-i18n="openaiContext">Send previous messages to the OpenAI API</label></div></div><label class="switch"><input type="checkbox" id="openai-context" aria-labelledby="client-history-label" checked><span class="slider"></span></label></div>
       <details><summary data-i18n="clientHistoryHow">How it is built</summary><p class="client-behavior-core" data-i18n="clientHistoryCore">Previous messages come from OpenAI turns currently visible in this page’s chat. This browser UI adds them to messages[]; this is not a separate OpenAI API parameter.</p><p data-i18n="clientHistoryDetails">Messages and Debug are saved in this tab’s sessionStorage and restored after reload. Only OpenAI messages from the current profile/conversation are included in API context; Webhook and Stub are excluded. They become user/assistant role-content entries. Clear chat removes the saved transcript; New session starts a new API context. With the toggle off, only the optional system prompt and current user message are sent.</p><code class="history-mapping" data-i18n="clientHistoryMap">Chat UI → messages[] → system (optional), previous OpenAI turns, current user</code></details>
-    </section>
-  </div>
+  </section>
   <details class="tool-builder" id="openai-tool-builder">
     <summary><span class="tool-builder-summary"><span data-i18n="openaiTools">Tools / function calling</span><small data-i18n="openaiToolsHint">Define functions; run HTTP requests or enter results in chat.</small></span><label class="switch" onclick="event.stopPropagation()"><input type="checkbox" id="openai-tools-enabled" data-i18n-aria-label="openaiToolsEnable"><span class="slider"></span></label></summary>
     <div class="tool-builder-body">
@@ -2533,15 +2546,15 @@ const i18n = {
     demoWelcomeDetail:  'Built-in Stub response · safe for UI, debug and suggestion testing',
     openaiSettingsTitle:'OpenAI API settings',
     openaiBaseUrl:      'Base URL',
-    openaiApiKey:       'API key · saved in this browser',
+    openaiApiKey:       'API key',
     openaiShowKey:      'Show key',
     openaiHideKey:      'Hide key',
     openaiModel:        'Model',
     openaiSystem:       'System prompt',
     openaiTemperature:  'Temperature (0–2)',
     openaiTopP:         'Top p (0–1)',
-    openaiMaxCompletionTokens:'Max completion tokens',
-    openaiN:            'Responses · n (1–128)',
+    openaiMaxCompletionTokens:'Completion tokens',
+    openaiN:            'Responses · n',
     openaiTools:        'Tools / function calling',
     openaiToolsHint:    'Define functions; run HTTP requests or enter results in chat.',
     openaiToolsEnable:  'Enable tools',
@@ -2788,15 +2801,15 @@ const i18n = {
     demoWelcomeDetail:  'Встроенный Stub-ответ · безопасная проверка UI, debug и подсказок',
     openaiSettingsTitle:'Настройки OpenAI API',
     openaiBaseUrl:      'Базовый URL',
-    openaiApiKey:       'API-ключ · сохраняется в этом браузере',
+    openaiApiKey:       'API-ключ',
     openaiShowKey:      'Показать ключ',
     openaiHideKey:      'Скрыть ключ',
     openaiModel:        'LLM Модель',
     openaiSystem:       'Системный промпт',
     openaiTemperature:  'Температура (0–2)',
     openaiTopP:         'Top p (0–1)',
-    openaiMaxCompletionTokens:'Максимум completion-токенов',
-    openaiN:            'Варианты ответа · n (1–128)',
+    openaiMaxCompletionTokens:'Токены ответа',
+    openaiN:            'Варианты · n',
     openaiTools:        'Tools / function calling',
     openaiToolsHint:    'Опишите функции; HTTP-запросы и ввод результатов — в чате.',
     openaiToolsEnable:  'Включить tools',
@@ -4186,7 +4199,7 @@ function validateOpenAIDraft() {
   const message = [error, ...new Set(toolMessages)].filter(Boolean).join(' ');
   if (composerError.textContent !== message) composerError.textContent = message;
   composerError.hidden = !message;
-  setAutosaveStatus('openai-autosave-status', error, error ? 'error' : 'saved');
+  setAutosaveStatus('openai-autosave-status', '');
   return !error && !toolError;
 }
 let openAIAutosaveTimer;

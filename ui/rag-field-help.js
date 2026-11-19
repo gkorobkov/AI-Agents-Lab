@@ -30,23 +30,23 @@
     patch: ['Коллекция · PATCH', 'Поле Изменить параметры принимает JSON-объект с поддерживаемыми вашей версией Qdrant изменениями конфигурации. Отправляются только указанные поля.'],
     'snapshot-file': ['Снимок · snapshot', 'Поле Файл .snapshot выбирает резервный снимок для восстановления выбранной коллекции. Восстановление заменяет данные и требует подтверждения имени коллекции.']
   };
-  function attach(host, title, path, text) {
+  function attach(host, title, path, text, anchor) {
     const icon = document.createElement('span'); icon.className = 'api-help'; icon.role = 'button'; icon.tabIndex = 0; icon.textContent = '?';
     icon.setAttribute('aria-label', 'Справка: ' + title); icon.dataset.helpPath = path; icon.dataset.helpText = text;
-    host.append(icon); FieldHelp.attach(icon);
+    host.append(icon); FieldHelp.attach(icon, null, anchor);
   }
   for (const [id, [path, text]] of Object.entries(help)) {
     const input = document.getElementById('rag-' + id), label = input?.closest('label');
     if (!label) continue;
     if (label.classList.contains('sr-only')) {
       const summary = input.closest('details')?.querySelector('summary');
-      if (summary) attach(summary, label.textContent.trim(), path, text);
+      if (summary) attach(summary, label.textContent.trim(), path, text, input);
       continue;
     }
     const nodes = [...label.childNodes].filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
     const caption = document.createElement('span'); caption.className = 'rag-field-caption';
     const title = nodes.map(node => node.textContent.trim()).join(' '); caption.append(document.createTextNode(title));
-    nodes.forEach(node => node.remove()); label.prepend(caption); attach(caption, title, path, text);
+    nodes.forEach(node => node.remove()); label.prepend(caption); attach(caption, title, path, text, label.closest('.proxy-field, .rag-credential-slot') || label);
   }
   const summary = [...document.querySelectorAll('#rag-settings summary')].find(node => node.textContent.trim() === 'Префиксы модели');
   if (summary) attach(summary, 'Префиксы модели', 'Векторизация · подготовка текста', 'Раздел Префиксы модели задаёт служебные строки, добавляемые к текстам перед векторизацией. Префикс документа используется для сохранения документов, префикс запроса — для семантического поиска. Оставьте поля пустыми, если документация вашей модели не требует таких строк.');
