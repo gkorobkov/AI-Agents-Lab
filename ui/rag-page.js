@@ -2,6 +2,8 @@
   'use strict';
   if (window === window.parent) return;
   const cfg = parent.ragDefaults;
+  Object.entries(parent.settingsFontSizes || {}).forEach(([role, size]) =>
+    document.documentElement.style.setProperty('--settings-font-' + role, size + 'px'));
   if (!cfg) return;
   const $ = id => document.getElementById('rag-' + id);
   const node = (tag, text) => { const item = document.createElement(tag); if (text !== undefined) item.textContent = text; return item; };
@@ -235,7 +237,6 @@
   }
   const on = (id, message, action) => $(id).addEventListener('click', () => run(message, action));
   $('new').addEventListener('click', () => { clearEditor(); status('Новый документ. При создании пустой ID будет заменён UUID.'); $('text').focus(); });
-  $('clear-keys').addEventListener('click', () => { $('qdrant-key').value = ''; $('neuraldeep-key').value = ''; window.RagConsole?.clearKeys(); status('Ключи удалены из сессии вкладки.'); });
   on('connect', 'Получение коллекций…', async () => {
     window.RagConsole?.connecting();
     try {

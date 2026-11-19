@@ -162,6 +162,7 @@ body[data-transport] :is(header, #composer-context) .transport-settings-control:
   outline: 2px solid var(--header-control-color);
   outline-offset: 2px;
 }
+#header-transport-toggle.chat-closed { --header-control-color: var(--text-muted); }
 header { flex-wrap: wrap; height: auto; min-height: var(--app-header-height); padding-block: 3px; }
 #header-webhook-controls { position: relative; display: flex; align-items: center; gap: 6px; flex: 1 1 300px; width: calc(62ch + 94px); max-width: 620px; min-width: min(100%, 220px); margin-right: 20px; font: 11px var(--font-mono); }
 #header-webhook-controls > :not(#header-url-input-wrap):not(#webhook-hist-dropdown) { flex-shrink: 0; }

@@ -44,7 +44,7 @@
   const connectionFields=document.querySelector('.rag-connection');
   const provider=$('provider').closest('label');
   provider.classList.add('rag-provider-control');
-  bar.append(provider,connection,settingsToggle);
+  bar.append(provider,connection,settingsToggle,$('qdrant-cloud'));
   const qfields=el('div',undefined,'rag-settings-fields');
   const efields=el('div',undefined,'rag-settings-fields');
   qfields.append(el('h3','Кластер Qdrant'));
@@ -130,10 +130,9 @@
     });
   }
   for(const id of ['qdrant-url','neuraldeep-url'])$(id).addEventListener('input',()=>{$(id==='qdrant-url'?'qdrant-key':'neuraldeep-key').value='';if(id==='qdrant-url')invalidate();});
-  function clearKeys(){for(const id of ['qdrant-key','neuraldeep-key'])try{const slot=secretSlot(id);if(slot)sessionStorage.removeItem(slot);}catch(_){}invalidate();}
-  for(const id of ['clear-keys','delete','clear-files']){const b=$(id);if(!b.querySelector('svg'))b.insertAdjacentHTML('afterbegin',trash);}
+  for(const id of ['delete','clear-files']){const b=$(id);if(!b.querySelector('svg'))b.insertAdjacentHTML('afterbegin',trash);}
   window.RagConsole={
-    connected:connectedTo,refresh,clearKeys,invalidate,
+    connected:connectedTo,refresh,invalidate,
     connecting:()=>setConnection('connecting','Проверка подключения к кластеру…'),
     connectionFailed:()=>{
       if(connection.dataset.state==='connecting') setConnection('error','Ошибка подключения. Подробности доступны в строке состояния RAG.');

@@ -3,9 +3,9 @@
   const tooltip = document.createElement('div'); tooltip.id = 'api-field-tooltip'; tooltip.role = 'tooltip'; tooltip.hidden = true; document.body.append(tooltip);
   const content = new WeakMap();
   const anchors = new WeakMap();
-  let current, hideTimer;
+  let current, hideTimer, pinned = false;
   const cancelHide = () => clearTimeout(hideTimer);
-  const hide = () => { cancelHide(); tooltip.hidden = true; current?.removeAttribute('aria-describedby'); if (current && content.has(current)) current.setAttribute('aria-expanded', 'false'); current = null; };
+  const hide = () => { cancelHide(); tooltip.hidden = true; current?.removeAttribute('aria-describedby'); if (current && content.has(current)) current.setAttribute('aria-expanded', 'false'); current = null; pinned = false; };
   const scheduleHide = () => {
     cancelHide();
     hideTimer = setTimeout(() => {
@@ -17,7 +17,7 @@
   tooltip.addEventListener('pointerleave', scheduleHide);
   tooltip.addEventListener('pointerdown', cancelHide);
   const show = button => {
-    if (current === button && content.has(button)) return;
+    if (current === button && content.has(button)) { cancelHide(); return; }
     hide(); current = button; tooltip.replaceChildren();
     if (button.dataset.helpPath) { const path = document.createElement('div'); path.className = 'help-parameter-path'; path.textContent = button.dataset.helpPath; tooltip.append(path); }
     const render = content.get(button);
@@ -90,10 +90,18 @@
       button.setAttribute('aria-haspopup', 'dialog');
       button.setAttribute('aria-controls', tooltip.id);
       button.setAttribute('aria-expanded', 'false');
+      button.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') show(button); });
+      button.addEventListener('pointerleave', scheduleHide);
       button.addEventListener('click', event => {
         event.preventDefault(); event.stopPropagation();
-        if (current === button) hide();
-        else { show(button); if (!tooltip.hidden) tooltip.querySelector('input, button')?.focus({preventScroll:true}); }
+        if (current === button && pinned) hide();
+        else {
+          show(button);
+          if (!tooltip.hidden) {
+            pinned = true;
+            tooltip.querySelector('input, button')?.focus({preventScroll:true});
+          }
+        }
       });
       return;
     }

@@ -276,6 +276,7 @@
     scrollable.forEach(el => { if (el.clientHeight) scrollPositions.set(el, el.scrollTop); });
     const split = slots.filter(Boolean).length === 2;
     workspace.dataset.split = String(split);
+    document.getElementById('header-transport-toggle').classList.toggle('chat-closed', !slots.includes('chat'));
     workspace.style.setProperty('--workspace-ratio', ratio + '%');
     separator.hidden = !split; separator.setAttribute('aria-valuenow', String(ratio));
     Object.entries(panels).forEach(([id, { panel, frame }]) => {
