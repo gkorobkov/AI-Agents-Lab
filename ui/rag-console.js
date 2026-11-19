@@ -47,19 +47,23 @@
   bar.append(provider,connection,settingsToggle,$('qdrant-cloud'));
   const qfields=el('div',undefined,'rag-settings-fields');
   const efields=el('div',undefined,'rag-settings-fields');
-  qfields.append(el('h3','Кластер Qdrant'));
-  efields.append(el('h3','Векторизация · OpenAI API'));
+  const qdrantRow=el('div',undefined,'settings-field-grid rag-endpoint-row');
+  const embeddingRow=el('div',undefined,'settings-field-grid rag-endpoint-row');
+  qfields.append(el('h3','Кластер Qdrant'),qdrantRow);
+  efields.append(el('h3','Векторизация · OpenAI API'),embeddingRow);
   const qdrantFields=[$('qdrant-url'),$('qdrant-key')];
+  const embeddingFields=[$('neuraldeep-url'),$('neuraldeep-key')];
   for(const node of [...connectionFields.children]) {
     if(node.tagName==='SUMMARY') continue;
     const isQdrant=qdrantFields.some(input=>node.contains(input));
     const input=node.querySelector('input:not([type=checkbox])');
     if(input && ['rag-qdrant-url','rag-neuraldeep-url'].includes(input.id)) node.classList.add('rag-url-setting');
     if(input?.id==='rag-model') node.classList.add('rag-model-setting');
-    (isQdrant?qfields:efields).append(node);
+    const isEmbeddingEndpoint=embeddingFields.some(field=>node.contains(field));
+    (isQdrant ? qdrantRow : isEmbeddingEndpoint ? embeddingRow : efields).append(node);
   }
-  $('connect').textContent='Проверить подключение';
-  qfields.append($('connect'));
+  const checkConnection = $('connect');
+  checkConnection.textContent='Проверить подключение';
   efields.querySelector('p.hint').textContent='Ключи сохраняются в сессии вкладки с привязкой к серверу. Для управления коллекциями ключ векторизации не нужен.';
   settings.append(qfields,efields);
   const tabs=el('nav',undefined,'rag-console-tabs');tabs.setAttribute('aria-label','Разделы кластера');$('workbench').before(tabs);
@@ -121,6 +125,11 @@
     clear.title=id==='qdrant-key'?'Удалить ключ Qdrant':'Удалить ключ векторизации';
     clear.setAttribute('aria-label',clear.title);
     host.append(label,clear);
+    if(id==='qdrant-key') {
+      const actions=el('div',undefined,'rag-key-actions');
+      host.before(actions);
+      actions.append(host,checkConnection);
+    }
     const slot=secretSlot(id);
     try{if(slot)input.value=sessionStorage.getItem(slot)||'';}catch(_){}
     input.addEventListener('input',()=>{

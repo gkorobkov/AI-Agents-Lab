@@ -1,3 +1,11 @@
+.settings-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--settings-field-min)), 1fr));
+  align-items: start;
+  gap: 8px 12px;
+  width: 100%;
+  min-width: 0;
+}
 .proxy-field {
   display: grid;
   grid-template-columns: minmax(5rem, 1fr) auto;
