@@ -10,9 +10,9 @@ const defaultUrl = html.match(/const CFG_LOCAL_PROXY_DEFAULT_URL = '([^']+)'/)[1
 const timeout = Number(html.match(/const CFG_LOCAL_PROXY_HEALTH_TIMEOUT_MS = (\d+)/)[1]);
 const targetHeader = 'X-Proxy-Target-URL';
 
-function environment(fetch, {storage = new Map(), standalone = false, navigator = {onLine:true}} = {}) {
+function environment(fetch, {storage = new Map(), standalone = false, navigator = {onLine:true}, dispatchEvent = () => {}} = {}) {
   const env = {
-    URL, Headers, AbortSignal, fetch, Event, dispatchEvent() {},
+    URL, Headers, AbortSignal, fetch, Event, dispatchEvent,
     navigator, document:{documentElement:{lang:'en'}},
     location:new URL('https://lab.example/ui/'),
     localStorage:{getItem:key => storage.get(key) ?? null, setItem:(key,value) => storage.set(key,value)}
@@ -85,6 +85,38 @@ test('standalone pages read the central default and health checks omit credentia
   assert.equal(result.status, 'connected');
   assert.equal(result.version, '1.0');
   assert.deepEqual(calls, ['index.html', defaultUrl + '/health']);
+});
+
+test('health recognises the universal proxy service running on localhost', async () => {
+  const transport = environment(async () => Response.json({service:'universal-http-proxy',status:'ok',version:'1.0.0'}));
+  const result = await transport.check();
+  assert.equal(result.status, 'connected');
+  assert.equal(result.version, '1.0.0');
+});
+
+test('only a successful proxied response for the current address reports connectivity', async () => {
+  const events = [];
+  let finish;
+  const transport = environment(() => new Promise(resolve => { finish = resolve; }), {
+    dispatchEvent: event => events.push(event.type)
+  });
+
+  const direct = transport.fetch('/api', {});
+  finish(new Response('ok'));
+  await direct;
+  const failed = transport.fetch('/api', {}, true);
+  finish(new Response('', {status:502}));
+  await failed;
+  const stale = transport.fetch('/api', {}, true);
+  transport.setUrl('http://localhost:19091');
+  finish(new Response('ok'));
+  await stale;
+  assert(!events.includes('local-proxy-response'));
+
+  const proxied = transport.fetch('/api', {}, true);
+  finish(new Response('ok'));
+  await proxied;
+  assert.equal(events.at(-1), 'local-proxy-response');
 });
 
 test('health reports confirmed permission denial separately from an ambiguous failure', async () => {

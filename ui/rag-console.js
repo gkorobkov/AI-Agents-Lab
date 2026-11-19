@@ -41,31 +41,44 @@
   settings.id='rag-settings';
   settings.setAttribute('aria-label','Настройки RAG');
   bar.after(settings);
-  const connectionFields=document.querySelector('.rag-connection');
   const provider=$('provider').closest('label');
   provider.classList.add('rag-provider-control');
   bar.append(provider,connection,settingsToggle,$('qdrant-cloud'));
-  const qfields=el('div',undefined,'rag-settings-fields');
-  const efields=el('div',undefined,'rag-settings-fields');
+  const connections=el('div',undefined,'rag-connections');
+  const qfields=el('section',undefined,'rag-settings-fields');
+  const efields=el('section',undefined,'rag-settings-fields');
   const qdrantRow=el('div',undefined,'settings-field-grid rag-endpoint-row');
   const embeddingRow=el('div',undefined,'settings-field-grid rag-endpoint-row');
-  qfields.append(el('h3','Кластер Qdrant'),qdrantRow);
-  efields.append(el('h3','Векторизация · OpenAI API'),embeddingRow);
-  const qdrantFields=[$('qdrant-url'),$('qdrant-key')];
-  const embeddingFields=[$('neuraldeep-url'),$('neuraldeep-key')];
-  for(const node of [...connectionFields.children]) {
-    if(node.tagName==='SUMMARY') continue;
-    const isQdrant=qdrantFields.some(input=>node.contains(input));
-    const input=node.querySelector('input:not([type=checkbox])');
-    if(input && ['rag-qdrant-url','rag-neuraldeep-url'].includes(input.id)) node.classList.add('rag-url-setting');
-    if(input?.id==='rag-model') node.classList.add('rag-model-setting');
-    const isEmbeddingEndpoint=embeddingFields.some(field=>node.contains(field));
-    (isQdrant ? qdrantRow : isEmbeddingEndpoint ? embeddingRow : efields).append(node);
+  const qdrantHeader=el('div',undefined,'rag-connection-header');
+  qdrantHeader.append(el('h3','Кластер Qdrant'));
+  qfields.append(qdrantHeader,qdrantRow);
+  const providerSelect=$('embedding-provider');
+  const providerSettings=button('',()=>parent.appWorkspace?.openSettings('openai', {profile:providerSelect.value, sourceWindow:window}));
+  providerSettings.className='rag-provider-settings';
+  providerSettings.title='Открыть настройки OpenAI API';
+  providerSettings.setAttribute('aria-label',providerSettings.title);
+  providerSettings.innerHTML=settingsToggle.innerHTML;
+  const providerControl=el('div',undefined,'rag-embedding-provider-control');
+  providerControl.append(providerSelect.closest('label'),providerSettings);
+  const embeddingHeader=el('div',undefined,'rag-connection-header');
+  embeddingHeader.append(el('h3','Векторизация · OpenAI API'),providerControl);
+  const embeddingModels=el('div',undefined,'rag-embedding-models');
+  embeddingModels.append($('model').closest('label'),$('embedding-status'));
+  efields.append(embeddingHeader,embeddingRow,embeddingModels);
+  for (const [row, url, key] of [
+    [qdrantRow, 'qdrant-url', 'qdrant-key'],
+    [embeddingRow, 'neuraldeep-url', 'neuraldeep-key']
+  ]) {
+    const urlField = $(url).closest('.proxy-field');
+    urlField.classList.add('rag-url-setting');
+    row.append(urlField, $(key).closest('label'));
   }
   const checkConnection = $('connect');
   checkConnection.textContent='Проверить подключение';
-  efields.querySelector('p.hint').textContent='Ключи сохраняются в сессии вкладки с привязкой к серверу. Для управления коллекциями ключ векторизации не нужен.';
-  settings.append(qfields,efields);
+  qfields.append(checkConnection);
+  connections.append(qfields,efields);
+  settings.append(connections,el('p','Ключ выбранного провайдера берётся из настроек OpenAI API. Ключи Qdrant и Custom сохраняются в сессии вкладки с привязкой к серверу.','hint'));
+  const vectorization=$('vectorization');
   const tabs=el('nav',undefined,'rag-console-tabs');tabs.setAttribute('aria-label','Разделы кластера');$('workbench').before(tabs);
   const inventory=el('section'),aliases=el('section'),collection=el('section');inventory.id='rag-inventory';aliases.id='rag-aliases-panel';collection.id='rag-collection-panel';$('workbench').append(inventory,aliases,collection);
   const toolbar=el('div',undefined,'rag-section-head'),count=el('h2','Коллекции'),filter=el('input');filter.placeholder='Найти коллекцию';filter.setAttribute('aria-label','Поиск коллекции');filter.oninput=renderInventory;
@@ -86,7 +99,7 @@
   const raw=el('details');raw.append(el('summary','Точка JSON / payload · без векторизации'),field('Полная точка: id, vector, payload','raw-point','{}','textarea'));
   raw.append(button('Прочитать точку с вектором',()=>act('Чтение точки…',async()=>{const result=await api.qdrant(api.context(),'/points','POST',{ids:[api.pointId()],with_payload:true,with_vector:true});if(!result[0])throw Error('Точка не найдена.');$('raw-point').value=JSON.stringify(result[0],null,2);})),button('Записать точку JSON',()=>act('Запись точки…',async()=>{const point=object('raw-point');if(point.id===undefined||!point.vector)throw Error('Укажите id и vector.');if(!confirmAction('Записать точку '+point.id+'? Существующая точка с этим ID будет заменена.'))return;await api.qdrant(api.context(),'/points?wait=true','PUT',{points:[point]});api.resetRecords();})),field('Payload · полная замена без изменения вектора','payload-only','{}','textarea'),button('Заменить payload по ID',()=>act('Запись payload…',async()=>{const id=api.pointId(),payload=object('payload-only');if(!confirmAction('Заменить весь payload точки '+id+'? Вектор останется прежним.'))return;await api.qdrant(api.context(),'/points/payload?wait=true','PUT',{points:[id],payload});api.resetRecords();})));
   panels.points.append(raw);
-  $('workbench').replaceChildren(inventory,aliases,collection);old.remove();
+  $('workbench').replaceChildren(vectorization,inventory,aliases,collection);old.remove();
   // Existing handlers retain this field as the selected collection context.
   const hidden=el('div');hidden.hidden=true;hidden.append(aside.querySelector('section'));$('workbench').append(hidden);
   const aliasList=el('div');aliases.append(el('h2','Алиасы коллекций'),el('p','Стабильное имя для коллекции. Переключение алиаса на другую коллекцию выполняется атомарно.','hint'),field('Имя алиаса','alias-name'),field('Целевая коллекция','alias-target','','select'),button('Создать алиас',()=>aliasAction('create')),button('Обновить список',()=>act('Чтение алиасов…',loadAliases)),aliasList);
@@ -97,7 +110,7 @@
   const configData=el('div');panels.config.append(el('h3','Настройки коллекции'),configData,field('Изменить параметры · PATCH JSON','patch','{}','textarea'),el('p','Доступны параметры оптимизатора, HNSW, репликации и другие настройки, поддерживаемые вашей версией Qdrant. Имя коллекции и размерность вектора здесь не меняются.','hint'),button('Применить параметры',()=>act('Обновление параметров…',async()=>{const patch=object('patch');if(!Object.keys(patch).length)throw Error('Укажите параметры изменения.');if(!confirmAction('Применить параметры к коллекции «'+current+'»?'))return;await api.qdrant(api.context(),'','PATCH',patch);await inspect();})),button('Удалить коллекцию',()=>act('Удаление коллекции…',async()=>{if(!typed(current))return;await api.qdrant(api.context(),'','DELETE');current='';await refresh();setView('collections');}),true));
   function act(message,fn){if(!connected)return api.status('Сначала подключитесь к кластеру.',true);return api.run(message,async()=>{cancelled=false;await fn();api.status(cancelled?'Действие отменено.':'Операция выполнена.');});}
   async function binary(ctx,suffix,method='GET',body){const response=await LocalProxyTransport.fetch(ctx.base+ctx.path+suffix,{method,headers:{'api-key':ctx.key},body,credentials:'omit',redirect:'error',referrerPolicy:'no-referrer',signal:api.signal || AbortSignal.timeout(parent.ragDefaults.timeoutMs)},ctx.useProxy);if(!response.ok)throw Error('HTTP '+response.status+': операция со снимком недоступна.');return response;}
-  function setView(v){view=v;inventory.hidden=v!=='collections';aliases.hidden=v!=='aliases';collection.hidden=v!=='collection';[...tabs.children].forEach(b=>b.setAttribute('aria-selected',String(b.dataset.view===v)));remember();}
+  function setView(v){view=v;vectorization.hidden=v==='aliases';inventory.hidden=v!=='collections';aliases.hidden=v!=='aliases';collection.hidden=v!=='collection';[...tabs.children].forEach(b=>b.setAttribute('aria-selected',String(b.dataset.view===v)));remember();}
   function setTab(id){tab=Object.hasOwn(panels,id)?id:'points';Object.entries(panels).forEach(([k,p])=>p.hidden=k!==tab);[...ctabs.children].forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===tab)));remember();if(connected&&current){if(tab==='indexes')renderIndexes();if(tab==='snapshots')act('Чтение снимков…',loadSnapshots);}}
   for(const [id,name]of [['collections','Коллекции'],['aliases','Алиасы']]){const b=button(name,()=>{setView(id);if(id==='aliases')act('Чтение алиасов…',loadAliases);});b.dataset.view=id;b.setAttribute('role','tab');tabs.append(b);}tabs.setAttribute('role','tablist');
   async function inspect(){const info=await api.qdrant(api.context(),'');details.set(current,info);title.textContent=current;stats.replaceChildren();for(const [name,value]of [['Статус',info.status],['Точки',info.points_count],['Сегменты',info.segments_count],['Шарды',info.config?.params?.shard_number]]){const n=el('span');n.append(el('small',name),document.createTextNode(String(value??'—')));stats.append(n);}configData.replaceChildren(json(info));const vectors=info.config?.params?.vectors||{};let list=document.getElementById('rag-vector-options');if(!list){list=el('datalist');list.id='rag-vector-options';$('vector-name').after(list);$('vector-name').setAttribute('list',list.id);}const names=Number.isInteger(vectors.size)?['']:Object.keys(vectors);list.replaceChildren(...names.map(name=>new Option(name,name)));if(!names.includes($('vector-name').value))$('vector-name').value=names[0]||'';}
@@ -120,18 +133,14 @@
       try{const slot=secretSlot(id);if(slot)sessionStorage.removeItem(slot);}catch(_){}
       input.value='';
       if(id==='qdrant-key')invalidate();
+      else input.dispatchEvent(new Event('change', {bubbles:true}));
       api.status('Ключ удалён из сессии.');
     },true);
     clear.title=id==='qdrant-key'?'Удалить ключ Qdrant':'Удалить ключ векторизации';
     clear.setAttribute('aria-label',clear.title);
     host.append(label,clear);
-    if(id==='qdrant-key') {
-      const actions=el('div',undefined,'rag-key-actions');
-      host.before(actions);
-      actions.append(host,checkConnection);
-    }
     const slot=secretSlot(id);
-    try{if(slot)input.value=sessionStorage.getItem(slot)||'';}catch(_){}
+    try{if(slot&&!input.disabled)input.value=sessionStorage.getItem(slot)||'';}catch(_){}
     input.addEventListener('input',()=>{
       const key=secretSlot(id);
       try{if(key&&input.value)sessionStorage.setItem(key,input.value);}catch(_){}
@@ -139,6 +148,10 @@
     });
   }
   for(const id of ['qdrant-url','neuraldeep-url'])$(id).addEventListener('input',()=>{$(id==='qdrant-url'?'qdrant-key':'neuraldeep-key').value='';if(id==='qdrant-url')invalidate();});
+  $('neuraldeep-url').addEventListener('change', () => {
+    const input = $('neuraldeep-key'), slot = secretSlot('neuraldeep-key');
+    try { if (!input.disabled && !input.value && slot) input.value = sessionStorage.getItem(slot) || ''; } catch (_) {}
+  });
   for(const id of ['delete','clear-files']){const b=$(id);if(!b.querySelector('svg'))b.insertAdjacentHTML('afterbegin',trash);}
   window.RagConsole={
     connected:connectedTo,refresh,invalidate,

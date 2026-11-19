@@ -61,7 +61,8 @@
   async function proxyFetch(originalUrl, options, enabled) {
     if (enabled !== true) return fetch(originalUrl, options);
     if (!getUrl()) await ready();
-    const base = baseUrl(getUrl());
+    const proxyUrl = getUrl();
+    const base = baseUrl(proxyUrl);
     const target = new URL(originalUrl, location.href);
     if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password) {
       throw new Error(tr('Некорректный исходный URL.', 'Invalid original URL.'));
@@ -72,7 +73,11 @@
     if (options?.mode === 'no-cors') throw new Error(tr('Для прокси требуется CORS.', 'Proxy mode requires CORS.'));
     headers.set(targetHeader, target.href);
     try {
-      return await fetch(endpoint(base, 'proxy'), { ...options, headers, credentials:'omit', redirect:'error' });
+      const response = await fetch(endpoint(base, 'proxy'), { ...options, headers, credentials:'omit', redirect:'error' });
+      if (response.ok && proxyUrl === getUrl()) {
+        globalThis.dispatchEvent(new Event('local-proxy-response'));
+      }
+      return response;
     } catch (error) {
       if (options?.signal?.aborted) throw error;
       throw new Error(tr('Прокси недоступен или браузер заблокировал запрос. Проверьте прокси и разрешения браузера.', 'The proxy is unavailable or the browser blocked the request. Check the proxy and browser permissions.'), {cause:error});
@@ -97,7 +102,7 @@
       return {status:navigator.onLine === false ? 'offline' : 'unreachable', url};
     }
     const value = response.ok ? await response.json().catch(() => null) : null;
-    if (value?.service !== 'ai-agents-local-proxy' || value.status !== 'ok') return { status:'invalid', url };
+    if (!['universal-http-proxy', 'ai-agents-local-proxy'].includes(value?.service) || value.status !== 'ok') return { status:'invalid', url };
     return { status:'connected', url, version:typeof value.version === 'string' ? value.version : '' };
   }
 

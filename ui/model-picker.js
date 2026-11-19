@@ -18,7 +18,8 @@
     const label = () => { button.title = text('Загрузить список моделей','Load available models'); button.setAttribute('aria-label',button.title); };
     label();
     function close() {
-      controller?.abort(); controller = null; popup.hidden = true;
+      if (controller) { controller.abort(); options.onResult?.(); }
+      controller = null; popup.hidden = true;
       input.setAttribute('aria-expanded','false'); button.setAttribute('aria-expanded','false'); input.removeAttribute('aria-activedescendant');
     }
     function position() {
@@ -54,10 +55,11 @@
       }); position();
     }
     async function open() {
-      if (input.disabled || input.readOnly) return;
+      if (input.matches(':disabled') || input.readOnly) return;
       close(); label(); ids = []; visible = []; active = -1;
       popup.hidden = false; input.setAttribute('aria-expanded','true'); button.setAttribute('aria-expanded','true');
-      status(text('Загрузка моделей…','Loading models…'));
+      const loading = text('Загрузка моделей…','Loading models…');
+      status(loading); options.onResult?.('loading', loading);
       const request = new AbortController(); controller = request;
       const timer = setTimeout(() => request.abort(),options.timeout);
       try {
@@ -77,11 +79,18 @@
         if (!Array.isArray(models)) throw new Error(text('API вернул некорректный список моделей.','The API returned an invalid model list.'));
         ids = [...new Set(models.map(model => typeof model === 'string' ? model : model?.id).filter(id => typeof id === 'string' && id.trim()))].sort((a,b) => a.localeCompare(b));
         render();
+        options.onResult?.('ready', text('Подключено. Моделей: ', 'Connected. Models: ') + ids.length);
       } catch (error) {
         if (controller !== request || popup.hidden) return;
         const message = request.signal.aborted ? text('Время ожидания истекло. Откройте список повторно.','Request timed out. Open the list again.') : error instanceof TypeError ? text('Не удалось загрузить модели. Проверьте сеть, Base URL и CORS сервера.','Could not load models. Check network, Base URL and server CORS.') : error instanceof SyntaxError ? text('API вернул не JSON. Проверьте Base URL.','The API returned non-JSON data. Check Base URL.') : error.message;
-        status(message);
-      } finally { clearTimeout(timer); }
+        if (options.onResult?.('error', message)) {
+          controller = null;
+          close();
+        } else status(message);
+      } finally {
+        clearTimeout(timer);
+        if (controller === request) controller = null;
+      }
     }
     button.addEventListener('focus',label); button.addEventListener('pointerenter',label);
     button.addEventListener('click',event => { event.preventDefault(); popup.hidden ? open() : close(); });
@@ -96,13 +105,18 @@
     });
     document.addEventListener('pointerdown',event => { if (!host.contains(event.target) && !popup.contains(event.target)) close(); });
     document.addEventListener('scroll',position,true); window.addEventListener('resize',position); window.addEventListener('pagehide',close);
-    (options.sources || []).forEach(source => { source.addEventListener('input',close); source.addEventListener('change',close); });
+    const reset = () => { close(); options.onResult?.(); };
+    (options.sources || []).forEach(source => { source.addEventListener('input',reset); source.addEventListener('change',reset); });
     const sync = () => { button.disabled = input.disabled || input.readOnly; if (button.disabled) close(); };
     new MutationObserver(sync).observe(input,{attributes:true,attributeFilter:['disabled','readonly']}); sync();
   }
   window.ModelPicker = {attach};
   const input = document.getElementById('openai-model');
+  const connectionStatus = document.getElementById('openai-model-status');
   if (input) attach(input,{
+    onResult(state, message) {
+      if (connectionStatus) connectionStatus.textContent = connectionStatus.title = state === 'ready' ? message : '';
+    },
     language: () => lang,
     connection: () => { const config = readOpenAIForm(); return {baseUrl:config.baseUrl,headers:openAIRequestHeaders(config),useProxy:config.useProxy}; },
     timeout: CFG_REQUEST_TIMEOUT_MS,

@@ -179,7 +179,7 @@
   <h2 data-t="sharedProxyTitle">Общий прокси</h2>
   <details>
     <summary data-t="sharedProxySummary">Как отправлять запросы через прокси</summary>
-    <p data-t="sharedProxyDetails">Флажок «Через прокси» рядом с полем URL включает прокси только для соответствующего подключения OpenAI API, инструмента или подключения RAG. Кнопка «?» открывает настройки общего адреса. Изменение адреса применяется ко всем включённым подключениям. Прокси получает исходный URL после подстановки параметров, а также данные и ключи запроса.</p>
+    <p data-t="sharedProxyDetails">Флажок «use Proxy» рядом с полем URL включает прокси только для соответствующего подключения OpenAI API, инструмента или подключения RAG. Кнопка «?» открывает настройки общего адреса. Изменение адреса применяется ко всем включённым подключениям. Прокси получает исходный URL после подстановки параметров, а также данные и ключи запроса.</p>
     <p data-t="sharedProxyBrowser">Если браузер спрашивает разрешение на доступ к локальной сети, разрешите доступ для этого сайта. Прокси должен разрешать запросы от сайта через CORS. API продолжает проверять права ключа. При недоступном прокси приложение не повторяет запрос напрямую.</p>
   </details>
 </section>
@@ -200,7 +200,7 @@ Object.assign(tx.en, {
   "connectKeyBefore": "Open",
   "sharedProxyTitle": "Shared proxy",
   "sharedProxySummary": "Send requests through the proxy",
-  "sharedProxyDetails": "The Use Proxy checkbox next to a URL enables the proxy for that OpenAI API connection, HTTP tool or RAG connection. The question mark button opens the shared address settings. Changing the address affects all enabled connections. The proxy receives the original URL after parameter substitution, along with request data and keys.",
+  "sharedProxyDetails": "The use Proxy checkbox next to a URL enables the proxy for that OpenAI API connection, HTTP tool or RAG connection. The question mark button opens the shared address settings. Changing the address affects all enabled connections. The proxy receives the original URL after parameter substitution, along with request data and keys.",
   "sharedProxyBrowser": "Grant local network access for this site if the browser prompts you. The proxy must allow the site through CORS. The API still checks the key's permissions. If the proxy is unavailable, the app does not retry the request directly.",
   "connectKeys": "API keys",
   "connectKeyAfter": ", create an API key and copy it.",

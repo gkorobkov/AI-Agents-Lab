@@ -19,11 +19,79 @@
   const proxyAddressChanged = () => { if (qdrantProxy.read()) window.RagConsole?.invalidate(); };
   window.addEventListener('ai-proxy:url-change', proxyAddressChanged);
   window.addEventListener('storage', event => { if (event.key === LocalProxyTransport.storageKey) proxyAddressChanged(); });
+  const providerSelect = $('embedding-provider');
+  const embeddingUrl = $('neuraldeep-url');
+  const embeddingKeyField = $('neuraldeep-key');
+  const embeddingStatus = $('embedding-status');
+  let customEmbeddingUrl = embeddingUrl.value;
+  function embeddingBaseUrl() {
+    return urlValue('neuraldeep-url').replace(/\/(?:chat\/completions|embeddings|models)$/, '');
+  }
+  function embeddingConnectionStatus(state = '', message = '') {
+    embeddingStatus.dataset.state = state;
+    embeddingStatus.textContent = message;
+  }
+  function embeddingKey() {
+    if (!providerSelect.value) return embeddingKeyField.value.trim();
+    const profile = parent.allOpenAIProfiles().find(item => item.id === providerSelect.value);
+    return profile ? parent.openAIRequestHeaders(profile).Authorization?.slice('Bearer '.length).trim() || '' : '';
+  }
+  function syncEmbeddingKeyDisplay() {
+    embeddingKeyField.placeholder = providerSelect.value && embeddingKey() ? '••••••••' : '';
+  }
+  function updateEmbeddingProvider() {
+    const selected = providerSelect.selectedOptions[0];
+    const url = selected.dataset.baseUrl || customEmbeddingUrl;
+    const managed = Boolean(selected.value);
+    const changed = embeddingUrl.value !== url || embeddingUrl.disabled !== managed;
+    embeddingUrl.disabled = embeddingKeyField.disabled = managed;
+    if (managed) embeddingKeyField.value = '';
+    syncEmbeddingKeyDisplay();
+    if (changed) {
+      embeddingUrl.value = url;
+      embeddingUrl.dispatchEvent(new Event('input', {bubbles:true}));
+      embeddingUrl.dispatchEvent(new Event('change', {bubbles:true}));
+    }
+  }
+  function refreshEmbeddingProviders(selected) {
+    const profiles = parent.allOpenAIProfiles().filter(profile => typeof profile.baseUrl === 'string' && profile.baseUrl.trim());
+    providerSelect.replaceChildren(new Option('Custom', ''), ...profiles.map(profile => {
+      const option = new Option(profile.name, profile.id);
+      option.dataset.baseUrl = profile.baseUrl;
+      return option;
+    }));
+    providerSelect.value = profiles.some(profile => profile.id === selected) ? selected : '';
+    updateEmbeddingProvider();
+  }
+  providerSelect.addEventListener('change', () => { updateEmbeddingProvider(); persist(); });
+  embeddingUrl.addEventListener('input', () => { if (!providerSelect.value) customEmbeddingUrl = embeddingUrl.value; });
+  const embeddingSources = [providerSelect, embeddingUrl, embeddingKeyField, embeddingProxy.input];
+  for (const source of embeddingSources) {
+    source.addEventListener('input', () => embeddingConnectionStatus());
+    source.addEventListener('change', () => embeddingConnectionStatus());
+  }
+  window.addEventListener('ai-proxy:url-change', () => { if (embeddingProxy.read()) embeddingConnectionStatus(); });
+  window.addEventListener('storage', event => {
+    if (event.key === 'ai_openai_profiles') { refreshEmbeddingProviders(providerSelect.value); persist(); }
+    if (event.key === 'ai_openai_key' && providerSelect.value) {
+      syncEmbeddingKeyDisplay();
+      embeddingKeyField.dispatchEvent(new Event('change'));
+    }
+    if (event.key === LocalProxyTransport.storageKey && embeddingProxy.read()) embeddingConnectionStatus();
+  });
   ModelPicker.attach($('model'), {
     language: () => 'ru',
-    connection: () => ({baseUrl: urlValue('neuraldeep-url'), useProxy:embeddingProxy.read(), headers: $('neuraldeep-key').value.trim() ? {Authorization:'Bearer ' + $('neuraldeep-key').value.trim()} : {}}),
+    connection: () => {
+      const key = embeddingKey();
+      if (providerSelect.value && !key) throw new Error('Укажите API-ключ в настройках OpenAI API.');
+      return {baseUrl:embeddingBaseUrl(), useProxy:embeddingProxy.read(), headers:key ? {Authorization:'Bearer ' + key} : {}};
+    },
     timeout: cfg.timeoutMs,
-    sources: [$('neuraldeep-url'), $('neuraldeep-key'), embeddingProxy.input]
+    sources: embeddingSources,
+    onResult(state, message) {
+      embeddingConnectionStatus(state, message);
+      return state === 'error';
+    }
   });
   $('metadata').value = cfg.metadata;
   $('text-field-note').textContent = `Поле «${cfg.textField}» хранит текст документа и не должно повторяться в метаданных. Остальные поля payload сохраняются при загрузке в редактор.`;
@@ -31,6 +99,8 @@
   const persist = () => {
     const settings = {qdrantUseProxy:qdrantProxy.read(), embeddingUseProxy:embeddingProxy.read()};
     Object.entries(fields).forEach(([name, id]) => { settings[name] = typeof cfg[name] === 'number' ? Number($(id).value) : $(id).value; });
+    settings.embeddingProfileId = providerSelect.value;
+    settings.neuraldeepUrl = customEmbeddingUrl;
     try { localStorage.setItem('ai_rag_settings', JSON.stringify(settings)); } catch (_) {}
   };
   function resetRecords() {
@@ -48,6 +118,7 @@
       status('Настройки изменены. Повторите запрос к выбранной коллекции.');
     }
   }));
+  refreshEmbeddingProviders(saved.embeddingProfileId);
   function urlValue(id) {
     let url;
     try { url = new URL($(id).value.trim()); } catch (_) { throw new Error('Укажите корректный URL в поле «' + (id === 'qdrant-url' ? 'REST URL кластера Qdrant' : 'Base URL OpenAI API') + '».'); }
@@ -93,7 +164,7 @@
       const detail = data.status?.error || data.error?.message || (typeof data.error === 'string' ? data.error : 'Проверьте ключ, права и параметры.');
       // A server error can echo a key. Redact keys before showing any response text.
       let message = String(detail);
-      [$('qdrant-key').value.trim(), $('neuraldeep-key').value.trim()].filter(Boolean).forEach(key => { message = message.split(key).join('[ключ скрыт]'); });
+      [$('qdrant-key').value.trim(), embeddingKey()].filter(Boolean).forEach(key => { message = message.split(key).join('[ключ скрыт]'); });
       throw new Error('HTTP ' + response.status + ': ' + message);
     }
     return data.result === undefined ? data : data.result;
@@ -109,10 +180,11 @@
     return { name, size:definition.size };
   }
   async function embedTexts(texts, vector, isQuery = false) {
-    const key = $('neuraldeep-key').value.trim(), model = $('model').value.trim();
+    const key = embeddingKey(), model = $('model').value.trim();
+    if (providerSelect.value && !key) throw new Error('Укажите API-ключ в настройках OpenAI API.');
     if (!key || !model) throw new Error('Укажите API Key и модель эмбеддингов.');
     const prefix = $(isQuery ? 'query-prefix' : 'document-prefix').value;
-    const data = await request(urlValue('neuraldeep-url'), '/embeddings', 'POST', {model, input:texts.map(text => prefix + text)}, {Authorization:'Bearer ' + key}, embeddingProxy.read());
+    const data = await request(embeddingBaseUrl(), '/embeddings', 'POST', {model, input:texts.map(text => prefix + text)}, {Authorization:'Bearer ' + key}, embeddingProxy.read());
     if (!Array.isArray(data.data) || data.data.length !== texts.length) throw new Error('NeuralDeep вернул неполный набор эмбеддингов.');
     const ordered = [...data.data].sort((a, b) => a.index - b.index);
     return ordered.map((item, index) => {

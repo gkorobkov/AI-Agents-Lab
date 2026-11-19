@@ -17,6 +17,10 @@ There is no package manifest or automated browser test suite in this repository.
 
 On a fresh site load, the consent overlay is expected. Accept the agreement yourself before testing the page; never wait for the user to click the consent button. Then verify mouse, keyboard, and touch-oriented interactions as relevant. Preserve consent behavior and its localStorage state unless the requested task explicitly changes it.
 
+## Proxy health contract
+
+Validate `/health` against service `universal-http-proxy` and status `ok`. After an actual relay response, recheck health when the shared proxy indicator is not connected; keep upstream API status separate from proxy availability.
+
 ## Configuration
 
 All configurable settings and defaults must be declared only in the `CONFIGURABLE DEFAULTS` block at the top of `ui/index.html`. Other files consume these settings and must not introduce independent configurable defaults. `CFG_PANEL_LAYOUT_ORDER` defines both the initial window mode (first entry, unless a saved browser preference exists) and the switching order.
@@ -41,5 +45,7 @@ Match the existing inline HTML/CSS/JavaScript style in `ui/index.html`: two-spac
 - Links to sections on the same Help page expand the target section and scroll smoothly to it. Keep Help free of Stub descriptions.
 
 ## Commit & Pull Request Guidelines
+
+Create a Git commit only after the user explicitly approves committing the current changes. Leave changes uncommitted when approval has not been given. A request to implement, fix, or test changes does not authorize a commit.
 
 Recent commits use short imperative summaries such as `add favicon`, `update system prompt`, and focused `Update`/`Refactor` descriptions. Keep each change scoped and describe visible behavior in the commit summary. Do not include generated `.build/` output unless the release workflow requires it.

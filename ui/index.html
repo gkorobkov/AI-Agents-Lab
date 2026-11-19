@@ -393,6 +393,7 @@ const CFG_OPENAI_PROVIDERS = [
   }
   #openai-settings .openai-profile-heading {
     display: flex; align-items: center; min-height: 20px; margin-bottom: 4px;
+    color: color-mix(in srgb, var(--text-muted) 78%, var(--text));
     font-size: var(--settings-font-title);
   }
   #openai-settings :is(.api-field > span:first-child, .parameter-heading, .client-behavior-label) { font-size: var(--settings-font-label); }
@@ -404,6 +405,15 @@ const CFG_OPENAI_PROVIDERS = [
     display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
     min-height: 20px; margin-bottom: 4px;
   }
+  #openai-settings .parameter-heading:has(#openai-model-status) { flex-wrap: nowrap; }
+  #openai-model-status {
+    flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--accent); font: var(--settings-font-note) var(--font-ui);
+  }
+  @container (max-width: 24rem) {
+    #openai-model-status { font-size: max(10px, calc(var(--settings-font-note) - 1px)); letter-spacing: -.025em; }
+  }
+  #openai-model-status:empty { display: none; }
   #openai-settings .openai-prompt { display: flex; flex-direction: column; margin: 9px 0 7px; }
   #openai-settings .openai-prompt-size { margin-left: auto; padding: 2px 6px; font-size: var(--settings-font-control); }
   #openai-system-prompt { height: 124px; }
@@ -417,10 +427,12 @@ const CFG_OPENAI_PROVIDERS = [
   }
   #openai-settings .lab-parameters > .api-field { min-width: 0; }
   #openai-settings .lab-parameters .parameter-heading {
-    display: grid; grid-template-columns: auto min-content; justify-content: start; gap: 3px 5px;
     min-height: 42px; align-content: end;
   }
-  #openai-settings .lab-parameters .parameter-toggle { grid-column: 1 / -1; justify-self: start; }
+  @container (min-width: 70rem) {
+    #openai-settings .lab-parameters .parameter-heading { min-height: 20px; }
+  }
+  #openai-api-key-error { margin: 0 0 0 3px; white-space: nowrap; }
   #openai-settings .client-behavior { margin: 5px 0 6px; padding: 6px 0; }
   #openai-settings .client-behavior-head { justify-content: flex-start; gap: 8px; }
   #openai-settings .tool-builder { margin-bottom: 5px; }
@@ -2191,7 +2203,7 @@ details > summary::-webkit-details-marker { color:var(--accent2); }
   <div class="api-settings-head openai-toolbar">
     <button class="panel-collapse" type="button" onclick="closeOpenAISettings(true)" data-i18n-title="collapsePanel" data-i18n-aria-label="collapsePanel"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 5-5 5 5"/></svg></button>
     <button class="cfg-btn api-pin" id="openai-pin-btn" type="button" onclick="toggleOpenAISettingsPin()" aria-pressed="false" data-i18n-title="openaiPinTitle" title="Pin settings"><svg class="api-pin-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 2 4 4M9.5 2.5l4 4-2.2 1.1-.9 3.2-5.2-5.2 3.2-.9L9.5 2.5Z"/><path d="m6.5 9.5-4 4"/></svg><span id="openai-pin-label" data-i18n="openaiPin">Pin</span></button>
-    <div class="openai-inline-title"><span class="api-settings-title" id="openai-settings-title" data-i18n="openaiSettingsTitle">OpenAI API settings</span><a class="api-docs-link" href="docs.html#openai-api" data-app-beside="settings" data-i18n="openaiDocsLink">OpenAI compatible: description →</a></div>
+    <div class="openai-inline-title"><span class="api-settings-title" id="openai-settings-title" data-i18n="openaiSettingsTitle">OpenAI API settings</span><a class="api-docs-link" href="docs.html#openai-api" data-app-beside="settings" data-i18n="openaiDocsLink">OpenAI compatible: description →</a><a class="api-docs-link" href="docs.html#embeddings" data-app-beside="settings" data-i18n="openaiEmbeddingsDocsLink">Embeddings: description →</a></div>
   </div>
   <div class="openai-credentials">
     <div class="openai-credential-row">
@@ -2487,6 +2499,7 @@ const i18n = {
     toolsCollapseAll: 'Collapse all functions',
     toolsExpandAll: 'Expand all functions',
     openaiDocsLink: 'OpenAI compatible: description →',
+    openaiEmbeddingsDocsLink: 'Embeddings: description →',
     openaiExpandPrompt: 'Expand field',
     openaiCollapsePrompt: 'Collapse field',
     navHelp: 'Help',
@@ -2743,6 +2756,7 @@ const i18n = {
     toolsCollapseAll: 'Свернуть все функции',
     toolsExpandAll: 'Развернуть все функции',
     openaiDocsLink: 'OpenAI compatible: описание →',
+    openaiEmbeddingsDocsLink: 'Векторизация: описание →',
     openaiExpandPrompt: 'Расширить поле',
     openaiCollapsePrompt: 'Свернуть поле',
     navHelp: 'Помощь',
@@ -3340,6 +3354,12 @@ function initOpenAIParameterToggles() {
     button.id = 'openai-default-' + key; button.className = 'parameter-toggle';
     button.innerHTML = '<button type="button" data-mode="default"></button><button type="button" data-mode="custom"></button><span aria-hidden="true">|</span><button type="button" data-remove-custom title="Remove custom data" aria-label="Remove custom data"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg></button>';
     row.appendChild(button);
+    if (key === 'model') {
+      const status = document.createElement('span');
+      status.id = 'openai-model-status';
+      status.setAttribute('role', 'status');
+      row.append(status);
+    }
     field.addEventListener('input', () => {
       const value = readOpenAIParameter(key);
       openAIConfig.parameterOverrides = { ...openAIConfig.parameterOverrides, [key]: { custom: value, mode: value === openAIParameterDefaults()[key] ? 'default' : 'custom' } };
@@ -4198,10 +4218,12 @@ function validateOpenAIDraft() {
   const errors = [];
   const showFieldError = (id, message) => {
     const field = document.getElementById(id);
-    const note = document.createElement('div');
+    const isKey = id === 'openai-api-key';
+    const note = document.createElement(isKey ? 'span' : 'div');
     note.className = 'tool-field-error'; note.id = id + '-error'; note.textContent = message;
     field.setAttribute('aria-invalid', 'true'); field.setAttribute('aria-errormessage', note.id);
-    field.closest('.api-field').append(note);
+    const label = field.closest('.api-field');
+    (isKey ? label.firstElementChild : label).append(note);
     errors.push(message);
   };
   try { const url = new URL(baseUrl); if (!/^https?:$/.test(url.protocol)) throw new Error(); }

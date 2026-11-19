@@ -33,12 +33,20 @@
     status = {status:'checking'}; refresh();
     transport.check(controller.signal).then(result => {
       if (pending !== controller) return;
-      status = result; refresh();
+      if (status.status !== 'connected' || result.status === 'connected') {
+        status = result; refresh();
+      }
     }).catch(() => {
       if (pending !== controller) return;
-      status = {status:'invalid'}; refresh();
+      if (status.status !== 'connected') { status = {status:'invalid'}; refresh(); }
     }).finally(() => { if (pending === controller) pending = null; });
   }
+
+  globalThis.addEventListener('local-proxy-response', () => {
+    if (status.status === 'connected') return;
+    status = {status:'connected', url:transport.getUrl()};
+    refresh();
+  });
 
   function addressChanged() {
     pending?.abort(); pending = null;
@@ -51,8 +59,8 @@
     panel.className = 'proxy-popover ym-hide-content';
     const help = document.createElement('p');
     help.textContent = tr(
-      'Это общий адрес прокси для OpenAI API, Tools и RAG. Изменение адреса применяется ко всем запросам, для которых включён флажок «Через прокси». Прокси получает исходный URL и данные запроса, включая ключи API.',
-      'OpenAI API, Tools and RAG share this proxy address. Changes apply to every request with Use Proxy enabled. The proxy receives the original URL and request data, including API keys.'
+      'Это общий адрес прокси для OpenAI API, Tools и RAG. Изменение адреса применяется ко всем запросам, для которых включён флажок «use Proxy». Прокси получает исходный URL и данные запроса, включая ключи API.',
+      'OpenAI API, Tools and RAG share this proxy address. Changes apply to every request with use Proxy enabled. The proxy receives the original URL and request data, including API keys.'
     );
     const form = document.createElement('form');
     const caption = document.createElement('label');
@@ -99,7 +107,7 @@
     const control = {
       input:toggle,
       refresh() {
-        name.textContent = tr('Через прокси', 'Use Proxy');
+        name.textContent = 'use Proxy';
         help.setAttribute('aria-label', tr('Настройки прокси', 'Proxy settings'));
         const state = toggle.checked ? status.status : 'off';
         dot.dataset.state = state;
