@@ -13,11 +13,11 @@
   try { saved = JSON.parse(sessionStorage.getItem(settingsSlot) || localStorage.getItem('ai_rag_settings') || '{}'); } catch (_) {}
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) saved = {};
   Object.entries(fields).forEach(([name, id]) => { $(id).value = typeof saved[name] === typeof cfg[name] ? saved[name] : cfg[name]; });
-  const qdrantProxy = ProxyControls.mount($('qdrant-url'), {onChange:() => { persist(); window.RagConsole?.invalidate(); }});
+  const qdrantProxy = ProxyControls.mount($('qdrant-url'), {onChange:() => { persist(); window.RagConsole?.transportChanged(); }});
   const embeddingProxy = ProxyControls.mount($('neuraldeep-url'), {onChange:() => persist()});
   qdrantProxy.set(saved.qdrantUseProxy);
   embeddingProxy.set(saved.embeddingUseProxy);
-  const proxyAddressChanged = () => { if (qdrantProxy.read()) window.RagConsole?.invalidate(); };
+  const proxyAddressChanged = () => { if (qdrantProxy.read()) window.RagConsole?.transportChanged(); };
   window.addEventListener('ai-proxy:url-change', proxyAddressChanged);
   window.addEventListener('storage', event => { if (event.key === LocalProxyTransport.storageKey) proxyAddressChanged(); });
   const providerSelect = $('embedding-provider');
@@ -109,7 +109,9 @@
   $('metadata').value = cfg.metadata;
   $('text-field-note').textContent = `Поле «${cfg.textField}» хранит текст документа и не должно повторяться в метаданных. Остальные поля payload сохраняются при загрузке в редактор.`;
   const status = (message, error = false) => {
-    $('status').textContent = message; $('status').classList.toggle('error', error);
+    if (!activeReceipt?.matches('#rag-collections-status, #rag-cluster-status')) {
+      $('status').textContent = message; $('status').classList.toggle('error', error);
+    }
     if (activeReceipt) { activeReceipt.textContent = message; activeReceipt.dataset.state = error ? 'error' : busy ? 'loading' : 'done'; }
     document.dispatchEvent(new CustomEvent('rag:operation', {detail:{phase:error ? 'error' : busy ? 'progress' : 'done', message}}));
   };
@@ -225,6 +227,11 @@
       if (signal?.aborted) throw new Error('Превышено время ожидания запроса. Проверьте доступность сервисов и повторите операцию.');
       if (useProxy) throw error;
       throw new Error('Не удалось связаться с сервисом. Проверьте URL, сеть и CORS: сервер должен разрешать origin ' + location.origin + ', методы запроса и заголовки api-key / Authorization / Content-Type.');
+    }
+    if (path === '/readyz') {
+      if (!response.ok) throw new Error('Кластер не готов. HTTP ' + response.status + '.');
+      await response.text();
+      return true;
     }
     let data;
     try { data = await response.json(); } catch (_) { throw new Error('Сервис вернул не JSON (HTTP ' + response.status + '). Проверьте REST URL.'); }
@@ -385,7 +392,11 @@
     if (busy) return;
     document.querySelectorAll('[data-rag-invalid]').forEach(clearFieldError);
     activeReceipt = null;
-    if (trigger && trigger !== document.body && trigger.closest('#rag-workbench')) {
+    if (trigger?.id === 'rag-connect' || trigger?.id === 'rag-check-cluster') {
+      activeReceipt = $(trigger.id === 'rag-connect' ? 'collections-status' : 'cluster-status');
+      $('status').textContent = '';
+    }
+    if (!activeReceipt && trigger && trigger !== document.body && trigger.closest('#rag-workbench')) {
       const group = trigger.closest('.actions, .rag-search-actions') || trigger.parentElement;
       activeReceipt = group.nextElementSibling?.matches('.rag-operation-result') ? group.nextElementSibling : node('p');
       activeReceipt.className = 'rag-operation-result hint';
@@ -401,7 +412,10 @@
     finally { clearTimeout(timeout); busy = false; $('workbench').disabled = false; $('workbench').removeAttribute('aria-busy'); controller = null; }
     if (failure) {
       if (activeReceipt) { activeReceipt.textContent = failure.message; activeReceipt.dataset.state = 'error'; }
-      showFieldError(failure, trigger);
+      if (activeReceipt?.matches('#rag-collections-status, #rag-cluster-status')) {
+        if (failure.fieldId) showFieldError(failure, trigger);
+        status(failure.message, true);
+      } else showFieldError(failure, trigger);
     } else if (activeReceipt) activeReceipt.dataset.state = 'done';
     document.dispatchEvent(new CustomEvent('rag:operation', {detail:{phase:failure ? 'error' : 'done', message:failure?.message || activeReceipt?.textContent || $('status').textContent}}));
     activeReceipt = null;
@@ -416,7 +430,7 @@
       if (!Array.isArray(result.collections)) throw new Error('Qdrant вернул неожиданный список коллекций.');
       $('collections').replaceChildren(...result.collections.map(item => { const option = node('option'); option.value = item.name; return option; }));
       await window.RagConsole?.connected(ctx, result);
-      status('Подключено. Коллекций: ' + result.collections.length + '.');
+      status('Найдено Коллекций: ' + result.collections.length + '.');
     } catch (error) {
       window.RagConsole?.connectionFailed();
       throw error;
@@ -472,5 +486,14 @@
     renderPoints($('results'), result.points, 'По этому запросу документов не найдено.');
     status('Поиск по всей коллекции «' + ctx.collection + '» завершён. Найдено: ' + result.points.length + '.');
   });
-  window.RagWorkbench = {get signal() { return controller?.signal; }, cancel: () => controller?.abort(), run, context, qdrant, loadPoint, browse, resetRecords, clearEditor, persist, status, pointId};
+  const checkCluster = () => run('Проверка готовности кластера…', async () => {
+    window.RagConsole?.connecting();
+    try {
+      const ctx=context(false);
+      await request(ctx.base, '/readyz', 'GET', undefined, {'api-key':ctx.key}, ctx.useProxy);
+      window.RagConsole?.clusterReady(ctx);
+      status('Сервер готов к запросам.');
+    } catch(error) { window.RagConsole?.connectionFailed(); throw error; }
+  }, cfg.timeoutMs, $('check-cluster'));
+  window.RagWorkbench = {get signal() { return controller?.signal; }, cancel: () => controller?.abort(), run, context, qdrant, loadPoint, browse, resetRecords, clearEditor, persist, status, pointId, checkCluster};
 })();
