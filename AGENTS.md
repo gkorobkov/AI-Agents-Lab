@@ -31,6 +31,15 @@ Keep the site's UI vertically compact. Match navigation and lab bars to the stan
 
 Match the existing inline HTML/CSS/JavaScript style in `ui/index.html`: two-space indentation, compact DOM helpers, CSS custom properties for theme colors, and `CFG_` prefixes for configuration constants. Reuse existing components and variables instead of introducing a framework or external dependency. Keep mobile rules near the existing responsive media queries.
 
+## Shared UI consistency
+
+- Preserve the site's established styles for parameter/value pairs, JSON viewers, panels, tabs, dropdowns, buttons, and help popovers. Reuse existing components, CSS classes, typography, colors, spacing, and interaction patterns before adding a new style. Present the same kind of element consistently across pages; avoid page-specific visual variants without a functional reason.
+- Display metadata (IDs, status, model, counts, timing and similar parameters) as the standard labelled parameter/value pairs. Keep artifact hierarchy explicit: collection operations belong inside their collection, and sibling operations use the same tab style. A document-list tab starts with the list; creation/import actions belong in their own clearly named place.
+
+## JSON presentation
+
+- Always render read-only JSON using the shared site `JsonViewer` component (`ui/json-viewer.js` and its CSS), with the standard syntax colors and expand/collapse behavior. Do not display JSON as uncolored plain text or introduce a separate highlighter. Editable JSON fields may remain text editors; provide the standard colored viewer for previews and results.
+
 ## Help and Documentation UI
 
 - Tooltips and settings popovers must never cover their trigger or the field they describe. Anchor them to the entire field group, including its input, and place them in available space outside that group at desktop and mobile widths.

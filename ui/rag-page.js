@@ -8,8 +8,9 @@
   const $ = id => document.getElementById('rag-' + id);
   const node = (tag, text) => { const item = document.createElement(tag); if (text !== undefined) item.textContent = text; return item; };
   const fields = { provider:'provider', qdrantUrl:'qdrant-url', neuraldeepUrl:'neuraldeep-url', model:'model', dimensions:'dimensions', collection:'collection', vectorName:'vector-name', topK:'top-k', queryPrefix:'query-prefix', documentPrefix:'document-prefix' };
-  let saved = {}, busy = false, nextOffset = null, controller = null;
-  try { saved = JSON.parse(localStorage.getItem('ai_rag_settings') || '{}'); } catch (_) {}
+  let saved = {}, busy = false, nextOffset = null, controller = null, recordsFilter = null, activeReceipt = null;
+  const settingsSlot = 'ai_rag_settings:' + location.hostname;
+  try { saved = JSON.parse(sessionStorage.getItem(settingsSlot) || localStorage.getItem('ai_rag_settings') || '{}'); } catch (_) {}
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) saved = {};
   Object.entries(fields).forEach(([name, id]) => { $(id).value = typeof saved[name] === typeof cfg[name] ? saved[name] : cfg[name]; });
   const qdrantProxy = ProxyControls.mount($('qdrant-url'), {onChange:() => { persist(); window.RagConsole?.invalidate(); }});
@@ -24,6 +25,17 @@
   const embeddingKeyField = $('neuraldeep-key');
   const embeddingStatus = $('embedding-status');
   let customEmbeddingUrl = embeddingUrl.value;
+  const profileFields = ['model','document-prefix','query-prefix'];
+  let profileValues = saved.embeddingProfiles && typeof saved.embeddingProfiles === 'object' ? saved.embeddingProfiles : {};
+  let activeProfile = saved.embeddingProfileId || '';
+  function rememberProfile() {
+    profileValues[activeProfile || 'custom'] = Object.fromEntries(profileFields.map(id => [id,$(id).value]));
+  }
+  function restoreProfile() {
+    const values = profileValues[providerSelect.value || 'custom'];
+    for (const id of profileFields) $(id).value = typeof values?.[id] === 'string' ? values[id] : cfg[id === 'model' ? 'model' : id === 'document-prefix' ? 'documentPrefix' : 'queryPrefix'];
+    activeProfile = providerSelect.value;
+  }
   function embeddingBaseUrl() {
     return urlValue('neuraldeep-url').replace(/\/(?:chat\/completions|embeddings|models)$/, '');
   }
@@ -63,8 +75,9 @@
     providerSelect.value = profiles.some(profile => profile.id === selected) ? selected : '';
     updateEmbeddingProvider();
   }
-  providerSelect.addEventListener('change', () => { updateEmbeddingProvider(); persist(); });
+  providerSelect.addEventListener('change', () => { rememberProfile(); updateEmbeddingProvider(); restoreProfile(); persist(); });
   embeddingUrl.addEventListener('input', () => { if (!providerSelect.value) customEmbeddingUrl = embeddingUrl.value; });
+  for (const id of profileFields) $(id).addEventListener('input', () => persist());
   const embeddingSources = [providerSelect, embeddingUrl, embeddingKeyField, embeddingProxy.input];
   for (const source of embeddingSources) {
     source.addEventListener('input', () => embeddingConnectionStatus());
@@ -95,13 +108,33 @@
   });
   $('metadata').value = cfg.metadata;
   $('text-field-note').textContent = `Поле «${cfg.textField}» хранит текст документа и не должно повторяться в метаданных. Остальные поля payload сохраняются при загрузке в редактор.`;
-  const status = (message, error = false) => { $('status').textContent = message; $('status').classList.toggle('error', error); };
+  const status = (message, error = false) => {
+    $('status').textContent = message; $('status').classList.toggle('error', error);
+    if (activeReceipt) { activeReceipt.textContent = message; activeReceipt.dataset.state = error ? 'error' : busy ? 'loading' : 'done'; }
+    document.dispatchEvent(new CustomEvent('rag:operation', {detail:{phase:error ? 'error' : busy ? 'progress' : 'done', message}}));
+  };
+  function recordsNotice(message) {
+    let notice = $('records-notice');
+    if (!notice) { notice = node('p'); notice.id = 'rag-records-notice'; notice.className = 'hint'; notice.setAttribute('role', 'status'); $('records').before(notice); }
+    notice.textContent = message;
+  }
+  async function refreshAfterMutation(ctx, message, filter) {
+    const warnings = [];
+    try { await browse(ctx, null, filter); } catch (error) { warnings.push('Список документов не обновлён: ' + error.message); }
+    try { await window.RagConsole?.afterMutation(); } catch (error) { warnings.push('Статистика не обновлена: ' + error.message); }
+    const result = message + (warnings.length ? ' Данные уже сохранены. ' + warnings.join(' ') + ' Нажмите «Все документы / обновить»; повторно загружать файл не нужно.' : ' Список документов и статистика обновлены.');
+    recordsNotice(result + (filter ? ' Ниже — документы этой записи. Для всей коллекции нажмите «Все документы / обновить».' : ''));
+    status(result, false);
+    window.RagConsole?.revealDocuments();
+    document.dispatchEvent(new CustomEvent('rag:operation', {detail:{phase:'saved', message:result, collection:ctx.collection}}));
+  }
   const persist = () => {
     const settings = {qdrantUseProxy:qdrantProxy.read(), embeddingUseProxy:embeddingProxy.read()};
     Object.entries(fields).forEach(([name, id]) => { settings[name] = typeof cfg[name] === 'number' ? Number($(id).value) : $(id).value; });
     settings.embeddingProfileId = providerSelect.value;
     settings.neuraldeepUrl = customEmbeddingUrl;
-    try { localStorage.setItem('ai_rag_settings', JSON.stringify(settings)); } catch (_) {}
+    rememberProfile(); settings.embeddingProfiles = profileValues;
+    try { sessionStorage.setItem(settingsSlot, JSON.stringify(settings)); localStorage.removeItem('ai_rag_settings'); } catch (_) {}
   };
   const fieldError = (id, message) => Object.assign(new Error(message), { fieldId:id });
   function clearFieldError(field) {
@@ -136,7 +169,8 @@
   document.addEventListener('input', event => clearFieldError(event.target));
   document.addEventListener('change', event => clearFieldError(event.target));
   function resetRecords() {
-    nextOffset = null; $('next').hidden = true;
+    nextOffset = null; recordsFilter = null; $('next').hidden = true;
+    if ($('records-notice')) $('records-notice').textContent = '';
     $('records').replaceChildren(node('p', 'Документы ещё не загружены.'));
     $('results').replaceChildren(node('p', 'Результаты поиска появятся здесь.'));
   }
@@ -151,6 +185,8 @@
     }
   }));
   refreshEmbeddingProviders(saved.embeddingProfileId);
+  if (profileValues[providerSelect.value || 'custom']) restoreProfile();
+  activeProfile = providerSelect.value;
   function urlValue(id) {
     let url;
     try { url = new URL($(id).value.trim()); } catch (_) { throw fieldError(id, 'Укажите корректный URL в поле «' + (id === 'qdrant-url' ? 'REST URL кластера Qdrant' : 'Base URL OpenAI API') + '».'); }
@@ -181,12 +217,12 @@
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) return value;
     throw fieldError('id', 'Укажите ID: UUID или неотрицательное целое число.');
   }
-  async function request(base, path, method, body, headers, useProxy) {
+  async function request(base, path, method, body, headers, useProxy, signal = controller?.signal) {
     let response;
     try {
-      response = await LocalProxyTransport.fetch(base + path, { method, headers:{ ...headers, ...(body === undefined ? {} : {'Content-Type':'application/json'}) }, body:body === undefined ? undefined : JSON.stringify(body), signal:controller.signal, credentials:'omit', redirect:'error', referrerPolicy:'no-referrer' }, useProxy);
+      response = await LocalProxyTransport.fetch(base + path, { method, headers:{ ...headers, ...(body === undefined ? {} : {'Content-Type':'application/json'}) }, body:body === undefined ? undefined : JSON.stringify(body), signal, credentials:'omit', redirect:'error', referrerPolicy:'no-referrer' }, useProxy);
     } catch (error) {
-      if (controller.signal.aborted) throw new Error('Превышено время ожидания запроса. Проверьте доступность сервисов и повторите операцию.');
+      if (signal?.aborted) throw new Error('Превышено время ожидания запроса. Проверьте доступность сервисов и повторите операцию.');
       if (useProxy) throw error;
       throw new Error('Не удалось связаться с сервисом. Проверьте URL, сеть и CORS: сервер должен разрешать origin ' + location.origin + ', методы запроса и заголовки api-key / Authorization / Content-Type.');
     }
@@ -201,7 +237,7 @@
     }
     return data.result === undefined ? data : data.result;
   }
-  const qdrant = (ctx, suffix, method = 'GET', body) => request(ctx.base, suffix.startsWith('/collections') || suffix === '/aliases' || suffix === '/cluster' ? suffix : ctx.path + suffix, method, body, {'api-key':ctx.key}, ctx.useProxy);
+  const qdrant = (ctx, suffix, method = 'GET', body, signal = controller?.signal) => request(ctx.base, suffix.startsWith('/collections') || suffix === '/aliases' || suffix === '/cluster' ? suffix : ctx.path + suffix, method, body, {'api-key':ctx.key}, ctx.useProxy, signal);
   async function collectionVector(ctx) {
     const info = await qdrant(ctx, '');
     const vectors = info.config?.params?.vectors;
@@ -295,10 +331,10 @@
     status('Сохранение в коллекцию «' + ctx.collection + '»: ' + total + ' фрагментов.');
     try { await qdrant(ctx, '/points?wait=true', 'PUT', {points}); }
     catch (error) { throw new Error(error.message + ' Проверьте коллекцию перед повторной загрузкой. ID импорта: ' + importId + '.'); }
-    resetRecords(); $('files').value = ''; showFiles();
-    status('Загружено файлов: ' + files.length + '. Фрагментов: ' + total + '. ID импорта: ' + importId + '. Обновите список документов.');
+    $('files').value = ''; showFiles();
+    await refreshAfterMutation(ctx, 'Загружено в «' + ctx.collection + '»: файлов ' + files.length + ', фрагментов ' + total + '. ID импорта: ' + importId + '.', {must:[{key:'import_id',match:{value:importId}}]});
   }
-  $('upload').addEventListener('click', () => run('Чтение файлов…', uploadFiles, cfg.fileUploadTimeoutMs));
+  $('upload').addEventListener('click', () => run('Чтение файлов…', uploadFiles, cfg.fileUploadTimeoutMs, $('upload')));
 
   async function read(ctx, id) {
     const points = await qdrant(ctx, '/points', 'POST', {ids:[id], with_payload:true, with_vector:false});
@@ -314,36 +350,48 @@
     $('metadata').value = JSON.stringify(metadata, null, 2);
   }
   function renderPoints(host, points, empty) {
-    host.replaceChildren();
+    host.replaceChildren();host.tabIndex=0;host.setAttribute('role','region');host.setAttribute('aria-label',host===$('records')?'Документы коллекции':'Результаты поиска');
     if (!points.length) { host.append(node('p', empty)); return; }
     points.forEach(point => {
-      const article = node('article'); article.className = 'rag-record';
-      const head = node('div'); head.className = 'rag-section-head';
-      const caption = node('span', 'ID ' + point.id + (typeof point.score === 'number' ? ' · score ' + point.score.toFixed(4) : ''));
-      const load = node('button', 'В редактор'); load.type = 'button'; load.className = 'small';
-      load.addEventListener('click', () => {
-        if (busy) return;
-        loadPoint(point); $('id').scrollIntoView({behavior:'smooth', block:'center'}); $('text').focus({preventScroll:true});
-        status('Документ ' + point.id + ' загружен в редактор.');
+      const article=node('article');article.className='rag-record';
+      const head=node('div');head.className='rag-section-head';
+      const payload=point.payload||{},text=typeof payload[cfg.textField]==='string'?payload[cfg.textField]:'Текстовое поле отсутствует.';
+      const caption=node('span',(payload.source_name||'Документ')+(payload.chunk_index?' · фрагмент '+payload.chunk_index+'/'+payload.chunk_count:'')+(typeof point.score==='number'?' · score '+point.score.toFixed(4):''));
+      const load=node('button','В редактор');load.type='button';load.className='small';
+      load.addEventListener('click',()=>{
+        if(busy)return;
+        loadPoint(point);window.RagConsole?.revealEditor();const editor=document.getElementById('rag-editor-details');if(editor)editor.open=true;
+        $('id').scrollIntoView({behavior:'smooth',block:'center'});$('text').focus({preventScroll:true});status('Документ '+point.id+' загружен в редактор.');
       });
-      head.append(caption, load);
-      const payload = point.payload || {}, details = node('details');
-      details.append(node('summary', 'Payload · JSON'), node('pre', JSON.stringify(payload, null, 2)));
-      article.append(head, node('p', typeof payload[cfg.textField] === 'string' ? payload[cfg.textField] : 'Текстовое поле отсутствует. Полный payload доступен ниже.'), details);
-      host.append(article);
+      head.append(caption,load);
+      const full=node('details');full.className='rag-record-text';
+      full.append(node('summary',text.replace(/\s+/g,' ')),node('p',text));
+      const identity=node('div');identity.className='debug-summary-text';const key=node('span','ID: '),value=node('span',String(point.id));key.className='debug-field-name';value.className='debug-field-value';identity.append(key,value);article.append(identity);
+      const metadata=node('details'),heading=node('summary','Payload JSON'),pre=node('pre');metadata.className='debug-section rag-json-panel';
+      metadata.append(heading,pre);JsonViewer.create({pre,heading}).update(JSON.stringify(payload,null,2));
+      article.append(head,full,metadata);host.append(article);
     });
   }
-  async function browse(ctx, offset) {
-    const result = await qdrant(ctx, '/points/scroll', 'POST', {limit:cfg.pageSize, with_payload:true, with_vector:false, ...(offset === null ? {} : {offset})});
+  async function browse(ctx, offset, filter = offset === null ? null : recordsFilter) {
+    const result = await qdrant(ctx, '/points/scroll', 'POST', {limit:cfg.pageSize, with_payload:true, with_vector:false, ...(filter ? {filter} : {}), ...(offset === null ? {} : {offset})});
     if (!Array.isArray(result.points)) throw new Error('Qdrant вернул неожиданный список документов.');
-    renderPoints($('records'), result.points, 'Коллекция пуста. Создайте первый документ.');
+    renderPoints($('records'), result.points, 'Документов нет. Загрузите текстовый файл или создайте документ.');
+    recordsFilter = filter;
     nextOffset = result.next_page_offset ?? null; $('next').hidden = nextOffset === null;
+    recordsNotice((filter ? 'Показаны документы последней записи. Для всей коллекции нажмите «Все документы / обновить». ' : 'Документы коллекции. ') + 'На странице: ' + result.points.length + (nextOffset === null ? '.' : '. Есть следующая страница.'));
     return result.points.length;
   }
-  async function run(message, action, timeoutMs = cfg.timeoutMs) {
+  async function run(message, action, timeoutMs = cfg.timeoutMs, trigger = document.activeElement) {
     if (busy) return;
-    const trigger = document.activeElement;
     document.querySelectorAll('[data-rag-invalid]').forEach(clearFieldError);
+    activeReceipt = null;
+    if (trigger && trigger !== document.body && trigger.closest('#rag-workbench')) {
+      const group = trigger.closest('.actions, .rag-search-actions') || trigger.parentElement;
+      activeReceipt = group.nextElementSibling?.matches('.rag-operation-result') ? group.nextElementSibling : node('p');
+      activeReceipt.className = 'rag-operation-result hint';
+      activeReceipt.setAttribute('role', 'status'); activeReceipt.setAttribute('aria-live', 'polite');
+      if (!activeReceipt.isConnected) group.after(activeReceipt);
+    }
     busy = true; $('workbench').disabled = true; $('workbench').setAttribute('aria-busy', 'true');
     controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -351,9 +399,15 @@
     status(message);
     try { await action(); } catch (error) { failure = error; }
     finally { clearTimeout(timeout); busy = false; $('workbench').disabled = false; $('workbench').removeAttribute('aria-busy'); controller = null; }
-    if (failure) showFieldError(failure, trigger);
+    if (failure) {
+      if (activeReceipt) { activeReceipt.textContent = failure.message; activeReceipt.dataset.state = 'error'; }
+      showFieldError(failure, trigger);
+    } else if (activeReceipt) activeReceipt.dataset.state = 'done';
+    document.dispatchEvent(new CustomEvent('rag:operation', {detail:{phase:failure ? 'error' : 'done', message:failure?.message || activeReceipt?.textContent || $('status').textContent}}));
+    activeReceipt = null;
+    return !failure;
   }
-  const on = (id, message, action) => $(id).addEventListener('click', () => run(message, action));
+  const on = (id, message, action) => $(id).addEventListener('click', () => run(message, action, cfg.timeoutMs, $(id)));
   $('new').addEventListener('click', () => { clearEditor(); status('Новый документ. При создании пустой ID будет заменён UUID.'); $('text').focus(); });
   on('connect', 'Получение коллекций…', async () => {
     window.RagConsole?.connecting();
@@ -396,7 +450,7 @@
       await qdrant(ctx, '/points/vectors?wait=true', 'PUT', {points:[{id,vector:{[vector.name]:embedding}}]});
       await qdrant(ctx, '/points/payload?wait=true', 'PUT', {points:[id],payload:{...metadata,[cfg.textField]:text}});
     } else await qdrant(ctx, '/points?wait=true', 'PUT', {points:[{id, vector:vector.name ? {[vector.name]:embedding} : embedding, payload:{...metadata, [cfg.textField]:text}}]});
-    resetRecords(); status('Документ ' + id + (update ? ' обновлён.' : ' создан.') + ' Обновите список документов.');
+    await refreshAfterMutation(ctx, 'Документ ' + id + (update ? ' обновлён.' : ' создан.'), {must:[{has_id:[id]}]});
   }
   on('create', 'Векторизация и создание документа…', () => write(false));
   on('update', 'Векторизация и обновление документа…', () => write(true));
@@ -405,7 +459,7 @@
     if (!await read(ctx, id)) throw new Error('Документ с этим ID не найден.');
     if (!confirm('Удалить документ ' + id + ' из коллекции «' + ctx.collection + '»? Действие нельзя отменить.')) { status('Удаление отменено.'); return; }
     await qdrant(ctx, '/points/delete?wait=true', 'POST', {points:[id]});
-    clearEditor(); resetRecords(); status('Документ ' + id + ' удалён из коллекции «' + ctx.collection + '».');
+    clearEditor(); await refreshAfterMutation(ctx, 'Документ ' + id + ' удалён из коллекции «' + ctx.collection + '».', null);
   });
   on('browse', 'Загрузка документов…', async () => { const count = await browse(context(), null); status('Загружено документов: ' + count + '.'); });
   on('next', 'Загрузка следующей страницы…', async () => { const count = await browse(context(), nextOffset); status('Загружена следующая страница. Документов: ' + count + '.'); });
@@ -416,7 +470,7 @@
     const result = await qdrant(ctx, '/points/query', 'POST', {query:embedding, limit, with_payload:true, with_vector:false, ...(vector.name ? {using:vector.name} : {})});
     if (!Array.isArray(result.points)) throw new Error('Qdrant вернул неожиданный результат поиска.');
     renderPoints($('results'), result.points, 'По этому запросу документов не найдено.');
-    status('Поиск завершён. Найдено: ' + result.points.length + '.');
+    status('Поиск по всей коллекции «' + ctx.collection + '» завершён. Найдено: ' + result.points.length + '.');
   });
   window.RagWorkbench = {get signal() { return controller?.signal; }, cancel: () => controller?.abort(), run, context, qdrant, loadPoint, browse, resetRecords, clearEditor, persist, status, pointId};
 })();

@@ -1,3 +1,11 @@
+  .debug-field-name {color:#89b6cb;}
+  .debug-field-value {color:#b8e7b3;font-weight:600;}
+  .debug-summary-text {font:11px/1.7 var(--font-mono,var(--mono));overflow-wrap:anywhere;}
+  .rag-json-panel {border:1px solid var(--border);border-radius:5px;overflow:hidden;margin:6px 0;}
+  .rag-json-panel > summary {display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(0,200,255,.06);color:var(--accent2,var(--cyan));font:11px/1.5 var(--font-mono,var(--mono));}
+  .rag-json-panel > summary::before {content:'▸';}
+  .rag-json-panel[open] > summary::before {content:'▾';}
+  .rag-json-panel pre {margin:0;padding:10px;max-height:320px;overflow:auto;font:11px/1.6 var(--font-mono,var(--mono));}
   .json-key { color: #89b6cb; }
   .json-string { color: #b8e7b3; }
   .json-number { color: #c5af91; }

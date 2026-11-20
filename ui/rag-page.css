@@ -17,6 +17,18 @@
 .rag-layout h2,.rag-connection > summary { color:var(--cyan); font-size:14px; font-weight:600; line-height:1.5; letter-spacing:0; }
 .rag-layout h2 { margin:0 0 8px; }
 .rag-section-head h2 { margin:0; }
+#rag-collection-panel > .rag-collection-head {display:flex;flex-direction:row;align-items:center;flex-wrap:wrap;gap:12px;padding:10px 12px;margin:0;border:1px solid var(--border);background:var(--surface);cursor:pointer;}
+#rag-collection-panel > .rag-collection-head h2 {margin:0;font-size:16px;}
+#rag-collection-panel > .rag-collection-head::before {content:'▸';color:var(--cyan);}
+#rag-collection-panel[open] > .rag-collection-head::before {content:'▾';}
+.rag-collection-head .rag-stat-strip {display:flex;gap:14px;flex-wrap:wrap;margin:0;padding:0;border:0;background:none;font:11px/1.7 var(--mono);}
+.rag-collection-body {padding:10px 0;}
+.rag-tab-control {display:inline-flex;align-items:center;gap:3px;}
+.rag-tab-control>.api-help {margin-right:8px;}
+.rag-settings-tabs {justify-content:flex-start;}
+.rag-collection-table th .api-help {margin-left:5px;}
+.rag-json-panel .debug-view-toggle {margin-left:auto;}
+
 .rag-layout [data-rag-invalid] { border-color:var(--error); outline:1px solid var(--error); }
 .rag-field-error { display:block; flex-basis:100%; margin-top:5px; color:var(--error); font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
 .rag-collection-head { flex-direction:column; align-items:flex-start; gap:8px; }
@@ -49,9 +61,12 @@
 /* Collection console: compact inventory, contextual tools, quiet settings. */
 .rag-layout {max-width:none;}
 .rag-console-bar {
-  display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-height:34px;
-  width:100%; box-sizing:border-box; margin:8px 0 10px; padding:0 8px; border:1px solid var(--border); border-radius:4px; background:var(--surface);
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:50px;
+  width:100%; box-sizing:border-box; margin:0 0 10px; padding:8px 10px; border:1px solid var(--border); border-radius:4px; background:var(--surface);
 }
+.rag-console-bar h1 {flex:1 1 260px;margin:0 10px 0 0;font-size:15px;line-height:1.5;white-space:normal;cursor:text;user-select:text;}
+.rag-console-bar h1 span {display:inline-block;max-width:100%;font:11px/1.5 var(--mono);color:var(--muted);}
+.rag-console-bar > a {flex:0 0 auto;font-size:11px;white-space:nowrap;}
 .rag-console-bar:has(#rag-settings-toggle[aria-expanded=true]) {margin-bottom:0;border-radius:4px 4px 0 0;}
 .rag-console-bar .rag-provider-control {display:flex;flex-direction:row;align-items:center;gap:6px;margin:0;font:11px var(--mono);color:var(--muted);}
 .rag-provider-control select {width:clamp(92px,20vw,132px);min-height:26px;padding:3px 6px;font:11px var(--mono);color:var(--cyan);background:var(--bg);border-color:var(--border);}
@@ -160,4 +175,33 @@
 #rag-tab-points>section:first-child {padding-top:0;}
 #rag-tab-points textarea,#rag-tab-config textarea {min-height:100px;}
 .rag-layout button>svg {margin-right:5px;vertical-align:middle;}
+.rag-collection-table tr[aria-current=true] {background:var(--tint);box-shadow:inset 3px 0 var(--cyan);}
+#rag-workbench>#rag-collection-panel {margin-top:12px;border-left:2px solid var(--cyan);padding-left:12px;}
+.rag-collection-head h2::before {content:'Коллекция · ';font-weight:400;font-size:12px;color:var(--muted);}
+.rag-search-scope {overflow-wrap:anywhere;}
+.rag-operation-settings {padding:8px 10px;border:1px solid var(--border);background:var(--surface);margin:8px 0;}
+.rag-operation-settings>summary {font-size:12px;color:var(--cyan);}
+.rag-effective-settings {display:flex;flex-wrap:wrap;gap:6px 18px;padding-top:7px;font:11px var(--mono);}
+.rag-effective-settings>span {min-width:0;overflow-wrap:anywhere;}
+.rag-effective-settings small {color:var(--muted);font:inherit;}
+.rag-records {overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;min-height:120px;border:1px solid var(--border);}
+.rag-records:focus-visible {outline:1px solid var(--cyan);}
+.rag-records .rag-record {padding:8px 10px;margin:0;border:0;border-bottom:1px solid var(--border);}
+.rag-records .rag-record .rag-section-head {gap:8px;font-size:11px;}
+.rag-record-text {border:0;margin:5px 0;}
+.rag-record-text>summary {display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;font-size:12px;color:var(--text);padding:0;}
+.rag-record-text>summary::before {content:'▸ ';color:var(--cyan);}
+.rag-record-text[open]>summary {-webkit-line-clamp:unset;color:var(--cyan);}
+.rag-record-text[open]>summary::before {content:'▾ ';}
+.rag-record-text>p {white-space:pre-wrap;font-size:12px;line-height:1.5;margin:6px 0;overflow-wrap:anywhere;}
+.rag-record>details:not(.rag-record-text)>summary {font-size:10px;color:var(--muted);overflow-wrap:anywhere;}
+.rag-record pre {max-height:240px;overflow:auto;}
+#rag-inventory .rag-table-scroll {max-height:180px;overflow:auto;}
+#rag-inventory {padding-block:10px;}
+.rag-layout .rag-operation-receipt,.rag-operation-result {margin:8px 0;padding:8px 10px;border-left:2px solid var(--cyan);background:var(--surface);font-size:12px;line-height:1.5;overflow-wrap:anywhere;}
+.rag-operation-result[data-state=loading] {color:var(--muted);}
+.rag-operation-result[data-state=error] {color:var(--error);border-left-color:var(--error);}
+.rag-operation-result[data-state=done] {color:var(--accent);border-left-color:var(--accent);}
+@media(max-width:640px){.rag-console-bar{gap:6px;padding:8px}.rag-console-bar h1{margin-right:4px;font-size:14px}.rag-console-bar h1{flex-basis:100%}.rag-console-bar h1 span{display:inline-block}.rag-console-bar .rag-provider-control{font-size:0;gap:0}.rag-console-bar .rag-provider-control .api-help{display:none}.rag-provider-control select{width:82px;min-width:0}.rag-console-bar > a{font-size:10px}.rag-console-bar button.rag-connection-state,.rag-console-bar #rag-settings-toggle{min-width:24px;width:24px;flex:0 0 24px}.rag-effective-settings{display:grid;gap:5px}.rag-operation-settings{padding:7px}.rag-records .rag-record{padding:7px}.rag-records .rag-record .rag-section-head>span{flex-basis:100%}}
+
 @media(max-width:640px){.rag-stat-strip{gap:16px}.rag-console-tabs button{font-size:11px;padding:4px 7px}.rag-entity-row>span{flex-basis:100%}.rag-empty{padding:20px 12px}}
