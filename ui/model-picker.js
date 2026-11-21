@@ -1,6 +1,7 @@
 // Editable OpenAI-compatible model selector. Fetch only on explicit opening.
 (() => {
   let sequence = 0;
+  const instances = new WeakMap();
   function attach(input, options) {
     if (input.closest('.model-picker')) return;
     const ru = () => options.language() === 'ru';
@@ -109,8 +110,9 @@
     (options.sources || []).forEach(source => { source.addEventListener('input',reset); source.addEventListener('change',reset); });
     const sync = () => { button.disabled = input.disabled || input.readOnly; if (button.disabled) close(); };
     new MutationObserver(sync).observe(input,{attributes:true,attributeFilter:['disabled','readonly']}); sync();
+    instances.set(input,{open,close});
   }
-  window.ModelPicker = {attach};
+  window.ModelPicker = {attach,open:input=>instances.get(input)?.open()};
   const input = document.getElementById('openai-model');
   const connectionStatus = document.getElementById('openai-model-status');
   if (input) attach(input,{

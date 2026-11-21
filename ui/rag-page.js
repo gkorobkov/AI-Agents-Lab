@@ -110,7 +110,7 @@
   $('text-field-note').textContent = `Поле «${cfg.textField}» хранит текст документа и не должно повторяться в метаданных. Остальные поля payload сохраняются при загрузке в редактор.`;
   const status = (message, error = false) => {
     if (!activeReceipt?.matches('#rag-collections-status, #rag-cluster-status')) {
-      $('status').textContent = message; $('status').classList.toggle('error', error);
+      $('status').textContent = message; $('status').title = message; $('status').classList.toggle('error', error);
     }
     if (activeReceipt) { activeReceipt.textContent = message; activeReceipt.dataset.state = error ? 'error' : busy ? 'loading' : 'done'; }
     document.dispatchEvent(new CustomEvent('rag:operation', {detail:{phase:error ? 'error' : busy ? 'progress' : 'done', message}}));
@@ -200,7 +200,6 @@
     const collection = $('collection').value.trim();
     if (needsCollection && !collection) throw new Error('Укажите имя коллекции.');
     const key = $('qdrant-key').value.trim();
-    if (!key) throw fieldError('qdrant-key', 'Укажите API key Qdrant.');
     return { base:urlValue('qdrant-url'), useProxy:qdrantProxy.read(), key, collection, path:'/collections/' + encodeURIComponent(collection) };
   }
   function integer(id, name, max = Number.MAX_SAFE_INTEGER) {
@@ -222,11 +221,13 @@
   async function request(base, path, method, body, headers, useProxy, signal = controller?.signal) {
     let response;
     try {
-      response = await LocalProxyTransport.fetch(base + path, { method, headers:{ ...headers, ...(body === undefined ? {} : {'Content-Type':'application/json'}) }, body:body === undefined ? undefined : JSON.stringify(body), signal, credentials:'omit', redirect:'error', referrerPolicy:'no-referrer' }, useProxy);
+      const requestHeaders = Object.fromEntries(Object.entries(headers).filter(([name, value]) => name !== 'api-key' || value));
+      response = await LocalProxyTransport.fetch(base + path, { method, headers:{ ...requestHeaders, ...(body === undefined ? {} : {'Content-Type':'application/json'}) }, body:body === undefined ? undefined : JSON.stringify(body), signal, credentials:'omit', redirect:'error', referrerPolicy:'no-referrer' }, useProxy);
     } catch (error) {
       if (signal?.aborted) throw new Error('Превышено время ожидания запроса. Проверьте доступность сервисов и повторите операцию.');
       if (useProxy) throw error;
-      throw new Error('Не удалось связаться с сервисом. Проверьте URL, сеть и CORS: сервер должен разрешать origin ' + location.origin + ', методы запроса и заголовки api-key / Authorization / Content-Type.');
+      const proxy = Object.prototype.hasOwnProperty.call(headers, 'api-key') ? qdrantProxy : embeddingProxy;
+      throw Object.assign(new Error('Не удалось связаться с сервисом. Возможна блокировка CORS. Включите «use Proxy» в настройках соответствующего сервиса и повторите запрос. Также проверьте URL и сеть.'), {proxyInput:proxy.input});
     }
     if (path === '/readyz') {
       if (!response.ok) throw new Error('Кластер не готов. HTTP ' + response.status + '.');
@@ -395,6 +396,7 @@
     if (trigger?.id === 'rag-connect' || trigger?.id === 'rag-check-cluster') {
       activeReceipt = $(trigger.id === 'rag-connect' ? 'collections-status' : 'cluster-status');
       $('status').textContent = '';
+      $('status').title = '';
     }
     if (!activeReceipt && trigger && trigger !== document.body && trigger.closest('#rag-workbench')) {
       const group = trigger.closest('.actions, .rag-search-actions') || trigger.parentElement;
@@ -405,17 +407,23 @@
     }
     busy = true; $('workbench').disabled = true; $('workbench').setAttribute('aria-busy', 'true');
     controller = new AbortController();
+    const generation=window.RagConsole?.epoch;
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     let failure;
     status(message);
     try { await action(); } catch (error) { failure = error; }
     finally { clearTimeout(timeout); busy = false; $('workbench').disabled = false; $('workbench').removeAttribute('aria-busy'); controller = null; }
+    if(generation!==window.RagConsole?.epoch){activeReceipt=null;return false;}
     if (failure) {
       if (activeReceipt) { activeReceipt.textContent = failure.message; activeReceipt.dataset.state = 'error'; }
       if (activeReceipt?.matches('#rag-collections-status, #rag-cluster-status')) {
         if (failure.fieldId) showFieldError(failure, trigger);
         status(failure.message, true);
       } else showFieldError(failure, trigger);
+      if (failure.proxyInput && !failure.proxyInput.checked) {
+        window.RagConsole?.revealField(failure.proxyInput);
+        parent.appWorkspace?.highlightField(failure.proxyInput.closest('label'), {focus:false});
+      }
     } else if (activeReceipt) activeReceipt.dataset.state = 'done';
     document.dispatchEvent(new CustomEvent('rag:operation', {detail:{phase:failure ? 'error' : 'done', message:failure?.message || activeReceipt?.textContent || $('status').textContent}}));
     activeReceipt = null;
@@ -423,19 +431,24 @@
   }
   const on = (id, message, action) => $(id).addEventListener('click', () => run(message, action, cfg.timeoutMs, $(id)));
   $('new').addEventListener('click', () => { clearEditor(); status('Новый документ. При создании пустой ID будет заменён UUID.'); $('text').focus(); });
-  on('connect', 'Получение коллекций…', async () => {
+  const fetchCollections = (trigger=$('connect')) => run('Получение коллекций…', async () => {
+    const generation=window.RagConsole?.epoch,signal=controller.signal;
     window.RagConsole?.connecting();
     try {
-      const ctx = context(false), result = await qdrant(ctx, '/collections');
+      const ctx = context(false), result = await qdrant(ctx, '/collections','GET',undefined,signal);
+      if(generation!==window.RagConsole?.epoch)return;
       if (!Array.isArray(result.collections)) throw new Error('Qdrant вернул неожиданный список коллекций.');
       $('collections').replaceChildren(...result.collections.map(item => { const option = node('option'); option.value = item.name; return option; }));
       await window.RagConsole?.connected(ctx, result);
+      if(generation!==window.RagConsole?.epoch)return;
       status('Найдено Коллекций: ' + result.collections.length + '.');
     } catch (error) {
+      if(generation!==window.RagConsole?.epoch)return;
       window.RagConsole?.connectionFailed();
       throw error;
     }
-  });
+  }, cfg.timeoutMs, trigger);
+  $('connect').addEventListener('click',()=>fetchCollections());
   on('create-collection', 'Создание коллекции…', async () => {
     const ctx = context(), size = integer('dimensions', 'Размерность'), name = $('vector-name').value.trim();
     const distance = document.getElementById('rag-distance')?.value || cfg.distance;
@@ -487,13 +500,15 @@
     status('Поиск по всей коллекции «' + ctx.collection + '» завершён. Найдено: ' + result.points.length + '.');
   });
   const checkCluster = () => run('Проверка готовности кластера…', async () => {
+    const generation=window.RagConsole?.epoch,signal=controller.signal;
     window.RagConsole?.connecting();
     try {
       const ctx=context(false);
-      await request(ctx.base, '/readyz', 'GET', undefined, {'api-key':ctx.key}, ctx.useProxy);
+      await request(ctx.base, '/readyz', 'GET', undefined, {'api-key':ctx.key}, ctx.useProxy,signal);
+      if(generation!==window.RagConsole?.epoch)return;
       window.RagConsole?.clusterReady(ctx);
       status('Сервер готов к запросам.');
-    } catch(error) { window.RagConsole?.connectionFailed(); throw error; }
+    } catch(error) { if(generation!==window.RagConsole?.epoch)return;window.RagConsole?.connectionFailed(); throw error; }
   }, cfg.timeoutMs, $('check-cluster'));
-  window.RagWorkbench = {get signal() { return controller?.signal; }, cancel: () => controller?.abort(), run, context, qdrant, loadPoint, browse, resetRecords, clearEditor, persist, status, pointId, checkCluster};
+  window.RagWorkbench = {get signal() { return controller?.signal; }, cancel: () => controller?.abort(), run, context, qdrant, loadPoint, browse, resetRecords, clearEditor, persist, status, pointId, checkCluster, fetchCollections, qdrantProxy};
 })();

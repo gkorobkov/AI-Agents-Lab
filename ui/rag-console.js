@@ -57,9 +57,11 @@
   settings.id='rag-settings';
   settings.setAttribute('aria-label','Настройки RAG');
   bar.after(settings);
+  const settingsGroup=el('div',undefined,'rag-settings-group');bar.before(settingsGroup);settingsGroup.append(bar,settings);
   const provider=$('provider').closest('label');
+  provider.append($('qdrant-cloud'));
   provider.classList.add('rag-provider-control');
-  bar.append(headingTitle,provider,connection,settingsToggle,$('qdrant-cloud'));heading.remove();
+  bar.append(headingTitle,$('status'),connection,settingsToggle);heading.remove();
   bar.addEventListener('click',event=>{if(!event.target.closest('button,a,label,input,select,.api-help')&&getSelection().isCollapsed)setSettings(settings.hidden);});
   const connections=el('div',undefined,'rag-connections');
   const qfields=el('section',undefined,'rag-settings-fields');
@@ -67,21 +69,25 @@
   const qdrantRow=el('div',undefined,'settings-field-grid rag-endpoint-row');
   const embeddingRow=el('div',undefined,'settings-field-grid rag-endpoint-row');
   const qdrantHeader=el('div',undefined,'rag-connection-header');
-  qdrantHeader.append(el('h3','Кластер Qdrant'));
-  qfields.append(qdrantHeader,qdrantRow);
+  qdrantHeader.append(provider);provider.classList.add('connection-provider');
+  qfields.classList.add('connection-panel');qdrantRow.classList.add('connection-fields');qfields.append(qdrantHeader,qdrantRow);
   const providerSelect=$('embedding-provider');
   const providerSettings=button('',()=>parent.appWorkspace?.openSettings('openai', {profile:providerSelect.value, sourceWindow:window}));
   providerSettings.className='rag-provider-settings';
   providerSettings.title='Открыть настройки OpenAI API';
   providerSettings.setAttribute('aria-label',providerSettings.title);
   providerSettings.innerHTML=settingsToggle.innerHTML;
-  const providerControl=el('div',undefined,'rag-embedding-provider-control');
-  providerControl.append(providerSelect.closest('label'),providerSettings);
+  const providerControl=el('div',undefined,'rag-embedding-provider-control connection-provider connection-profile-row');
+  const embeddingProviderLabel=providerSelect.closest('label');
+  embeddingProviderLabel.querySelector('span').classList.add('sr-only');
+  providerControl.append(embeddingProviderLabel,providerSettings);
+  helpControl(providerControl,'Профиль векторизации','Список профилей векторизации выбирается независимо от RAG-системы. Сохранённые профили управляются в настройках OpenAI API; для собственного подключения выберите Custom.');
   const embeddingHeader=el('div',undefined,'rag-connection-header');
-  embeddingHeader.append(el('h3','Векторизация · OpenAI API'),providerControl);
+  embeddingHeader.append(el('h3','Векторизация · OpenAI API'));
+  const embeddingDocs=el('a','Описание →');embeddingDocs.href='docs.html#embeddings';embeddingDocs.target='_blank';embeddingDocs.rel='noopener';embeddingHeader.append(embeddingDocs);
   const embeddingModels=el('div',undefined,'rag-embedding-models');
   embeddingModels.append($('model').closest('label'),$('embedding-status'));
-  efields.append(embeddingHeader,embeddingRow,embeddingModels);
+  efields.classList.add('connection-panel');embeddingRow.classList.add('connection-fields');efields.append(embeddingHeader,providerControl,embeddingRow,embeddingModels);
   for (const [row, url, key] of [
     [qdrantRow, 'qdrant-url', 'qdrant-key'],
     [embeddingRow, 'neuraldeep-url', 'neuraldeep-key']
@@ -90,15 +96,29 @@
     urlField.classList.add('rag-url-setting');
     row.append(urlField, $(key).closest('label'));
   }
+  const collectionChoice=$('collection').closest('label');collectionChoice.classList.add('rag-collection-choice');qfields.append(collectionChoice);
   const checkConnection = $('connect');
   checkConnection.textContent='Получить коллекции';
-  const clusterCheck=button('Проверить кластер',()=>api.checkCluster());
+  const clusterCheck=button('Подключиться',()=>api.fetchCollections($('check-cluster')));
   clusterCheck.id='rag-check-cluster';
   const clusterStatus=el('span',undefined,'hint');clusterStatus.id='rag-cluster-status';clusterStatus.setAttribute('role','status');
   const clusterActions=el('div',undefined,'rag-cluster-actions');clusterActions.append(clusterCheck,clusterStatus);qfields.append(clusterActions);
-  helpControl(clusterActions,'Проверка кластера','Кнопка Проверить кластер запрашивает /readyz без получения коллекций. Готовность сервера не подтверждает права API-ключа на коллекции.');
-  connections.append(qfields,efields);
-  settings.append(connections,el('p','Ключ выбранного профиля берётся из настроек OpenAI API. В сессии этой вкладки ключ Qdrant привязан к имени сервера из поля «REST URL кластера Qdrant», а ключ Custom — к имени сервера из поля «Base URL» сервиса эмбеддингов. Порты этих API-серверов не учитываются.','hint'));
+  helpControl(clusterActions,'Подключение к кластеру','Кнопка Подключиться получает список коллекций выбранного RAG-профиля.');
+  const qshell=el('div',undefined,'connection-card-shell'),eshell=el('div',undefined,'connection-card-shell');qshell.append(qfields);eshell.append(efields);connections.append(qshell,eshell);
+  settings.append(connections);
+  const ragProfileSelect=el('select');ragProfileSelect.id='rag-connection-profile';provider.append(ragProfileSelect);$('provider').hidden=true;
+  CompactSelect.attach(ragProfileSelect, {label:'RAG-система'});
+  CompactSelect.attach(providerSelect, {label:'Профиль векторизации OpenAI API'});
+  const qdrantList=el('div',undefined,'connection-list');
+  const qdrantResource=el('div',undefined,'connection-resource');qdrantResource.append(clusterCheck,collectionChoice);qdrantList.append(qdrantResource,clusterStatus);
+  qdrantHeader.classList.add('connection-provider');
+  const qurl=$('qdrant-url').closest('.proxy-field'),qkey=$('qdrant-key').closest('label');
+  qdrantRow.replaceChildren(qdrantHeader,qurl,qkey,qdrantList);qfields.replaceChildren(qdrantRow);
+  const embeddingProvider=el('div',undefined,'connection-provider');embeddingProvider.append(embeddingHeader,providerControl);
+  const eurl=$('neuraldeep-url').closest('.proxy-field'),ekey=$('neuraldeep-key').closest('label');
+  const embeddingResource=el('div',undefined,'connection-resource'),embeddingConnect=button('Подключиться',()=>ModelPicker.open($('model')));
+  embeddingConnect.id='rag-embedding-connect';embeddingResource.append(embeddingConnect,$('model').closest('label'));embeddingModels.replaceChildren(embeddingResource,$('embedding-status'));embeddingModels.classList.add('connection-list');
+  embeddingRow.replaceChildren(embeddingProvider,eurl,ekey,embeddingModels);efields.replaceChildren(embeddingRow);
   const vectorization=$('vectorization');
   const tabs=el('nav',undefined,'rag-console-tabs');tabs.setAttribute('aria-label','Разделы кластера');$('workbench').before(tabs);
   const inventory=el('section'),aliases=el('section'),collection=el('details');inventory.id='rag-inventory';aliases.id='rag-aliases-panel';collection.id='rag-collection-panel';$('workbench').append(inventory,aliases,collection);
@@ -112,8 +132,9 @@
   const distance=field('Метрика','distance','','select');['Cosine','Dot','Euclid','Manhattan'].forEach(v=>distance.lastChild.append(new Option(v,v)));createForm.append($('dimensions').closest('label'),distance,field('Имя вектора · необязательно','new-vector-name'));
   createForm.append(el('p','Задайте размерность и метрику для новой коллекции. Размерность существующего вектора изменить нельзя.','hint'),button('Создать',()=>{const name=$('new-collection').value.trim();if(!name)return api.status('Введите имя коллекции.',true);$('collection').value=name;$('vector-name').value=$('new-vector-name').value.trim();$('create-collection').click();}));inventory.append(createForm);$('distance').value=parent.ragDefaults.distance;
   const tableHost=el('div',undefined,'rag-table-scroll');tableHost.tabIndex=0;tableHost.setAttribute('aria-label','Список коллекций');inventory.append(tableHost);
-  const empty=el('div',undefined,'rag-empty');empty.append(el('h3','Подключите базу знаний'),el('p','Укажите REST URL и API key Qdrant в настройках. Здесь появятся коллекции и доступные операции.'));inventory.append(empty);
+  const empty=el('div',undefined,'rag-empty');empty.append(el('h3','Подключите базу знаний'),el('p','Укажите REST URL Qdrant в настройках. API-ключ нужен только при включённой авторизации на сервере. Здесь появятся коллекции и доступные операции.'));inventory.append(empty);
   const crumb=el('summary',undefined,'rag-collection-head'),title=el('h2'),stats=el('div',undefined,'rag-stat-strip'),collectionBody=el('div',undefined,'rag-collection-body');crumb.append(title,stats);collection.append(crumb,collectionBody);crumb.addEventListener('click',event=>{if(!getSelection().isCollapsed||event.target.closest('.api-help,button,a'))event.preventDefault();});
+  const collectionHint=el('div',undefined,'rag-empty');collectionHint.append(el('h3','Выберите коллекцию'),el('p','Нажмите «Получить коллекции», затем выберите имя коллекции в списке выше. Здесь появятся её документы, поиск и настройки.'));collection.append(collectionHint);
   const ctabs=el('nav',undefined,'rag-console-tabs');ctabs.setAttribute('aria-label','Разделы коллекции');collectionBody.append(ctabs);
   const panels={};
   for(const [id,name]of [['points','Документы'],['add','Добавить'],['search','Поиск в коллекции'],['settings','Настройки'],['indexes','Индексы'],['snapshots','Снимки'],['config','Параметры']]){const panel=el('div');panel.id='rag-tab-'+id;panels[id]=panel;collectionBody.append(panel);const b=button(name,()=>setTab(id));b.dataset.tab=id;b.setAttribute('role','tab');b.setAttribute('aria-controls',panel.id);ctabs.append(b);}
@@ -163,16 +184,26 @@
   addEventListener('resize',sizeRecordPanels);addEventListener('scroll',sizeRecordPanels,{passive:true});
   new ResizeObserver(sizeRecordPanels).observe(main);
   document.addEventListener('toggle',sizeRecordPanels,true);
-  function act(message,fn){if(!connected)return api.status('Сначала подключитесь к кластеру.',true);return api.run(message,async()=>{cancelled=false;await fn();api.status(cancelled?'Действие отменено.':'Операция выполнена.');});}
-  async function binary(ctx,suffix,method='GET',body){const response=await LocalProxyTransport.fetch(ctx.base+ctx.path+suffix,{method,headers:{'api-key':ctx.key},body,credentials:'omit',redirect:'error',referrerPolicy:'no-referrer',signal:api.signal || AbortSignal.timeout(parent.ragDefaults.timeoutMs)},ctx.useProxy);if(!response.ok)throw Error('HTTP '+response.status+': операция со снимком недоступна.');return response;}
-  function setView(v){if(v!=='collection')snapshotController?.abort();view=v;vectorization.hidden=v!=='collection'||tab!=='settings'||settingTab!=='vectorization';inventory.hidden=v==='aliases';aliases.hidden=v!=='aliases';collection.hidden=v!=='collection';if(connected)renderInventory();[...tabs.querySelectorAll('[data-view]')].forEach(b=>b.setAttribute('aria-selected',String(b.dataset.view===(v==='collection'?'collections':v))));remember();}
+  function act(message,fn){if(!connected)return api.status('Сначала подключитесь к кластеру.',true);return api.run(message,async()=>{cancelled=false;await fn();api.status(cancelled?'Действие отменено.':'');});}
+  async function binary(ctx,suffix,method='GET',body){const response=await LocalProxyTransport.fetch(ctx.base+ctx.path+suffix,{method,headers:ctx.key?{'api-key':ctx.key}:{},body,credentials:'omit',redirect:'error',referrerPolicy:'no-referrer',signal:api.signal || AbortSignal.timeout(parent.ragDefaults.timeoutMs)},ctx.useProxy);if(!response.ok)throw Error('HTTP '+response.status+': операция со снимком недоступна.');return response;}
+  function setView(v){if(v!=='collection')snapshotController?.abort();view=v;vectorization.hidden=v!=='collection'||tab!=='settings'||settingTab!=='vectorization';inventory.hidden=v==='aliases';aliases.hidden=v!=='aliases';collection.hidden=v==='aliases';collectionBody.hidden=!current;collectionHint.hidden=!!current;title.textContent=current?'Коллекция · '+current:'Коллекция';if(!current)collection.open=true;if(connected)renderInventory();[...tabs.querySelectorAll('[data-view]')].forEach(b=>b.setAttribute('aria-selected',String(b.dataset.view===(v==='collection'?'collections':v))));remember();}
   function setTab(id){const sub=['vectorization','indexes','snapshots','config'];if(sub.includes(id)){settingTab=id;tab='settings';}else tab=['points','add','search','settings'].includes(id)?id:'points';if(tab!=='settings'||settingTab!=='snapshots')snapshotController?.abort();for(const key of ['points','add','search','settings'])panels[key].hidden=key!==tab;vectorization.hidden=settingTab!=='vectorization';$('model-prefixes').hidden=settingTab!=='vectorization';for(const key of ['indexes','snapshots','config'])panels[key].hidden=settingTab!==key;for(const b of ctabs.querySelectorAll('[data-tab]'))b.setAttribute('aria-selected',String(b.dataset.tab===tab));for(const b of advanced.querySelectorAll('[data-tab]'))b.setAttribute('aria-selected',String(b.dataset.tab===settingTab));remember();if(connected&&current&&tab==='settings'){if(settingTab==='indexes')renderIndexes();if(settingTab==='snapshots')loadSnapshots();}}
   for(const [id,name]of [['collections','Коллекции'],['aliases','Алиасы']]){const b=button(name,()=>{setView(id);if(id==='aliases')act('Чтение алиасов…',loadAliases);});b.dataset.view=id;b.setAttribute('role','tab');helpControl(b,name,id==='collections'?'Коллекция Qdrant хранит документы, метаданные и векторы для поиска.':'Алиас — стабильное имя коллекции. Его можно перенаправить на другую коллекцию без изменения имени в приложении.');tabs.append(b);}tabs.setAttribute('role','tablist');
-  async function inspect(){const info=await api.qdrant(api.context(),'');details.set(current,info);title.textContent=current;stats.replaceChildren();for(const [name,value]of [['Статус',info.status],['Точки',info.points_count],['Сегменты',info.segments_count],['Шарды',info.config?.params?.shard_number]]){const n=el('span');n.append(el('span',name+': ','debug-field-name'),el('span',String(value??'—'),'debug-field-value'));stats.append(n);}configData.replaceChildren(json(info));const vectors=info.config?.params?.vectors||{};let list=document.getElementById('rag-vector-options');if(!list){list=el('datalist');list.id='rag-vector-options';$('vector-name').after(list);$('vector-name').setAttribute('list',list.id);}const names=Number.isInteger(vectors.size)?['']:Object.keys(vectors);list.replaceChildren(...names.map(name=>new Option(name,name)));if(!names.includes($('vector-name').value))$('vector-name').value=names[0]||'';refreshSummaries();}
-  async function openCollection(name){snapshotController?.abort();current=name;collection.open=true;title.textContent=name;stats.replaceChildren();configData.replaceChildren();indexList.replaceChildren();snapshotList.replaceChildren();$('raw-point').value='{}';$('payload-only').value='{}';$('snapshot-file').value='';$('collection').value=name;api.persist();api.clearEditor();api.resetRecords();setView('collection');renderInventory();await inspect();setTab(tab);await api.browse(api.context(),null);}
+  async function inspect(){const info=await api.qdrant(api.context(),'');details.set(current,info);title.textContent='Коллекция · '+current;stats.replaceChildren();for(const [name,value]of [['Статус',info.status],['Точки',info.points_count],['Сегменты',info.segments_count],['Шарды',info.config?.params?.shard_number]]){const n=el('span');n.append(el('span',name+': ','debug-field-name'),el('span',String(value??'—'),'debug-field-value'));stats.append(n);}configData.replaceChildren(json(info));const vectors=info.config?.params?.vectors||{};let list=document.getElementById('rag-vector-options');if(!list){list=el('datalist');list.id='rag-vector-options';$('vector-name').after(list);$('vector-name').setAttribute('list',list.id);}const names=Number.isInteger(vectors.size)?['']:Object.keys(vectors);list.replaceChildren(...names.map(name=>new Option(name,name)));if(!names.includes($('vector-name').value))$('vector-name').value=names[0]||'';refreshSummaries();}
+  async function openCollection(name){snapshotController?.abort();current=name;collection.open=true;title.textContent='Коллекция · '+name;stats.replaceChildren();configData.replaceChildren();indexList.replaceChildren();snapshotList.replaceChildren();$('raw-point').value='{}';$('payload-only').value='{}';$('snapshot-file').value='';$('collection').value=name;api.persist();api.clearEditor();api.resetRecords();setView('collection');renderInventory();await inspect();setTab(tab);await api.browse(api.context(),null);}
   const vectorText=info=>{const vectors=info?.config?.params?.vectors;if(!vectors)return '—';return Number.isInteger(vectors.size)?vectors.size+' · '+vectors.distance:Object.entries(vectors).map(([k,v])=>k+': '+v.size+' · '+v.distance).join(', ');};
   function renderInventory(){count.textContent='Коллекции ('+collections.length+')';createButton.disabled=!connected;createControl.title=connected?'':'Подключите кластер для добавления коллекции.';createButton.title=createControl.title;empty.hidden=connected||collections.length>0;tableHost.replaceChildren();if(!connected&&!collections.length)return;if(!collections.length){tableHost.append(el('p','Коллекций пока нет. Создайте первую коллекцию.','hint'));return;}const table=el('table');table.className='rag-collection-table';const head=el('tr');['Коллекция','Статус','Точки','Сегменты','Шарды','Векторы'].forEach(t=>{const cell=el('th',t);helpControl(cell,t,columnHelp[t]);head.append(cell);});const th=el('thead');th.append(head);table.append(th);const body=el('tbody');for(const name of collections.filter(n=>n.toLowerCase().includes(filter.value.toLowerCase()))){const info=details.get(name),row=el('tr'),cell=el('td');if(name===current&&view==='collection')row.setAttribute('aria-current','true');cell.append(button(name,()=>act('Открытие коллекции…',()=>openCollection(name))));row.append(cell);const statusCell=el('td'),badge=el('span',info?.status??'Недоступно','rag-collection-status');badge.dataset.status=info?.status||'unknown';statusCell.append(badge);row.append(statusCell);for(const value of [info?.points_count??'—',info?.segments_count??'—',info?.config?.params?.shard_number??'—',vectorText(info)])row.append(el('td',String(value)));body.append(row);}table.append(body);tableHost.append(table);}
-  async function connectedTo(ctx,result){const generation=epoch;collections=result.collections.map(c=>c.name);details.clear();connected=true;setConnection('online','Подключено: '+new URL(ctx.base).host+'.');for(let i=0;i<collections.length;i+=parent.ragDefaults.collectionDetailsConcurrency){await Promise.all(collections.slice(i,i+parent.ragDefaults.collectionDetailsConcurrency).map(async name=>{try{details.set(name,await api.qdrant({...ctx,path:'/collections/'+encodeURIComponent(name)},''));}catch(_){}}));}if(generation!==epoch)return;renderInventory();$('alias-target').replaceChildren(...collections.map(name=>new Option(name,name)));const desiredView=restored.view;if(restored.current&&collections.includes(restored.current)){tab=restored.tab||'points';const name=restored.current;restored={};await openCollection(name);if(desiredView==='collections')setView('collections');}else setView('collections');if(desiredView==='aliases'){setView('aliases');await loadAliases();}}
+  function reconcileCollectionSelection(){
+    const input=$('collection'),validCurrent=collections.includes(current);
+    if(restored.current&&!collections.includes(restored.current))delete restored.current;
+    if(input.value&&!collections.includes(input.value))input.value=validCurrent?current:'';
+    if(!validCurrent){
+      snapshotController?.abort();current='';stats.replaceChildren();configData.replaceChildren();indexList.replaceChildren();snapshotList.replaceChildren();
+      api.clearEditor();api.resetRecords();$('raw-point').value='{}';$('payload-only').value='{}';$('snapshot-file').value='';
+    }
+    api.persist();
+  }
+  async function connectedTo(ctx,result){const generation=epoch;collections=result.collections.map(c=>c.name);reconcileCollectionSelection();details.clear();connected=true;setConnection('online','Подключено: '+new URL(ctx.base).host+'.');for(let i=0;i<collections.length;i+=parent.ragDefaults.collectionDetailsConcurrency){await Promise.all(collections.slice(i,i+parent.ragDefaults.collectionDetailsConcurrency).map(async name=>{try{const info=await api.qdrant({...ctx,path:'/collections/'+encodeURIComponent(name)},'');if(generation===epoch)details.set(name,info);}catch(_){}}));}if(generation!==epoch)return;renderInventory();$('alias-target').replaceChildren(...collections.map(name=>new Option(name,name)));const desiredView=restored.view;if(restored.current&&collections.includes(restored.current)){tab=restored.tab||'points';const name=restored.current;restored={};await openCollection(name);if(desiredView==='collections')setView('collections');}else setView('collections');if(desiredView==='aliases'){setView('aliases');await loadAliases();}}
   async function refresh(select){createForm.hidden=true;const ctx=api.context(false),result=await api.qdrant(ctx,'/collections');restored=select?{current:select,tab}:{};await connectedTo(ctx,result);}
   function renderIndexes(){indexList.replaceChildren();for(const [name,info]of Object.entries(details.get(current)?.payload_schema||{})){const row=el('div',undefined,'rag-entity-row');row.append(el('span',name+' · '+info.data_type),button('Удалить',()=>act('Удаление индекса…',async()=>{if(!confirmAction('Удалить индекс поля «'+name+'»?'))return;await api.qdrant(api.context(),'/index/'+encodeURIComponent(name)+'?wait=true','DELETE');await inspect();renderIndexes();}),true));indexList.append(row);}if(!indexList.children.length)indexList.append(el('p','Индексов payload пока нет.','hint'));}
   async function loadAliases(){const result=await api.qdrant(api.context(false),'/aliases');aliasList.replaceChildren();for(const a of result.aliases||[]){const row=el('div',undefined,'rag-entity-row');row.append(el('span',a.alias_name+' → '+a.collection_name),button('Переименовать',()=>aliasAction('rename',a)),button('Перенаправить',()=>aliasAction('retarget',a)),button('Удалить',()=>aliasAction('delete',a),true));aliasList.append(row);}if(!aliasList.children.length)aliasList.append(el('p','Алиасов пока нет.','hint'));}
@@ -197,7 +228,7 @@
       snapshotList.replaceChildren(el('p',controller.signal.aborted?'Время ожидания снимков истекло. Проверьте подключение и повторите.':error.message,'rag-field-error'),button('Повторить загрузку',loadSnapshots));
     }finally{clearTimeout(timeout);if(snapshotController===controller){snapshotController=null;snapshotList.removeAttribute('aria-busy');}}
   }
-  function invalidate(){snapshotController?.abort();epoch++;api.cancel();connected=false;collections=[];collectionStatus.textContent='';clusterStatus.textContent='';details.clear();aliasList.replaceChildren();snapshotList.replaceChildren();indexList.replaceChildren();stats.replaceChildren();configData.replaceChildren();api.clearEditor();$('raw-point').value='{}';$('payload-only').value='{}';$('snapshot-file').value='';setConnection('offline','Настройки подключения изменены. Проверьте подключение к кластеру.');api.resetRecords();setView('collections');renderInventory();}
+  function invalidate(){snapshotController?.abort();epoch++;api.cancel();connected=false;current='';collections=[];collectionStatus.textContent='';clusterStatus.textContent='';details.clear();aliasList.replaceChildren();snapshotList.replaceChildren();indexList.replaceChildren();stats.replaceChildren();configData.replaceChildren();api.clearEditor();$('raw-point').value='{}';$('payload-only').value='{}';$('snapshot-file').value='';setConnection('offline','Настройки подключения изменены. Проверьте подключение к кластеру.');api.resetRecords();setView('collections');renderInventory();}
   function transportChanged(){snapshotController?.abort();epoch++;api.cancel();connected=false;createForm.hidden=true;clusterStatus.textContent='';collectionStatus.textContent='Маршрут изменён. Обновите коллекции для проверки доступа.';setConnection('offline','Маршрут изменён. Доступ к кластеру по новому маршруту ещё не проверен.');renderInventory();}
   function secretSlot(id){try{return 'ai_rag_secret:'+id+':'+new URL($(id==='qdrant-key'?'qdrant-url':'neuraldeep-url').value).hostname;}catch(_){return null;}}
   function legacySecretSlots(id){
@@ -205,6 +236,7 @@
     return Object.keys(sessionStorage).filter(key=>{if(!key.startsWith(prefix))return false;try{return new URL(key.slice(prefix.length)).hostname===server.hostname;}catch(_){return false;}});
   }
   function readSecret(id){
+    if(id==='qdrant-key'&&window.RagProfiles)return RagProfiles.keyForUrl();
     const slot=secretSlot(id);if(!slot)return '';
     try{
       if(sessionStorage.getItem(slot)!==null)return sessionStorage.getItem(slot);
@@ -251,7 +283,9 @@
   }
   for(const id of ['delete','clear-files']){const b=$(id);if(!b.querySelector('svg'))b.insertAdjacentHTML('afterbegin',trash);}
   window.RagConsole={
+    get epoch(){return epoch;},
     connected:connectedTo,refresh,invalidate,refreshSummaries,transportChanged,
+    selectCollection:name=>act('Открытие коллекции…',()=>{if(!collections.includes(name))throw Error('Выберите коллекцию из полученного списка.');return openCollection(name);}),
     clusterReady:ctx=>{setConnection('ready','Qdrant: '+new URL(ctx.base).host+' /readyz: 200');},
     afterMutation:async()=>{await inspect();renderInventory();refreshSummaries();},
     revealDocuments:()=>{setView('collection');collection.open=true;setTab('points');$('records').scrollIntoView({block:'start',behavior:'smooth'});sizeRecordPanels();},

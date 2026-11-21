@@ -1,0 +1,58 @@
+/* Shared connection cards: provider, endpoint, credentials and resource picker. */
+.connection-panel { min-width:0; padding:14px 12px; margin:0 0 10px; border:1px solid var(--border); border-radius:4px; background:var(--surface); container-type:normal; }
+.connection-fields { display:grid; grid-template-columns:minmax(0,1fr); align-items:start; }
+.connection-fields > * { min-width:0; margin:0; }
+.connection-provider, .connection-list { grid-column:auto; }
+.connection-profile-row, .connection-profile-actions, .profile-actions { display:flex; align-items:center; gap:5px; flex-wrap:wrap; min-width:0; }
+.connection-profile-row > .compact-select { flex:1 1 160px; min-width:0; }
+.connection-panel .compact-select-trigger { width:100%; min-height:30px; height:30px; padding:3px 8px; font:var(--settings-font-input,12px)/1.3 var(--font-mono,var(--mono)); letter-spacing:.2px; }
+.connection-panel .compact-select-trigger > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.connection-panel .compact-select-trigger svg { width:9px; height:9px; margin:0; }
+.connection-panel .connection-title { margin:0 0 6px; color:var(--accent); font:var(--settings-font-title,14px)/1.4 var(--font-mono,var(--mono)); }
+@container(min-width:40rem) { .connection-fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+#openai-settings .connection-panel { width:100%; grid-column:1/-1; box-sizing:border-box; }
+#openai-settings .connection-fields { grid-template-columns:minmax(0,1fr); }
+@container(min-width:40rem) { #openai-settings .connection-fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+#openai-settings .connection-panel .openai-profile-heading { color:var(--accent); font:var(--settings-font-title)/1.4 var(--font-mono); margin:0 0 6px; }
+#openai-settings .connection-panel .openai-profile-row { flex-wrap:wrap; }
+#openai-settings .profile-combo { flex:1 1 160px; }
+#openai-profile-combo > .compact-select { display:block; width:calc(100% - 30px); }
+#openai-profile-combo .profile-pencil { right:0; }
+#openai-profile-combo.editing > .compact-select { visibility:hidden; }
+#openai-profile-select[hidden] { display:none!important; }
+#openai-settings .connection-panel .api-field { margin:0; }
+#openai-settings .agent-profile-row { display:flex; gap:5px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+#openai-settings .agent-profile-row > .compact-select { flex:1 1 160px; min-width:0; }
+#openai-settings .agent-profile-row button.agent-action { min-height:30px; padding:3px 8px; font:var(--settings-font-control)/1.3 var(--font-mono); color:var(--text-muted); background:transparent; border:1px solid var(--border); border-radius:4px; }
+#openai-settings .agent-profile-row button.agent-action svg { width:14px; height:14px; display:block; }
+#openai-settings .agent-panel > .client-behavior { padding-left:0; padding-right:0; }
+
+.connection-card-shell { container-type:inline-size; min-width:0; width:100%; grid-column:1/-1; }
+.connection-card-shell > .connection-panel { container-type:normal; }
+.connection-panel .connection-fields { grid-template-columns:minmax(0,1fr); gap:14px 20px; }
+.connection-caption { display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; }
+.connection-resource { display:flex; align-items:center; gap:6px; min-width:0; }
+.connection-resource > .model-picker { flex:1 1 0; min-width:0; width:auto; }
+.connection-resource > .connection-connect { flex:0 0 auto; min-height:30px; padding:3px 8px; font:var(--settings-font-control,11px)/1.3 var(--font-mono,var(--mono)); }
+.connection-inline-status { display:block; height:16px; min-height:16px; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font:var(--settings-font-note,11px)/16px var(--font-mono,var(--mono)); color:var(--muted,var(--text-muted)); }
+#openai-settings .connection-panel .openai-profile-heading { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; font-size:var(--settings-font-label); min-height:20px; }
+#openai-settings .connection-panel .api-docs-link { font-size:var(--settings-font-note); margin:0; }
+#openai-settings .connection-panel .profile-action { min-width:24px; width:24px; height:28px; padding:3px; }
+#openai-settings .connection-panel .profile-action svg, #openai-settings .connection-panel .profile-pencil svg { width:13px; height:13px; }
+#openai-settings .connection-panel .profile-pencil { width:24px; padding:3px; }
+#openai-settings .connection-panel .openai-profile-row { gap:4px; }
+#openai-settings .connection-panel .profile-combo { flex:1 1 120px; }
+#openai-profile-combo > .compact-select { width:calc(100% - 26px); }
+#openai-profile-add[hidden], #openai-settings .agent-action[hidden], #openai-settings .agent-name-edit[hidden] { display:none!important; }
+#openai-settings .agent-profile-row { position:relative; }
+#openai-settings .agent-profile-row button.agent-action { width:24px; min-width:24px; height:28px; min-height:28px; padding:4px; }
+#openai-settings .agent-profile-row button.agent-action svg { width:13px; height:13px; }
+#openai-settings .agent-profile-row.editing-name > .compact-select { visibility:hidden; }
+#openai-settings .agent-name-edit { position:absolute; inset:0 auto auto 0; width:calc(100% - 90px); height:30px; }
+/* Keep URL and proxy on one caption line while preserving the whole-field anchor. */
+.connection-fields > .proxy-field { position:relative; display:block; }
+.connection-fields > .proxy-field > label { width:100%; }
+.connection-fields > .proxy-field > .proxy-option { position:absolute; top:0; right:0; margin:0; }
+.connection-fields > .proxy-field > label > :is(.parameter-heading,span:first-child) { padding-right:112px; min-height:20px; }
+@container(min-width:40rem) { .connection-panel .connection-fields, #openai-settings .connection-panel .connection-fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@container(max-width:39.99rem) { .connection-card-shell > .connection-panel, #openai-settings .connection-card-shell > .connection-panel { padding:12px 6px; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; } }
