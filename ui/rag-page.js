@@ -112,7 +112,7 @@
     if (!activeReceipt?.matches('#rag-collections-status, #rag-cluster-status')) {
       $('status').textContent = message; $('status').title = message; $('status').classList.toggle('error', error);
     }
-    if (activeReceipt) { activeReceipt.textContent = message; activeReceipt.dataset.state = error ? 'error' : busy ? 'loading' : 'done'; }
+    if (activeReceipt) { activeReceipt.textContent = message; activeReceipt.title = message; activeReceipt.dataset.state = error ? 'error' : busy ? 'loading' : 'done'; }
     document.dispatchEvent(new CustomEvent('rag:operation', {detail:{phase:error ? 'error' : busy ? 'progress' : 'done', message}}));
   };
   function recordsNotice(message) {
@@ -454,7 +454,9 @@
     const distance = document.getElementById('rag-distance')?.value || cfg.distance;
     await qdrant(ctx, '', 'PUT', {vectors:name ? {[name]:{size, distance}} : {size, distance}});
     await window.RagConsole?.refresh(ctx.collection);
-    const option = node('option'); option.value = ctx.collection; $('collections').append(option);
+    if (![...$('collections').options].some(option => option.value === ctx.collection)) {
+      const option = node('option'); option.value = ctx.collection; $('collections').append(option);
+    }
     resetRecords(); status('Коллекция «' + ctx.collection + '» создана. Размерность: ' + size + '.');
   });
   on('read', 'Чтение документа…', async () => {
