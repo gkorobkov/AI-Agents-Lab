@@ -1,4 +1,4 @@
-.rag-layout { max-width:1240px; margin:auto; padding:16px 20px 28px; }
+.rag-layout { max-width:1240px; margin:auto; padding:16px 16px 28px; }
 .rag-heading,.rag-section-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
 .rag-heading h1 { margin:5px 0; font-size:21px; }
 .rag-heading h1 span { display:inline; font:12px var(--mono); }
@@ -127,9 +127,59 @@
 .rag-settings-fields .connection-resource > button { flex:0 0 auto; }
 .rag-settings-fields :is(#rag-cluster-status,#rag-embedding-status) { display:block; height:18px; min-height:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .rag-settings-fields .connection-resource .model-picker { width:100%; }
+.rag-settings-fields .connection-resource { flex-wrap:wrap; }
+.rag-settings-fields .rag-model-inventory { display:grid; grid-template-columns:max-content minmax(0,max-content); align-items:stretch; gap:8px; }
+.rag-settings-fields .rag-model-inventory:not(.rag-model-expanded) { grid-template-columns:min(14rem,56%) minmax(0,12rem); }
+.rag-model-box.rag-model-box-compact { min-inline-size:0; max-inline-size:none; }
+.rag-model-box-compact .rag-model-list { height:0; min-height:100%; }
+.rag-settings-fields .rag-model-inventory:has(.rag-model-details:not([hidden])) { grid-template-columns:max-content minmax(0,max-content) minmax(0,1fr); }
+.rag-model-actions { display:grid; justify-items:start; align-content:start; gap:3px; font:var(--settings-font-label)/1.35 var(--mono); color:var(--muted); }
+.rag-model-actions .rag-field-caption { gap:0; flex-wrap:wrap; }
+.rag-model-actions { align-self:start; }
+.rag-model-actions > label.rag-model-filter { margin-inline-start:0; }
+.rag-settings-panel .rag-model-actions label.rag-model-filter { display:inline-flex; flex-direction:row; align-items:center; margin-inline-start:6px; white-space:nowrap; }
+.rag-model-filter input[type=checkbox] { width:13px; height:13px; min-height:0; margin:0; padding:0; accent-color:var(--accent2,var(--cyan)); }
+.rag-model-log-row { display:flex; align-items:center; gap:6px; width:100%; min-width:0; }
+.rag-model-log-row > button { flex:none; white-space:nowrap; }
+.rag-settings-fields .rag-model-log-row #rag-embedding-status { flex:0 1 auto; min-width:0; height:auto; min-height:0; max-width:12ch; }
+.rag-settings-panel .rag-model-actions button.small:not(.http-debug-log-link) { min-height:21px; padding:1px 5px; font:var(--settings-font-control)/1.3 var(--mono); }
+.rag-model-list li > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rag-model-box { --model-list-width:min(12rem,40cqi); min-inline-size:var(--model-list-width); max-inline-size:calc(var(--model-list-width) * 1.5); }
+.rag-model-list { box-sizing:border-box; height:0; min-height:100%; overflow:auto; scrollbar-gutter:stable; margin:0; padding:0 3px; list-style:none; border:1px solid var(--border); border-radius:4px; font:var(--settings-font-control)/21px var(--mono); }
+.rag-model-list li { display:flex; align-items:center; gap:4px; height:21px; padding-inline:3px; border-radius:3px; }
+.rag-model-list li:hover,.rag-model-list li:focus-within { background:var(--tint); }
+.rag-model-box:has([data-empty=true]) { position:relative; }
+.rag-model-list[data-empty=true] { overflow-y:scroll; }
+.rag-model-box:has([data-empty=true])::after { content:''; position:absolute; inset:5px 4px 5px auto; width:4px; border-radius:3px; background:var(--border); pointer-events:none; }
+.rag-model-placeholder { color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rag-settings-panel .rag-model-list button.rag-model-item { display:block; width:100%; min-height:0; padding:0; border:0; background:none; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:inherit; }
+.rag-model-item[aria-pressed=true] { color:var(--accent2,var(--cyan)); }
+.rag-model-details { min-width:0; height:0; min-height:100%; overflow:auto; }
+.rag-layout .rag-model-details details { margin:0; }
+.rag-model-details .rag-json-panel { overflow:visible; }
+.rag-model-details .rag-json-panel > summary { position:sticky; top:0; z-index:1; background:var(--surface); }
+.rag-model-details .rag-json-panel > :is(pre,.debug-json-tree) { max-height:none; overflow:visible; }
+.rag-model-details .rag-json-panel pre,.rag-model-details .debug-json-tree { font-size:10px; line-height:1.35; }
+@container(max-width:55rem) {
+  .rag-settings-fields .rag-model-inventory:has(.rag-model-details:not([hidden])) { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+  .rag-model-details { grid-column:1/-1; height:auto; max-height:110px; min-height:0; }
+  .rag-model-box { min-inline-size:0; }
+}
+.rag-settings-fields #rag-embedding-status:empty { display:none; }
+.rag-settings-fields .connection-resource:has(#rag-check-cluster) { align-items:center; min-height:30px; }
+.rag-settings-fields .connection-resource > #rag-cluster-status { flex:1 1 180px; min-width:0; }
+.rag-settings-fields #rag-cluster-status:empty { display:none; }
+.rag-settings-panel .rag-settings-fields .connection-resource > button { min-height:30px; height:30px; }
+.rag-settings-panel .rag-settings-fields .compact-select-trigger { min-height:30px; height:30px; }
+@container(min-width:40rem) {
+  .rag-settings-fields .connection-fields { align-items:end; padding-bottom:18px; }
+  .rag-settings-fields .connection-fields:has(#rag-cluster-status) { padding-bottom:0; }
+  .rag-settings-fields .connection-list { position:relative; align-self:end; }
+  .rag-settings-fields .connection-list > :is(#rag-cluster-status,#rag-embedding-status) { position:absolute; top:100%; left:0; right:0; }
+}
 .rag-embedding-provider-control { display: flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; }
 .rag-settings-panel .rag-embedding-provider { display: flex; flex-direction: row; align-items: center; gap: 8px; min-width: 0; }
-.rag-settings-panel .rag-embedding-provider-control { width:100%; margin:0 0 8px; }
+.rag-settings-panel .rag-embedding-provider-control { width:100%; margin:0; }
 .rag-settings-panel .rag-embedding-provider-control > .rag-embedding-provider { flex:1 1 160px; }
 .rag-settings-panel .rag-embedding-provider-control .compact-select { flex:1 1 auto; width:100%; }
 .rag-settings-panel .rag-embedding-provider select { width: clamp(6rem, 38cqi, 13rem); min-width: 0; min-height: 28px; padding-block: 3px; }

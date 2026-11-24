@@ -48,7 +48,7 @@
     const title = nodes.map(node => node.textContent.trim()).join(' '); caption.append(document.createTextNode(title));
     nodes.forEach(node => node.remove()); label.prepend(caption); attach(caption, title, path, text, label.closest('.proxy-field, .rag-credential-slot') || label);
     caption.classList.add('connection-caption');
-    if(id==='provider')caption.append(document.getElementById('rag-qdrant-cloud'));
+    if(id==='provider')caption.append(' · ',document.getElementById('rag-qdrant-cloud'));
   }
   const summary = document.querySelector('#rag-model-prefixes > summary');
   if (summary) attach(summary, 'Префиксы модели', 'Векторизация · подготовка текста', 'Раздел Префиксы модели задаёт служебные строки, добавляемые к текстам перед векторизацией. Префикс документа используется для сохранения документов, префикс запроса — для семантического поиска. Оставьте поля пустыми, если документация вашей модели не требует таких строк.', summary.closest('details'));

@@ -22,7 +22,15 @@
   function refresh() {
     document.querySelectorAll('.proxy-option').forEach(host => controls.get(host)?.refresh());
     if (popupStatus?.isConnected) {
-      popupStatus.textContent = [label(status.status), status.url, status.version && 'v' + status.version].filter(Boolean).join(' · ');
+      const heading=popupStatus.closest('#api-field-tooltip')?.querySelector('.help-parameter-path');
+      if (heading) heading.textContent='Proxy URL · '+transport.getUrl();
+      popupStatus.replaceChildren();
+      for (const [name, value] of [[tr('Статус','Status'),label(status.status)],['URL',status.url],[tr('Версия','Version'),status.version]]) {
+        if (!value) continue;
+        const row=document.createElement('span'),caption=document.createElement('span'),text=document.createElement('span');
+        caption.className='proxy-status-label';caption.textContent=name+':';text.textContent=value;
+        row.append(caption,text);popupStatus.append(row);
+      }
     }
   }
 
@@ -68,7 +76,7 @@
     const url = document.createElement('input');
     url.inputMode = 'url'; url.autocomplete = 'off'; url.spellcheck = false;
     url.value = transport.getUrl();
-    transport.ready().then(() => { if (!url.value) url.value = transport.getUrl(); }).catch(() => {});
+    transport.ready().then(() => { if (!url.value) url.value = transport.getUrl(); refresh(); }).catch(() => {});
     caption.append(url);
     const save = document.createElement('button');
     save.textContent = tr('Сохранить и проверить', 'Save and check');
@@ -108,6 +116,7 @@
       input:toggle,
       refresh() {
         name.textContent = 'use Proxy';
+        help.dataset.helpPath = 'Proxy URL · '+transport.getUrl();
         help.setAttribute('aria-label', tr('Настройки прокси', 'Proxy settings'));
         const state = toggle.checked ? status.status : 'off';
         dot.dataset.state = state;
@@ -135,5 +144,6 @@
     if (event.key === transport.storageKey) addressChanged();
     if (event.key === 'n8n_lang') refresh();
   });
+  transport.ready().then(refresh).catch(() => {});
   window.ProxyControls = {mount, refresh};
 })();

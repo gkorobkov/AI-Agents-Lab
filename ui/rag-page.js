@@ -39,9 +39,13 @@
   function embeddingBaseUrl() {
     return urlValue('neuraldeep-url').replace(/\/(?:chat\/completions|embeddings|models)$/, '');
   }
-  function embeddingConnectionStatus(state = '', message = '') {
+  let modelRequest;
+  function embeddingConnectionStatus(state = '', message = '', models = []) {
+    if (!state) modelRequest?.abort();
     embeddingStatus.dataset.state = state;
-    embeddingStatus.textContent = message;
+    embeddingStatus.textContent = state === 'loading' ? 'загрузка...' : message;
+    embeddingStatus.title = message;
+    document.dispatchEvent(new CustomEvent('rag:models', {detail:{state, models}}));
   }
   function embeddingKey() {
     if (!providerSelect.value) return embeddingKeyField.value.trim();
@@ -92,20 +96,32 @@
     }
     if (event.key === LocalProxyTransport.storageKey && embeddingProxy.read()) embeddingConnectionStatus();
   });
-  ModelPicker.attach($('model'), {
-    language: () => 'ru',
-    connection: () => {
+  async function loadModels() {
+    modelRequest?.abort();
+    const pending = modelRequest = new AbortController();
+    const timer = setTimeout(() => pending.abort(), cfg.timeoutMs);
+    embeddingConnectionStatus('loading', 'Загрузка моделей…');
+    try {
       const key = embeddingKey();
       if (providerSelect.value && !key) throw fieldError('neuraldeep-key', 'Укажите API-ключ в настройках OpenAI API.');
-      return {baseUrl:embeddingBaseUrl(), useProxy:embeddingProxy.read(), headers:key ? {Authorization:'Bearer ' + key} : {}};
-    },
-    timeout: cfg.timeoutMs,
-    sources: embeddingSources,
-    onResult(state, message) {
-      embeddingConnectionStatus(state, message);
-      return state === 'error';
+      const data = await request(embeddingBaseUrl(), '/models', 'GET', undefined, key ? {Authorization:'Bearer ' + key} : {}, embeddingProxy.read(), pending.signal, 'models');
+      if (modelRequest !== pending || pending.signal.aborted) return;
+      const rows = Array.isArray(data) ? data : data?.data ?? data?.models;
+      if (!Array.isArray(rows)) throw new Error('API вернул некорректный список моделей.');
+      const byId = new Map();
+      for (const row of rows) {
+        const model = typeof row === 'string' ? {id:row} : row;
+        if (typeof model?.id === 'string' && model.id.trim()) byId.set(model.id, model);
+      }
+      const models = [...byId.values()].sort((a,b) => a.id.localeCompare(b.id));
+      embeddingConnectionStatus('ready', '', models);
+    } catch (error) {
+      if (modelRequest === pending && embeddingStatus.dataset.state === 'loading') embeddingConnectionStatus('error', error.message);
+    } finally {
+      clearTimeout(timer);
+      if (modelRequest === pending) modelRequest = null;
     }
-  });
+  }
   $('metadata').value = cfg.metadata;
   $('text-field-note').textContent = `Поле «${cfg.textField}» хранит текст документа и не должно повторяться в метаданных. Остальные поля payload сохраняются при загрузке в редактор.`;
   const status = (message, error = false) => {
@@ -218,17 +234,28 @@
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) return value;
     throw fieldError('id', 'Укажите ID: UUID или неотрицательное целое число.');
   }
-  async function request(base, path, method, body, headers, useProxy, signal = controller?.signal) {
+  async function request(base, path, method, body, headers, useProxy, signal = controller?.signal, channel) {
+    const secrets=[$('qdrant-key').value.trim(),embeddingKey()].filter(Boolean);
+    const redact=value=>{let text=JSON.stringify(value);for(const key of secrets)text=text.split(JSON.stringify(key).slice(1,-1)).join('[ключ скрыт]');return JSON.parse(text);};
+    const requestHeaders = Object.fromEntries(Object.entries(headers).filter(([name, value]) => name !== 'api-key' || value));
+    requestHeaders.Accept='application/json';
+    if(body!==undefined)requestHeaders['Content-Type']='application/json';
+    const record={method,channel,url:base+path,request:redact({headers:HttpDebug.clean(requestHeaders),...(body===undefined?{}:{body}),proxy:useProxy})};
+    const started=performance.now();document.dispatchEvent(new CustomEvent('rag:http',{detail:record}));
     let response;
     try {
-      const requestHeaders = Object.fromEntries(Object.entries(headers).filter(([name, value]) => name !== 'api-key' || value));
       response = await LocalProxyTransport.fetch(base + path, { method, headers:{ ...requestHeaders, ...(body === undefined ? {} : {'Content-Type':'application/json'}) }, body:body === undefined ? undefined : JSON.stringify(body), signal, credentials:'omit', redirect:'error', referrerPolicy:'no-referrer' }, useProxy);
     } catch (error) {
+      record.complete?.({status:'Ошибка сети',ms:Math.round(performance.now()-started),response:redact({error:error.message})});
       if (signal?.aborted) throw new Error('Превышено время ожидания запроса. Проверьте доступность сервисов и повторите операцию.');
       if (useProxy) throw error;
       const proxy = Object.prototype.hasOwnProperty.call(headers, 'api-key') ? qdrantProxy : embeddingProxy;
       throw Object.assign(new Error('Не удалось связаться с сервисом. Возможна блокировка CORS. Включите «use Proxy» в настройках соответствующего сервиса и повторите запрос. Также проверьте URL и сеть.'), {proxyInput:proxy.input});
     }
+    try {
+      const text=await response.clone().text();let value;try{value=JSON.parse(text);}catch(_){value={text};}
+      record.complete?.({status:response.status,ms:Math.round(performance.now()-started),headers:HttpDebug.clean(Object.fromEntries(response.headers.entries())),response:redact(value)});
+    } catch(error) { record.complete?.({status:response.status,ms:Math.round(performance.now()-started),response:{error:'Не удалось прочитать ответ.'}}); }
     if (path === '/readyz') {
       if (!response.ok) throw new Error('Кластер не готов. HTTP ' + response.status + '.');
       await response.text();
@@ -512,5 +539,5 @@
       status('Сервер готов к запросам.');
     } catch(error) { if(generation!==window.RagConsole?.epoch)return;window.RagConsole?.connectionFailed(); throw error; }
   }, cfg.timeoutMs, $('check-cluster'));
-  window.RagWorkbench = {get signal() { return controller?.signal; }, cancel: () => controller?.abort(), run, context, qdrant, loadPoint, browse, resetRecords, clearEditor, persist, status, pointId, checkCluster, fetchCollections, qdrantProxy};
+  window.RagWorkbench = {loadModels,get signal() { return controller?.signal; }, cancel: () => controller?.abort(), run, context, qdrant, loadPoint, browse, resetRecords, clearEditor, persist, status, pointId, checkCluster, fetchCollections, qdrantProxy};
 })();

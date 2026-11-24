@@ -1,0 +1,18 @@
+.http-debug-section { margin-top:7px; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--bg); }
+.http-debug-section > summary { display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:7px 9px; color:var(--text-muted,var(--muted)); background:rgba(136,152,184,.05); font:11px/1.5 var(--font-mono,var(--mono)); cursor:pointer; }
+.http-debug-section[open] > summary { border-bottom:1px solid var(--border); }
+.http-debug-section .debug-section-badge { padding:2px 5px; border:1px solid rgba(0,200,255,.2); border-radius:9px; color:var(--accent2,var(--cyan)); font-size:8px; }
+.http-debug-section .dbg-copy { margin-left:auto; flex:0 0 24px; width:24px; min-height:24px; padding:0; border:0; background:transparent; color:var(--text-muted,var(--muted)); cursor:pointer; }
+.http-debug-section pre { margin:0; padding:10px; max-height:260px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font:11px/1.6 var(--font-mono,var(--mono)); }
+.http-debug-metadata,.http-debug-section .debug-response-headers { margin:6px 10px; overflow-wrap:anywhere; font:11px/1.7 var(--font-mono,var(--mono)); }
+.http-debug-section .debug-response-headers-toggle { min-height:24px; padding:0; border:0; background:transparent; color:#89b6cb; font:11px/1.5 var(--font-mono,var(--mono)); cursor:pointer; }
+.http-debug-section .debug-response-headers-toggle::before { content:'▸'; margin-right:4px; }
+.http-debug-section .debug-response-headers-toggle[aria-expanded=true]::before { content:'▾'; }
+.http-debug-record { margin:8px 0; }
+.http-debug-record > summary { color:var(--accent2,var(--cyan)); font:11px/1.5 var(--font-mono,var(--mono)); cursor:pointer; }
+.http-debug-record + .http-debug-record { padding-top:8px; border-top:1px solid var(--border); }
+#api-field-tooltip:has(.http-debug-log) { width:min(760px,calc(100vw - 16px)); max-width:min(760px,calc(100vw - 16px)); white-space:normal; }
+.http-debug-log { min-width:0; }
+.rag-settings-panel .connection-resource button.http-debug-log-link { border:0; border-radius:0; background:transparent; box-shadow:none; padding:0 2px; color:color-mix(in srgb,var(--accent2,var(--cyan)) 36%,var(--text-muted,var(--muted))); text-decoration:underline; font:inherit; cursor:pointer; }
+.rag-settings-panel .rag-model-actions button.http-debug-log-link { min-height:0; padding:0; }
+.rag-settings-panel .http-debug-log-link:focus-visible { outline:1px solid var(--accent2,var(--cyan)); outline-offset:3px; }

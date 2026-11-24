@@ -37,7 +37,15 @@
   connection.dataset.helpPath='Qdrant · Подключение';
   FieldHelp.attach(connection);
   function setConnection(state, message) {
-    connection.dataset.state=state;
+    qdrantState=state;
+    qdrantMessage=message;
+    renderConnection();
+  }
+  let qdrantState='offline',qdrantMessage='',embeddingReady=false;
+  function renderConnection() {
+    const qdrantReady=['ready','online'].includes(qdrantState);
+    connection.dataset.state=qdrantReady&&embeddingReady?'online':qdrantReady||embeddingReady?'connecting':qdrantState;
+    const message='Qdrant: '+qdrantMessage+'\nOpenAI API: '+(embeddingReady?'Список моделей получен.':'Список моделей не подтверждён.')+'\nСерый — ни одно подключение не подтверждено. Жёлтый — подтверждено одно подключение или идёт проверка Qdrant. Красный — ошибка Qdrant без подтверждённого подключения OpenAI API. Зелёный — Qdrant готов и OpenAI API вернул список моделей. Для этого нажмите «Проверить подключение» и «Получить список».';
     connection.dataset.helpText=message;
     connection.setAttribute('aria-label', 'Qdrant. '+message);
     if(connection.hasAttribute('aria-describedby')) FieldHelp.show(connection);
@@ -85,10 +93,10 @@
   providerControl.append(embeddingProviderLabel,providerSettings);
   helpControl(providerControl,'Профиль векторизации','Список профилей векторизации выбирается независимо от RAG-системы. Сохранённые профили управляются в настройках OpenAI API; для собственного подключения выберите Custom.');
   const embeddingHeader=el('div',undefined,'rag-connection-header');
-  embeddingHeader.append(el('h3','Векторизация · OpenAI API'));
-  const embeddingDocs=el('a','Описание →');embeddingDocs.href='docs.html#embeddings';embeddingDocs.target='_blank';embeddingDocs.rel='noopener';embeddingHeader.append(embeddingDocs);
+  embeddingHeader.append(el('h3','OpenAI API · Векторизация'));
+  const embeddingDocs=el('a','Описание →');embeddingDocs.href='docs.html#embeddings';embeddingDocs.target='_blank';embeddingDocs.rel='noopener';embeddingHeader.append(el('span','·'),embeddingDocs);
   const embeddingModels=el('div',undefined,'rag-embedding-models');
-  embeddingModels.append($('model').closest('label'),$('embedding-status'));
+
   efields.classList.add('connection-panel');embeddingRow.classList.add('connection-fields');efields.append(embeddingHeader,providerControl,embeddingRow,embeddingModels);
   for (const [row, url, key] of [
     [qdrantRow, 'qdrant-url', 'qdrant-key'],
@@ -101,25 +109,125 @@
   const collectionChoice=$('collection').closest('label');collectionChoice.classList.add('rag-collection-choice');qfields.append(collectionChoice);
   const checkConnection = $('connect');
   checkConnection.textContent='Получить коллекции';
-  const clusterCheck=button('Подключиться',()=>api.fetchCollections($('check-cluster')));
+  const clusterCheck=button('Проверить подключение',()=>api.checkCluster());
   clusterCheck.id='rag-check-cluster';
   const clusterStatus=el('span',undefined,'hint');clusterStatus.id='rag-cluster-status';clusterStatus.setAttribute('role','status');
   const clusterActions=el('div',undefined,'rag-cluster-actions');clusterActions.append(clusterCheck,clusterStatus);qfields.append(clusterActions);
-  helpControl(clusterActions,'Подключение к кластеру','Кнопка Подключиться получает список коллекций выбранного RAG-профиля.');
+  helpControl(clusterActions,'Подключение к кластеру','Запрос GET /readyz к адресу из поля REST URL кластера Qdrant проверяет, готов ли сервер принимать запросы. Если заполнено поле API-ключ Qdrant, ключ передаётся в заголовке api-key. При включённом use Proxy запрос проходит через общий прокси, иначе — напрямую из браузера с учётом CORS. Ответ HTTP 200 означает готовность сервера. Эта проверка не подтверждает права на операции с коллекциями.');
   const qshell=el('div',undefined,'connection-card-shell'),eshell=el('div',undefined,'connection-card-shell');qshell.append(qfields);eshell.append(efields);connections.append(qshell,eshell);
   settings.append(connections);
   const ragProfileSelect=el('select');ragProfileSelect.id='rag-connection-profile';provider.append(ragProfileSelect);$('provider').hidden=true;
   CompactSelect.attach(ragProfileSelect, {label:'RAG-система'});
   CompactSelect.attach(providerSelect, {label:'Профиль векторизации OpenAI API'});
   const qdrantList=el('div',undefined,'connection-list');
-  const qdrantResource=el('div',undefined,'connection-resource');qdrantResource.append(clusterCheck,collectionChoice);qdrantList.append(qdrantResource,clusterStatus);
+  const qdrantResource=el('div',undefined,'connection-resource');collectionChoice.hidden=true;$('collection').removeAttribute('list');
+  function createLogs(anchor, channel) {
+    const entries=[];
+    let logHost;
+    const render=()=>{
+      logHost.replaceChildren(...entries.map(entry=>HttpDebug.record(entry)));
+      if (!entries.length) logHost.append(el('p','Запросов пока нет.'));
+    };
+    const logs=button('view logs',null);
+    logs.classList.add('http-debug-log-link');
+    logs.dataset.helpPath='View logs';
+    FieldHelp.attach(logs,()=>{
+      logHost=el('div',undefined,'http-debug-log');
+      render();
+      return logHost;
+    },anchor,{openOnHover:false});
+    document.addEventListener('rag:http',event=>{
+      const record=event.detail;
+      if (record.channel!==channel) return;
+      const entry={request:{method:record.method,url:record.url,...record.request},status:'Ожидание'};
+      entries.unshift(entry);entries.splice(parent.ragDefaults.connectionLogMax);
+      if (logHost?.isConnected) render();
+      record.complete=result=>{
+        entry.status=result.status;entry.ms=result.ms;entry.response={headers:result.headers||{},body:result.response};
+        if (logHost?.isConnected && entries.includes(entry)) render();
+      };
+    });
+    return logs;
+  }
+  const logs=createLogs(qdrantResource);
+  qdrantResource.append(clusterCheck);
+  helpControl(qdrantResource,'Подключение к кластеру','Запрос GET /readyz к адресу из поля REST URL кластера Qdrant проверяет, готов ли сервер принимать запросы. Если заполнено поле API-ключ Qdrant, ключ передаётся в заголовке api-key. При включённом use Proxy запрос проходит через общий прокси, иначе — напрямую из браузера с учётом CORS. Ответ HTTP 200 означает готовность сервера. Эта проверка не подтверждает права на операции с коллекциями.');
+  qdrantResource.append(logs,clusterStatus);qdrantList.append(qdrantResource,collectionChoice);
   qdrantHeader.classList.add('connection-provider');
   const qurl=$('qdrant-url').closest('.proxy-field'),qkey=$('qdrant-key').closest('label');
   qdrantRow.replaceChildren(qdrantHeader,qurl,qkey,qdrantList);qfields.replaceChildren(qdrantRow);
   const embeddingProvider=el('div',undefined,'connection-provider');embeddingProvider.append(embeddingHeader,providerControl);
   const eurl=$('neuraldeep-url').closest('.proxy-field'),ekey=$('neuraldeep-key').closest('label');
-  const embeddingResource=el('div',undefined,'connection-resource'),embeddingConnect=button('Подключиться',()=>ModelPicker.open($('model')));
-  embeddingConnect.id='rag-embedding-connect';embeddingResource.append(embeddingConnect,$('model').closest('label'));embeddingModels.replaceChildren(embeddingResource,$('embedding-status'));embeddingModels.classList.add('connection-list');
+  const embeddingResource=el('div',undefined,'connection-resource rag-model-inventory');
+  const embeddingConnect=button('Получить список',()=>api.loadModels());
+  embeddingConnect.id='rag-embedding-connect';
+  const modelCaption=el('span',undefined,'rag-field-caption'),modelCount=el('span','Список моделей (…)');
+  modelCaption.append(modelCount);
+  helpControl(modelCaption,'Список моделей','Запрос GET /models показывает модели, доступные по указанному URL OpenAI API. Список может включать модели чата. Для загрузки документов и поиска выберите модель эмбеддингов в настройках коллекции, на вкладке «Векторизация».');
+  const modelList=el('ul',undefined,'rag-model-list'),modelBox=el('div',undefined,'rag-model-box');
+  modelList.setAttribute('aria-label','Доступные модели');modelList.tabIndex=0;
+  const onlyEmbeddings=el('input');onlyEmbeddings.type='checkbox';onlyEmbeddings.checked=true;
+  const filterModels=el('label',undefined,'rag-model-filter');filterModels.append(onlyEmbeddings,'only Embeddings');
+  const modelDetailsEnabled=parent.ragDefaults.modelDetailsEnabled;
+  embeddingResource.classList.toggle('rag-model-expanded',modelDetailsEnabled);
+  if (!modelDetailsEnabled) modelBox.classList.add('rag-model-box-compact');
+  const modelActions=el('div',undefined,'rag-model-actions'),modelLogRow=el('div',undefined,'rag-model-log-row');
+  modelLogRow.append(createLogs(embeddingResource,'models'),$('embedding-status'));
+  modelActions.append(modelCaption);
+  modelActions.append(filterModels);
+  modelActions.append(modelLogRow);
+  modelLogRow.prepend(embeddingConnect);
+  if (modelDetailsEnabled) modelLogRow.before(embeddingConnect);
+  const modelDetails=el('div',undefined,'rag-model-details');modelDetails.hidden=true;
+  modelBox.append(modelList);
+  embeddingResource.append(modelActions,modelBox,modelDetails);
+  embeddingModels.append(embeddingResource);embeddingModels.classList.add('connection-list');
+  const modelOptions=el('datalist');modelOptions.id='rag-embedding-options';
+  $('model').setAttribute('list',modelOptions.id);$('model').after(modelOptions);
+  let availableModels=[],modelState='',selectedModel=null;
+  function renderModelDetails() {
+    modelDetails.hidden=!selectedModel;
+    modelDetails.replaceChildren();
+    if (selectedModel) {
+      const viewer=json(HttpDebug.clean(selectedModel));
+      viewer.open=true;
+      modelDetails.append(viewer);
+    }
+    modelList.querySelectorAll('button').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.model===selectedModel?.id)));
+  }
+  function renderModelList() {
+    const visible=onlyEmbeddings.checked?availableModels.filter(model=>model.type==='embedding'):availableModels;
+    if (!visible.includes(selectedModel)) selectedModel=null;
+    modelList.replaceChildren(...visible.map(model=>{
+      const row=el('li');
+      if (!modelDetailsEnabled) {
+        const name=el('span',model.id);name.title=model.id;row.append(name);return row;
+      }
+      const item=button(model.id,()=>{
+        selectedModel=model;
+        renderModelDetails();
+      });
+      item.className='rag-model-item';item.dataset.model=model.id;item.title=model.id;
+      row.append(item);return row;
+    }));
+    if (!visible.length) {
+      const placeholder=modelState==='ready'?(availableModels.length?'Нет моделей с типом embedding.':'Список пуст.'):'Здесь появятся модели';
+      modelList.append(el('li',placeholder,'rag-model-placeholder'));
+    }
+    modelList.dataset.empty=String(!visible.length);
+    renderModelDetails();
+  }
+  onlyEmbeddings.addEventListener('change',renderModelList);
+  renderModelList();
+  document.addEventListener('rag:models',({detail:{state,models}})=>{
+    modelState=state;
+    availableModels=models;
+    embeddingConnect.disabled=state==='loading';
+    modelCount.textContent='Список моделей ('+(state==='ready'?models.length:'…')+')';
+    modelOptions.replaceChildren(...models.filter(model=>model.type==='embedding'||!model.type).map(({id})=>new Option(id,id)));
+    renderModelList();
+    embeddingReady=state==='ready';renderConnection();
+  });
   embeddingRow.replaceChildren(embeddingProvider,eurl,ekey,embeddingModels);efields.replaceChildren(embeddingRow);
   const vectorization=$('vectorization');
   const tabs=el('nav',undefined,'rag-console-tabs');tabs.setAttribute('aria-label','Разделы кластера');$('workbench').before(tabs);
@@ -309,7 +417,7 @@
     connecting:()=>setConnection('connecting','Проверка подключения к кластеру…'),
     connectionFailed:()=>{
       connected=false;renderInventory();
-      if(connection.dataset.state==='connecting') setConnection('error','Ошибка подключения. Подробности доступны в строке состояния RAG.');
+      if(qdrantState==='connecting') setConnection('error','Ошибка подключения. Подробности доступны в строке состояния RAG.');
     }
   };
   let savedSettings;try{savedSettings=sessionStorage.getItem('ai_rag_settings_open');}catch(_){}

@@ -3,11 +3,13 @@
   const tooltip = document.createElement('div'); tooltip.id = 'api-field-tooltip'; tooltip.role = 'tooltip'; tooltip.hidden = true; document.body.append(tooltip);
   const content = new WeakMap();
   const anchors = new WeakMap();
+  const clickOnly = new WeakSet();
   let current, hideTimer, pinned = false;
   const cancelHide = () => clearTimeout(hideTimer);
   const hide = () => { cancelHide(); tooltip.hidden = true; current?.removeAttribute('aria-describedby'); if (current && content.has(current)) current.setAttribute('aria-expanded', 'false'); current = null; pinned = false; };
   const scheduleHide = () => {
     cancelHide();
+    if (pinned && clickOnly.has(current)) return;
     hideTimer = setTimeout(() => {
       if (content.has(current) && tooltip.contains(document.activeElement)) return;
       if (!tooltip.matches(':hover') && !current?.matches(':hover') && document.activeElement !== current) hide();
@@ -45,7 +47,7 @@
     const left = (viewport?.offsetLeft || 0) + margin, top = (viewport?.offsetTop || 0) + margin;
     const right = left + (viewport?.width || document.documentElement.clientWidth) - margin * 2;
     const bottom = top + (viewport?.height || innerHeight) - margin * 2;
-    tooltip.style.maxWidth = Math.min(330, right - left) + 'px';
+    tooltip.style.maxWidth = Math.min(tooltip.querySelector('.http-debug-log') ? 760 : 330, right - left) + 'px';
     if (right - left < 36 || bottom - top < 36) return false;
     tooltip.style.maxHeight = bottom - top + 'px';
     const width = tooltip.offsetWidth, height = tooltip.offsetHeight;
@@ -60,11 +62,11 @@
     if (below < height && above < height && (sideRight + width <= right || sideLeft - width >= left)) {
       if (sideRight + width <= right) {
         tooltip.style.left = sideRight + 'px';
-        tooltip.style.maxWidth = Math.min(330, right - sideRight) + 'px';
+        tooltip.style.maxWidth = Math.min(tooltip.querySelector('.http-debug-log') ? 760 : 330, right - sideRight) + 'px';
       } else {
         tooltip.style.left = '';
         tooltip.style.right = innerWidth - sideLeft + 'px';
-        tooltip.style.maxWidth = Math.min(330, sideLeft - left) + 'px';
+        tooltip.style.maxWidth = Math.min(tooltip.querySelector('.http-debug-log') ? 760 : 330, sideLeft - left) + 'px';
       }
       const y = clamp(trigger.top, top, bottom - height);
       tooltip.style.top = y + 'px';
@@ -83,15 +85,17 @@
     }
     return true;
   }
-  function attach(button, render, anchor) {
+  function attach(button, render, anchor, {openOnHover = true} = {}) {
     if (anchor) anchors.set(button, anchor);
     if (render) {
       content.set(button, render);
       button.setAttribute('aria-haspopup', 'dialog');
       button.setAttribute('aria-controls', tooltip.id);
       button.setAttribute('aria-expanded', 'false');
-      button.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') show(button); });
-      button.addEventListener('pointerleave', scheduleHide);
+      if (openOnHover) {
+        button.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') show(button); });
+        button.addEventListener('pointerleave', scheduleHide);
+      } else clickOnly.add(button);
       button.addEventListener('click', event => {
         event.preventDefault(); event.stopPropagation();
         if (current === button && pinned) hide();
@@ -121,7 +125,7 @@
     if (current && content.has(current)) current.focus({preventScroll:true});
     hide();
   });
-  document.addEventListener('pointerdown', event => { if (!event.target.closest('.api-help, #api-field-tooltip')) hide(); });
+  document.addEventListener('pointerdown', event => { if (!current?.contains(event.target) && !event.target.closest('.api-help, #api-field-tooltip')) hide(); });
   document.addEventListener('scroll', event => { if (!tooltip.contains(event.target)) hide(); }, true);
   window.FieldHelp = { attach, show, hide };
 })();

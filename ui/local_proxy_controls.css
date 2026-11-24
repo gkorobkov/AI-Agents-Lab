@@ -80,5 +80,11 @@ html[data-theme="light"] .proxy-option input[type="checkbox"] { color-scheme: li
   border-color: var(--proxy-action-color);
 }
 .proxy-popover small { display: block; overflow-wrap: anywhere; }
+.proxy-popover [role="status"] { margin-top:8px; padding-top:6px; border-top:1px solid var(--border); font:11px/1.5 var(--mono, monospace); }
+.proxy-popover [role="status"] > span { display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px; }
+.proxy-popover .proxy-status-label { color:var(--text-muted, var(--muted)); }
+.proxy-popover form > button { flex:0 0 auto; line-height:20px; }
+.proxy-popover input { width:100%; line-height:20px; }
+@media(max-width:400px) { .proxy-popover form > label,.proxy-popover form > button { flex-basis:100%; width:100%; } }
 .proxy-popover [role="alert"] { width: 100%; color: #f17075; }
 .proxy-popover [role="alert"]:empty { display: none; }
