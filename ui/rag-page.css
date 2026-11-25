@@ -172,14 +172,21 @@
 .rag-settings-panel .rag-settings-fields .connection-resource > button { min-height:30px; height:30px; }
 .rag-settings-panel .rag-settings-fields .compact-select-trigger { min-height:30px; height:30px; }
 @container(min-width:40rem) {
-  .rag-settings-fields .connection-fields { align-items:end; padding-bottom:18px; }
-  .rag-settings-fields .connection-fields:has(#rag-cluster-status) { padding-bottom:0; }
+  .rag-settings-fields .connection-fields { align-items:end; }
   .rag-settings-fields .connection-list { position:relative; align-self:end; }
   .rag-settings-fields .connection-list > :is(#rag-cluster-status,#rag-embedding-status) { position:absolute; top:100%; left:0; right:0; }
 }
 .rag-embedding-provider-control { display: flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; }
 .rag-settings-panel .rag-embedding-provider { display: flex; flex-direction: row; align-items: center; gap: 8px; min-width: 0; }
 .rag-settings-panel .rag-embedding-provider-control { width:100%; margin:0; }
+.rag-settings-panel .rag-embedding-provider-control > input { flex:1; min-width:0; }
+.rag-profile-dialog { width:min(26rem,calc(100% - 24px)); box-sizing:border-box; padding:12px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:6px; }
+.rag-profile-dialog::backdrop { background:rgb(0 0 0 / 50%); }
+.rag-profile-dialog p { margin:0 0 10px; overflow-wrap:anywhere; }
+.rag-profile-dialog .actions { justify-content:flex-end; }
+.rag-shared-profile { position:relative; }
+.rag-settings-panel .rag-provider-usage { position:absolute; inset:100% 0 auto; margin:1px 0 0; font:var(--settings-font-control)/12px var(--mono); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rag-provider-usage.is-inactive { visibility:hidden; }
 .rag-settings-panel .rag-embedding-provider-control > .rag-embedding-provider { flex:1 1 160px; }
 .rag-settings-panel .rag-embedding-provider-control .compact-select { flex:1 1 auto; width:100%; }
 .rag-settings-panel .rag-embedding-provider select { width: clamp(6rem, 38cqi, 13rem); min-width: 0; min-height: 28px; padding-block: 3px; }

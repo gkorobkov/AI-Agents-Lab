@@ -2,7 +2,6 @@
 (() => {
   if (!window.FieldHelp || !window.RagConsole) return;
   const help = {
-    provider: ['Подключение · RAG-система', 'Список RAG-система выбирает профиль подключения Qdrant: адрес сервера, API-ключ, использование прокси и коллекцию. Кнопки рядом позволяют переименовать, клонировать, добавить или удалить локальный профиль. Удаление профиля не удаляет коллекции на сервере. Профиль векторизации выбирается независимо.'],
     'qdrant-url': ['Qdrant · REST URL', 'Поле REST URL кластера Qdrant содержит адрес HTTP API вашего кластера, включая порт, если он нужен. Не добавляйте путь /collections. Для Docker с опубликованным портом 6333 при запросах из браузера на том же компьютере укажите http://localhost:6333. Через прокси в Docker Desktop можно использовать http://host.docker.internal:6333 для доступа к опубликованному порту хоста. Если прокси и Qdrant находятся в одной Docker-сети, используйте имя сервиса, например http://qdrant:6333. В этом случае включите use Proxy.'],
     'qdrant-key': ['Qdrant · API key', 'Поле API key Qdrant необязательно: оставьте его пустым, если авторизация на сервере отключена. При включённой авторизации укажите ключ, настроенный в Qdrant. Для изменений нужны права записи. Ключ сохраняется только в сессии вкладки в выбранном RAG-профиле. При смене имени сервера ключ нужно указать заново. Кнопка Удалить ключ удаляет сохранённый ключ.'],
     'neuraldeep-url': ['Векторизация · Base URL', 'Поле Base URL OpenAI API задаёт базовый адрес сервиса эмбеддингов, обычно с окончанием /v1. Приложение добавляет путь /embeddings для векторизации и /models для списка моделей.'],
@@ -48,7 +47,6 @@
     const title = nodes.map(node => node.textContent.trim()).join(' '); caption.append(document.createTextNode(title));
     nodes.forEach(node => node.remove()); label.prepend(caption); attach(caption, title, path, text, label.closest('.proxy-field, .rag-credential-slot') || label);
     caption.classList.add('connection-caption');
-    if(id==='provider')caption.append(' · ',document.getElementById('rag-qdrant-cloud'));
   }
   const summary = document.querySelector('#rag-model-prefixes > summary');
   if (summary) attach(summary, 'Префиксы модели', 'Векторизация · подготовка текста', 'Раздел Префиксы модели задаёт служебные строки, добавляемые к текстам перед векторизацией. Префикс документа используется для сохранения документов, префикс запроса — для семантического поиска. Оставьте поля пустыми, если документация вашей модели не требует таких строк.', summary.closest('details'));

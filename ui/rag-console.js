@@ -7,8 +7,8 @@
   const button=(text,fn,remove=false)=>{const n=el('button',undefined,remove?'small danger':'small');n.type='button';if(remove)n.innerHTML=trash;n.append(document.createTextNode(text));n.onclick=fn;return n;};
   const field=(title,id,value='',tag='input')=>{const l=el('label',title),n=el(tag);n.id='rag-'+id;n.value=value;l.append(n);return l;};
   const json=(value)=>{const d=el('details',undefined,'debug-section rag-json-panel'),heading=el('summary','JSON'),pre=el('pre');d.append(heading,pre);JsonViewer.create({pre,heading}).update(JSON.stringify(value,null,2));return d;};
-  function helpControl(host,title,text){
-    const icon=el('span','?','api-help');icon.setAttribute('role','button');icon.tabIndex=0;icon.setAttribute('aria-label','Справка: '+title);icon.dataset.helpPath='RAG · '+title;icon.dataset.helpText=text;host.append(icon);icon.addEventListener('click',event=>{event.stopPropagation();event.preventDefault();});FieldHelp.attach(icon,null,host);return icon;
+  function helpControl(host,title,text,anchor=host){
+    const icon=el('span','?','api-help');icon.setAttribute('role','button');icon.tabIndex=0;icon.setAttribute('aria-label','Справка: '+title);icon.dataset.helpPath='RAG · '+title;icon.dataset.helpText=text;host.append(icon);icon.addEventListener('click',event=>{event.stopPropagation();event.preventDefault();});FieldHelp.attach(icon,null,anchor);return icon;
   }
   const columnHelp={
     'Коллекция':'Колонка Коллекция показывает имя набора точек Qdrant. Нажмите имя, чтобы открыть документы и поиск этой коллекции.',
@@ -69,52 +69,95 @@
   bar.after(settings);
   const settingsGroup=el('div',undefined,'rag-settings-group');bar.before(settingsGroup);settingsGroup.append(bar,settings);
   const provider=$('provider').closest('label');
-  provider.append($('qdrant-cloud'));
+  for (const child of [...provider.childNodes]) if (child.nodeType===Node.TEXT_NODE) child.remove();
   provider.classList.add('rag-provider-control');
   bar.append(headingTitle,$('status'),connection,settingsToggle);heading.remove();
   bar.addEventListener('click',event=>{if(!event.target.closest('button,a,label,input,select,.api-help')&&getSelection().isCollapsed)setSettings(settings.hidden);});
   const connections=el('div',undefined,'rag-connections');
-  const qfields=el('section',undefined,'rag-settings-fields');
-  const efields=el('section',undefined,'rag-settings-fields');
-  const qdrantRow=el('div',undefined,'settings-field-grid rag-endpoint-row');
-  const embeddingRow=el('div',undefined,'settings-field-grid rag-endpoint-row');
-  const qdrantHeader=el('div',undefined,'rag-connection-header');
-  qdrantHeader.append(provider);provider.classList.add('connection-provider');
-  qfields.classList.add('connection-panel');qdrantRow.classList.add('connection-fields');qfields.append(qdrantHeader,qdrantRow);
   const providerSelect=$('embedding-provider');
-  const providerSettings=button('',()=>parent.appWorkspace?.openSettings('openai', {profile:providerSelect.value, sourceWindow:window}));
-  providerSettings.className='rag-provider-settings';
-  providerSettings.title='Открыть настройки OpenAI API';
-  providerSettings.setAttribute('aria-label',providerSettings.title);
-  providerSettings.innerHTML=settingsToggle.innerHTML;
+  const sharedProfiles=parent.OpenAIProviderProfiles;
   const providerControl=el('div',undefined,'rag-embedding-provider-control connection-provider connection-profile-row');
   const embeddingProviderLabel=providerSelect.closest('label');
   embeddingProviderLabel.querySelector('span').classList.add('sr-only');
-  providerControl.append(embeddingProviderLabel,providerSettings);
-  helpControl(providerControl,'Профиль векторизации','Список профилей векторизации выбирается независимо от RAG-системы. Сохранённые профили управляются в настройках OpenAI API; для собственного подключения выберите Custom.');
-  const embeddingHeader=el('div',undefined,'rag-connection-header');
-  embeddingHeader.append(el('h3','OpenAI API · Векторизация'));
-  const embeddingDocs=el('a','Описание →');embeddingDocs.href='docs.html#embeddings';embeddingDocs.target='_blank';embeddingDocs.rel='noopener';embeddingHeader.append(el('span','·'),embeddingDocs);
-  const embeddingModels=el('div',undefined,'rag-embedding-models');
-
-  efields.classList.add('connection-panel');embeddingRow.classList.add('connection-fields');efields.append(embeddingHeader,providerControl,embeddingRow,embeddingModels);
-  for (const [row, url, key] of [
-    [qdrantRow, 'qdrant-url', 'qdrant-key'],
-    [embeddingRow, 'neuraldeep-url', 'neuraldeep-key']
-  ]) {
-    const urlField = $(url).closest('.proxy-field');
-    urlField.classList.add('rag-url-setting');
-    row.append(urlField, $(key).closest('label'));
+  const providerActions=el('span',undefined,'connection-profile-actions');
+  const providerNotice=el('p','Этот профиль используется в Chat.','hint rag-provider-usage');
+  const providerProfile=el('div',undefined,'rag-shared-profile');
+  providerProfile.append(providerControl,providerNotice);
+  function changeProfile(action, values) {
+    try {
+      const id=sharedProfiles.change(providerSelect.value,action,values);
+      api.refreshEmbeddingProviders(id);
+      providerSelect.dispatchEvent(new Event('change',{bubbles:true}));
+    } catch (error) { api.status(error.message,true); }
   }
-  const collectionChoice=$('collection').closest('label');collectionChoice.classList.add('rag-collection-choice');qfields.append(collectionChoice);
+  function profileAction(title, icon, action) {
+    const control=button('',action);
+    control.title=title;control.setAttribute('aria-label',title);control.innerHTML=icon;
+    providerActions.append(control);
+    return control;
+  }
+  const renameProfile=profileAction('Переименовать профиль OpenAI API','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>',()=>{
+    const name=el('input');
+    name.value=providerSelect.selectedOptions[0].textContent;
+    name.setAttribute('aria-label','Имя профиля OpenAI API');
+    embeddingProviderLabel.hidden=true;
+    providerControl.prepend(name);
+    function finish(save) {
+      if (!name.isConnected) return;
+      name.remove();
+      embeddingProviderLabel.hidden=false;
+      if (save && name.value.trim() !== providerSelect.selectedOptions[0].textContent) changeProfile('update',{name:name.value.trim()});
+    }
+    name.addEventListener('blur',()=>finish(true));
+    name.addEventListener('keydown',event=>{
+      if (event.key!=='Enter' && event.key!=='Escape') return;
+      event.preventDefault();
+      finish(event.key==='Enter');
+      renameProfile.focus();
+    });
+    name.focus();name.select();
+  });
+  const cloneProfile=profileAction('Клонировать профиль OpenAI API','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>',()=>changeProfile('clone'));
+  const deleteProfile=profileAction('Удалить профиль OpenAI API',trash,()=>{
+    const id=providerSelect.value;
+    const dialog=el('dialog',undefined,'rag-profile-dialog');
+    const message=el('p','Удалить общий профиль «'+providerSelect.selectedOptions[0].textContent+'»?');
+    const actions=el('div',undefined,'actions');
+    const cancel=button('Отмена',()=>dialog.close());
+    cancel.autofocus=true;
+    actions.append(cancel,button('Удалить',()=>{
+      dialog.close();
+      if (providerSelect.value===id) changeProfile('delete');
+    },true));
+    dialog.setAttribute('aria-label','Удаление профиля OpenAI API');
+    dialog.append(message,actions);
+    dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+    document.body.append(dialog);
+    dialog.showModal();
+  });
+  function syncProviderActions() {
+    const id=providerSelect.value;
+    renameProfile.disabled=cloneProfile.disabled=!id;
+    deleteProfile.disabled=!id || !sharedProfiles.canDelete(id);
+    providerNotice.classList.toggle('is-inactive',!id || id!==sharedProfiles.active());
+  }
+  providerControl.append(embeddingProviderLabel,providerActions);
+  providerSelect.addEventListener('change',syncProviderActions);
+  new MutationObserver(syncProviderActions).observe(providerSelect,{childList:true});
+  window.addEventListener('storage',event=>{if(event.key==='ai_openai_active_profile') syncProviderActions();});
+  syncProviderActions();
+  const embeddingDocs=el('a','Описание →');
+  embeddingDocs.href='docs.html#embeddings';
+  embeddingDocs.target='_blank';
+  embeddingDocs.rel='noopener';
+  const embeddingModels=el('div',undefined,'rag-embedding-models');
+  const collectionChoice=$('collection').closest('label');
+  collectionChoice.classList.add('rag-collection-choice');
   const checkConnection = $('connect');
   checkConnection.textContent='Получить коллекции';
   const clusterCheck=button('Проверить подключение',()=>api.checkCluster());
   clusterCheck.id='rag-check-cluster';
   const clusterStatus=el('span',undefined,'hint');clusterStatus.id='rag-cluster-status';clusterStatus.setAttribute('role','status');
-  const clusterActions=el('div',undefined,'rag-cluster-actions');clusterActions.append(clusterCheck,clusterStatus);qfields.append(clusterActions);
-  helpControl(clusterActions,'Подключение к кластеру','Запрос GET /readyz к адресу из поля REST URL кластера Qdrant проверяет, готов ли сервер принимать запросы. Если заполнено поле API-ключ Qdrant, ключ передаётся в заголовке api-key. При включённом use Proxy запрос проходит через общий прокси, иначе — напрямую из браузера с учётом CORS. Ответ HTTP 200 означает готовность сервера. Эта проверка не подтверждает права на операции с коллекциями.');
-  const qshell=el('div',undefined,'connection-card-shell'),eshell=el('div',undefined,'connection-card-shell');qshell.append(qfields);eshell.append(efields);connections.append(qshell,eshell);
   settings.append(connections);
   const ragProfileSelect=el('select');ragProfileSelect.id='rag-connection-profile';provider.append(ragProfileSelect);$('provider').hidden=true;
   CompactSelect.attach(ragProfileSelect, {label:'RAG-система'});
@@ -153,11 +196,6 @@
   qdrantResource.append(clusterCheck);
   helpControl(qdrantResource,'Подключение к кластеру','Запрос GET /readyz к адресу из поля REST URL кластера Qdrant проверяет, готов ли сервер принимать запросы. Если заполнено поле API-ключ Qdrant, ключ передаётся в заголовке api-key. При включённом use Proxy запрос проходит через общий прокси, иначе — напрямую из браузера с учётом CORS. Ответ HTTP 200 означает готовность сервера. Эта проверка не подтверждает права на операции с коллекциями.');
   qdrantResource.append(logs,clusterStatus);qdrantList.append(qdrantResource,collectionChoice);
-  qdrantHeader.classList.add('connection-provider');
-  const qurl=$('qdrant-url').closest('.proxy-field'),qkey=$('qdrant-key').closest('label');
-  qdrantRow.replaceChildren(qdrantHeader,qurl,qkey,qdrantList);qfields.replaceChildren(qdrantRow);
-  const embeddingProvider=el('div',undefined,'connection-provider');embeddingProvider.append(embeddingHeader,providerControl);
-  const eurl=$('neuraldeep-url').closest('.proxy-field'),ekey=$('neuraldeep-key').closest('label');
   const embeddingResource=el('div',undefined,'connection-resource rag-model-inventory');
   const embeddingConnect=button('Получить список',()=>api.loadModels());
   embeddingConnect.id='rag-embedding-connect';
@@ -173,7 +211,9 @@
   if (!modelDetailsEnabled) modelBox.classList.add('rag-model-box-compact');
   const modelActions=el('div',undefined,'rag-model-actions'),modelLogRow=el('div',undefined,'rag-model-log-row');
   modelLogRow.append(createLogs(embeddingResource,'models'),$('embedding-status'));
-  modelActions.append(modelCaption);
+  const embeddingPurpose=el('div','Векторизация','connection-caption');
+  helpControl(embeddingPurpose,'Векторизация','Провайдер создаёт эмбеддинги для загрузки документов и семантического поиска через POST /embeddings. Модель выбирается в настройках коллекции.');
+  modelActions.append(embeddingPurpose,modelCaption);
   modelActions.append(filterModels);
   modelActions.append(modelLogRow);
   modelLogRow.prepend(embeddingConnect);
@@ -228,7 +268,10 @@
     renderModelList();
     embeddingReady=state==='ready';renderConnection();
   });
-  embeddingRow.replaceChildren(embeddingProvider,eurl,ekey,embeddingModels);efields.replaceChildren(embeddingRow);
+  for (const card of [
+    {title:'RAG-система', help:'Профиль Qdrant хранит адрес, API-ключ и маршрут подключения к векторной базе. Кнопки рядом со списком управляют локальным профилем.', links:[$('qdrant-cloud')], profile:provider, url:$('qdrant-url'), key:$('qdrant-key'), connection:qdrantList},
+    {title:'OpenAI API', help:'Изменения сохранённого профиля применяются везде, где он выбран. API-ключ общий для сохранённых профилей OpenAI API.', links:[embeddingDocs], profile:providerProfile, url:$('neuraldeep-url'), key:$('neuraldeep-key'), connection:embeddingModels}
+  ]) connections.append(ProviderPanel.create({...card, helpControl, className:'rag-settings-fields'}));
   const vectorization=$('vectorization');
   const tabs=el('nav',undefined,'rag-console-tabs');tabs.setAttribute('aria-label','Разделы кластера');$('workbench').before(tabs);
   const inventory=el('section'),aliases=el('section'),collection=el('details');inventory.id='rag-inventory';aliases.id='rag-aliases-panel';collection.id='rag-collection-panel';$('workbench').append(inventory,aliases,collection);
@@ -375,27 +418,30 @@
     const host=el('div',undefined,'rag-credential-slot');
     label.before(host);
     const clear=button('',()=>{
-      try{const slot=secretSlot(id);if(slot){sessionStorage.removeItem(slot);legacySecretSlots(id).forEach(key=>sessionStorage.removeItem(key));}}catch(_){}
+      const sharedKey=id==='neuraldeep-key' && providerSelect.value;
+      if (!sharedKey) {
+        try{const slot=secretSlot(id);if(slot){sessionStorage.removeItem(slot);legacySecretSlots(id).forEach(key=>sessionStorage.removeItem(key));}}catch(_){}
+      }
       input.value='';
       if(id==='qdrant-key')invalidate();
       else input.dispatchEvent(new Event('change', {bubbles:true}));
-      api.status('Ключ удалён из сессии.');
+      api.status(sharedKey?'Общий ключ OpenAI API удалён.':'Ключ удалён из сессии.');
     },true);
     clear.title=id==='qdrant-key'?'Удалить ключ Qdrant':'Удалить ключ векторизации';
     clear.setAttribute('aria-label',clear.title);
     host.append(label,clear);
     const slot=secretSlot(id);
-    try{if(slot&&!input.disabled)input.value=readSecret(id);}catch(_){}
+    try{if(slot&&!input.disabled&&(id!=='neuraldeep-key'||!providerSelect.value))input.value=readSecret(id);}catch(_){}
     input.addEventListener('input',()=>{
       const key=secretSlot(id);
-      try{if(key&&!input.disabled)sessionStorage.setItem(key,input.value);}catch(_){}
+      try{if(key&&!input.disabled&&(id!=='neuraldeep-key'||!providerSelect.value))sessionStorage.setItem(key,input.value);}catch(_){}
       if(id==='qdrant-key')invalidate();
     });
   }
-  for(const id of ['qdrant-url','neuraldeep-url'])$(id).addEventListener('input',()=>{const keyId=id==='qdrant-url'?'qdrant-key':'neuraldeep-key',input=$(keyId);if(!input.disabled)input.value=readSecret(keyId);if(id==='qdrant-url')invalidate();});
+  for(const id of ['qdrant-url','neuraldeep-url'])$(id).addEventListener('input',()=>{const keyId=id==='qdrant-url'?'qdrant-key':'neuraldeep-key',input=$(keyId);if(!input.disabled&&(id!=='neuraldeep-url'||!providerSelect.value))input.value=readSecret(keyId);if(id==='qdrant-url')invalidate();});
   $('neuraldeep-url').addEventListener('change', () => {
     const input = $('neuraldeep-key'), slot = secretSlot('neuraldeep-key');
-    try { if (!input.disabled && !input.value && slot) input.value = readSecret('neuraldeep-key'); } catch (_) {}
+    try { if (!providerSelect.value && !input.disabled && !input.value && slot) input.value = readSecret('neuraldeep-key'); } catch (_) {}
   });
   const selectSlot='ai_rag_selects:'+location.hostname;
   let selectedValues={};try{selectedValues=JSON.parse(sessionStorage.getItem(selectSlot)||'{}');}catch(_){}

@@ -35,6 +35,8 @@ Match the existing inline HTML/CSS/JavaScript style in `ui/index.html`: two-spac
 
 ## Connection layout
 
+- OpenAI API provider pickers in RAG and Chat use the same saved profiles. Do not add a separate Custom option. Reserve space for conditional notices and statuses, including «Этот профиль используется в Chat.», so showing or hiding them never moves nearby controls.
+
 - In RAG model settings, place `only Embeddings` directly below the `Список моделей (N)` caption in the left column. Keep the scrollable model field in the right column. Loading must preserve the controls' positions and the model field's dimensions. If a layout instruction is ambiguous, ask which element and position the user means before changing it.
 
 - Connection settings use a strict 2×2 grid on wide screens: provider/profile and URL in the first row, API key and connection/resource controls in the second. Align the top and bottom edges of corresponding inputs and buttons across columns. Help icons and log links are centered on the control row. Status text sits below the controls and must not shift their alignment. At narrow widths, stack the cells in their existing order. Verify alignment with browser element coordinates as well as screenshots after changing these panels.

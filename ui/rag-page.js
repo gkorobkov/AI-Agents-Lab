@@ -14,7 +14,10 @@
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) saved = {};
   Object.entries(fields).forEach(([name, id]) => { $(id).value = typeof saved[name] === typeof cfg[name] ? saved[name] : cfg[name]; });
   const qdrantProxy = ProxyControls.mount($('qdrant-url'), {onChange:() => { persist(); window.RagConsole?.transportChanged(); }});
-  const embeddingProxy = ProxyControls.mount($('neuraldeep-url'), {onChange:() => persist()});
+  const embeddingProxy = ProxyControls.mount($('neuraldeep-url'), {onChange:() => {
+    if (providerSelect.value) parent.OpenAIProviderProfiles.change(providerSelect.value, 'update', {useProxy:embeddingProxy.read()});
+    persist();
+  }});
   qdrantProxy.set(saved.qdrantUseProxy);
   embeddingProxy.set(saved.embeddingUseProxy);
   const proxyAddressChanged = () => { if (qdrantProxy.read()) window.RagConsole?.transportChanged(); };
@@ -49,38 +52,46 @@
   }
   function embeddingKey() {
     if (!providerSelect.value) return embeddingKeyField.value.trim();
-    const profile = parent.allOpenAIProfiles().find(item => item.id === providerSelect.value);
-    return profile ? parent.openAIRequestHeaders(profile).Authorization?.slice('Bearer '.length).trim() || '' : '';
+    return parent.OpenAIProviderProfiles.key();
   }
   function syncEmbeddingKeyDisplay() {
     embeddingKeyField.placeholder = providerSelect.value && embeddingKey() ? '••••••••' : '';
   }
   function updateEmbeddingProvider() {
     const selected = providerSelect.selectedOptions[0];
-    const url = selected.dataset.baseUrl || customEmbeddingUrl;
+    const url = selected.value ? selected.dataset.baseUrl : customEmbeddingUrl;
     const managed = Boolean(selected.value);
-    const changed = embeddingUrl.value !== url || embeddingUrl.disabled !== managed;
-    embeddingUrl.disabled = embeddingKeyField.disabled = managed;
-    if (managed) embeddingKeyField.value = '';
+    const changed = embeddingUrl.value !== url || activeProfile !== selected.value;
+    if (managed) {
+      embeddingKeyField.value = embeddingKey();
+      embeddingProxy.set(selected.dataset.useProxy === 'true');
+    }
     syncEmbeddingKeyDisplay();
     if (changed) {
       embeddingUrl.value = url;
       embeddingUrl.dispatchEvent(new Event('input', {bubbles:true}));
-      embeddingUrl.dispatchEvent(new Event('change', {bubbles:true}));
     }
   }
   function refreshEmbeddingProviders(selected) {
-    const profiles = parent.allOpenAIProfiles().filter(profile => typeof profile.baseUrl === 'string' && profile.baseUrl.trim());
-    providerSelect.replaceChildren(new Option('Custom', ''), ...profiles.map(profile => {
+    const profiles = parent.allOpenAIProfiles();
+    providerSelect.replaceChildren(...profiles.map(profile => {
       const option = new Option(profile.name, profile.id);
       option.dataset.baseUrl = profile.baseUrl;
+      option.dataset.useProxy = String(!!profile.useProxy);
       return option;
     }));
-    providerSelect.value = profiles.some(profile => profile.id === selected) ? selected : '';
+    const fallback = parent.OpenAIProviderProfiles.active();
+    providerSelect.value = [selected, fallback].find(id => profiles.some(profile => profile.id === id)) ?? profiles[0]?.id ?? '';
     updateEmbeddingProvider();
   }
   providerSelect.addEventListener('change', () => { rememberProfile(); updateEmbeddingProvider(); restoreProfile(); persist(); });
   embeddingUrl.addEventListener('input', () => { if (!providerSelect.value) customEmbeddingUrl = embeddingUrl.value; });
+  embeddingUrl.addEventListener('change', () => {
+    if (providerSelect.value) parent.OpenAIProviderProfiles.change(providerSelect.value, 'update', {baseUrl:embeddingUrl.value.trim().replace(/\/+$/, '')});
+  });
+  embeddingKeyField.addEventListener('change', () => {
+    if (providerSelect.value) parent.OpenAIProviderProfiles.setKey(embeddingKeyField.value);
+  });
   for (const id of profileFields) $(id).addEventListener('input', () => persist());
   const embeddingSources = [providerSelect, embeddingUrl, embeddingKeyField, embeddingProxy.input];
   for (const source of embeddingSources) {
@@ -91,8 +102,9 @@
   window.addEventListener('storage', event => {
     if (event.key === 'ai_openai_profiles') { refreshEmbeddingProviders(providerSelect.value); persist(); }
     if (event.key === 'ai_openai_key' && providerSelect.value) {
+      embeddingKeyField.value = embeddingKey();
       syncEmbeddingKeyDisplay();
-      embeddingKeyField.dispatchEvent(new Event('change'));
+      embeddingConnectionStatus();
     }
     if (event.key === LocalProxyTransport.storageKey && embeddingProxy.read()) embeddingConnectionStatus();
   });
@@ -539,5 +551,5 @@
       status('Сервер готов к запросам.');
     } catch(error) { if(generation!==window.RagConsole?.epoch)return;window.RagConsole?.connectionFailed(); throw error; }
   }, cfg.timeoutMs, $('check-cluster'));
-  window.RagWorkbench = {loadModels,get signal() { return controller?.signal; }, cancel: () => controller?.abort(), run, context, qdrant, loadPoint, browse, resetRecords, clearEditor, persist, status, pointId, checkCluster, fetchCollections, qdrantProxy};
+  window.RagWorkbench = {loadModels,refreshEmbeddingProviders,get signal() { return controller?.signal; }, cancel: () => controller?.abort(), run, context, qdrant, loadPoint, browse, resetRecords, clearEditor, persist, status, pointId, checkCluster, fetchCollections, qdrantProxy};
 })();
