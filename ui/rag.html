@@ -5,30 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RAG · базы знаний — AI Agents Lab</title>
   <script>if (window === window.parent) location.replace('./?page=rag');</script>
-  <link rel="stylesheet" href="tools-page.css?v=1.6.4">
-  <link rel="stylesheet" href="rag-page.css?v=1.6.4">
-  <link rel="stylesheet" href="compact-select.css?v=1.6.4">
-  <link rel="stylesheet" href="provider-panels.css?v=1.6.4">
-  <link rel="stylesheet" href="model-picker.css?v=1.6.4">
-  <link rel="stylesheet" href="field-help.css?v=1.6.4">
-  <link rel="stylesheet" href="local_proxy_controls.css?v=1.6.4">
-  <link rel="stylesheet" href="scrollbars.css?v=1.6.4">
-  <link rel="stylesheet" href="credential-fields.css?v=1.6.4">
-  <script src="app-content.js?v=1.6.4"></script>
-  <script src="field-help.js?v=1.6.4" defer></script>
-  <script src="local_proxy_transport.js?v=1.6.4" defer></script>
-  <script src="local_proxy_controls.js?v=1.6.4" defer></script>
-  <script src="model-picker.js?v=1.6.4" defer></script>
-  <link rel="stylesheet" href="json-viewer.css?v=1.6.4">
-  <script src="json-viewer.js?v=1.6.4" defer></script>
-  <script src="http-debug.js?v=1.6.4" defer></script>
-  <link rel="stylesheet" href="http-debug.css?v=1.6.4">
-  <script src="rag-page.js?v=1.6.4" defer></script>
-  <script src="compact-select.js?v=1.6.4" defer></script>
-  <script src="provider-panel.js?v=1.6.4" defer></script>
-  <script src="rag-console.js?v=1.6.4" defer></script>
-  <script src="rag-profiles.js?v=1.6.4" defer></script>
-  <script src="rag-field-help.js?v=1.6.4" defer></script>
+  <link rel="stylesheet" href="tools-page.css?v=1.6.5">
+  <link rel="stylesheet" href="rag-page.css?v=1.6.5">
+  <link rel="stylesheet" href="compact-select.css?v=1.6.5">
+  <link rel="stylesheet" href="provider-panels.css?v=1.6.5">
+  <link rel="stylesheet" href="model-picker.css?v=1.6.5">
+  <link rel="stylesheet" href="field-help.css?v=1.6.5">
+  <link rel="stylesheet" href="local_proxy_controls.css?v=1.6.5">
+  <link rel="stylesheet" href="scrollbars.css?v=1.6.5">
+  <link rel="stylesheet" href="credential-fields.css?v=1.6.5">
+  <script src="app-content.js?v=1.6.5"></script>
+  <script src="field-help.js?v=1.6.5" defer></script>
+  <script src="local_proxy_transport.js?v=1.6.5" defer></script>
+  <script src="local_proxy_controls.js?v=1.6.5" defer></script>
+  <script src="model-picker.js?v=1.6.5" defer></script>
+  <link rel="stylesheet" href="json-viewer.css?v=1.6.5">
+  <script src="json-viewer.js?v=1.6.5" defer></script>
+  <script src="http-debug.js?v=1.6.5" defer></script>
+  <link rel="stylesheet" href="http-debug.css?v=1.6.5">
+  <script src="rag-page.js?v=1.6.5" defer></script>
+  <script src="compact-select.js?v=1.6.5" defer></script>
+  <script src="provider-panel.js?v=1.6.5" defer></script>
+  <script src="rag-console.js?v=1.6.5" defer></script>
+  <script src="rag-profiles.js?v=1.6.5" defer></script>
+  <script src="rag-field-help.js?v=1.6.5" defer></script>
 </head>
 <body>
   <header><a href="./?page=rag">AI Agents Lab · RAG →</a></header>
@@ -37,22 +37,6 @@
     <p class="hint rag-intro">Текст → эмбеддинг NeuralDeep → коллекция Qdrant. Хранение и CRUD выполняет Qdrant, векторизацию — NeuralDeep.</p>
     <div id="rag-status" role="status" aria-live="polite"></div>
     <fieldset id="rag-workbench">
-      <details id="rag-vectorization">
-        <summary>Настройки векторизации и поиска</summary>
-        <p class="hint">Для существующей коллекции используйте ту же модель и правила подготовки текста, что и при индексации.</p>
-        <div class="settings-field-grid rag-vectorization-row">
-          <label>Модель эмбеддингов<input id="rag-model" spellcheck="false" autocomplete="off"></label>
-          <label>Имя вектора в коллекции<input id="rag-vector-name" placeholder="Без имени" spellcheck="false"></label>
-        </div>
-        <details id="rag-model-prefixes">
-          <summary>Префиксы модели</summary>
-          <p class="hint">Добавляются перед текстом документа или поискового запроса. Оставьте поля пустыми, если модель не требует префиксов.</p>
-          <div class="settings-field-grid rag-vectorization-row">
-            <label>Префикс документа<input id="rag-document-prefix" spellcheck="false"></label>
-            <label>Префикс запроса<input id="rag-query-prefix" spellcheck="false"></label>
-          </div>
-        </details>
-      </details>
       <div class="rag-columns">
         <aside>
           <details class="rag-connection" open>
@@ -76,34 +60,48 @@
         </aside>
         <div class="rag-workspace">
           <section class="rag-editor ym-hide-content">
-            <div class="rag-section-head"><h2>03 · Документ</h2><button id="rag-new" type="button" class="small">Новый / очистить</button></div>
-            <label>ID документа<input id="rag-id" autocomplete="off" placeholder="UUID или целое число · пусто для нового UUID" spellcheck="false"></label>
-            <div class="actions"><button id="rag-read" type="button">Прочитать по ID</button></div>
+            <div class="rag-lookup-row">
+              <label>ID документа<input id="rag-id" autocomplete="off" placeholder="UUID или целое число" spellcheck="false"></label>
+              <div class="actions"><button id="rag-read" type="button">Найти по ID</button><button id="rag-clear-id" type="button">Очистить</button></div>
+            </div>
+            <div id="rag-edit-document" hidden>
             <label>Текст документа<textarea id="rag-text" rows="5" placeholder="Текст для базы знаний"></textarea></label>
-            <details><summary>Метаданные · JSON-объект</summary><label class="sr-only" for="rag-metadata">Метаданные документа</label><textarea id="rag-metadata" class="code" rows="4" spellcheck="false"></textarea><p class="hint" id="rag-text-field-note"></p></details>
-            <div class="actions rag-editor-actions"><button id="rag-create" type="button" class="primary">Создать документ</button><button id="rag-update" type="button">Обновить по ID</button><button id="rag-delete" type="button" class="danger">Удалить по ID</button></div>
-            <p class="hint">Создание проверяет свободный ID. Обновление заменяет текст, вектор и метаданные существующего документа. Перед редактированием прочитайте документ по ID.</p>
+            <label class="rag-optional-document">Метаданные (JSON)<textarea id="rag-metadata" class="code" rows="3" spellcheck="false"></textarea></label>
+            <div class="actions rag-editor-actions"><button id="rag-update" type="button" class="primary">Сохранить изменения</button><button id="rag-delete" type="button" class="danger">Удалить документ</button></div>
+            </div>
           </section>
-          <section>
-            <h2 id="rag-files-heading">04 · Загрузка файлов</h2>
-            <label>Текстовые файлы<input id="rag-files" type="file" multiple aria-describedby="rag-files-hint"></label>
+          <section id="rag-add-files">
+            <div class="rag-file-row">
+              <input id="rag-files" type="file" multiple hidden aria-describedby="rag-files-hint">
+              <button id="rag-pick-files" type="button" aria-describedby="rag-files-hint">Выбрать файлы</button>
+              <div id="rag-file-list" class="hint ym-hide-content" aria-live="polite">Файлы не выбраны.</div>
+            </div>
             <p class="hint" id="rag-files-hint"></p>
-            <div id="rag-file-list" class="hint ym-hide-content" aria-live="polite">Файлы не выбраны.</div>
             <div class="actions"><button id="rag-upload" type="button" class="primary">Загрузить в коллекцию</button><button id="rag-clear-files" type="button">Очистить список</button></div>
-            <p class="hint">Каждый файл разбивается на фрагменты с отдельными UUID. Имя файла, номер фрагмента и ID импорта сохраняются в метаданных. Повторная загрузка создаёт новые записи. PDF, DOCX и изображения предварительно сохраните как текст UTF-8.</p>
+            <p class="hint">Каждый фрагмент получает UUID и метаданные об исходном файле. Повторный импорт создаёт новые записи.</p>
           </section>
           <section>
-            <div class="rag-section-head"><h2>05 · Документы коллекции</h2><button id="rag-browse" type="button" class="small">Все документы / обновить</button></div>
+            <button id="rag-browse" type="button" class="small" aria-label="Обновить документы">Обновить документы</button>
+            <p id="rag-records-notice" class="hint" role="status"></p>
             <div id="rag-records" class="rag-records ym-hide-content"><p class="hint">Документы ещё не загружены.</p></div>
-            <button id="rag-next" type="button" class="small" hidden>Следующая страница →</button>
+            <div class="actions rag-document-pagination">
+              <button id="rag-prev" type="button" class="small" hidden>← Предыдущая</button>
+              <button id="rag-next" type="button" class="small" hidden>Следующая →</button>
+            </div>
           </section>
           <section class="ym-hide-content">
-            <h2>06 · Семантический поиск</h2>
-            <label>Поисковый запрос<textarea id="rag-query" rows="2" placeholder="Что найти в базе знаний?"></textarea></label>
-            <div class="rag-search-actions"><label>Top K<input id="rag-top-k" type="number" min="1" max="100" step="1"></label><button id="rag-search" type="button" class="primary">Найти по смыслу</button></div>
-            <div id="rag-results" class="rag-records"><p class="hint">Результаты поиска появятся здесь.</p></div>
+            <div class="rag-search-form">
+              <label>Поисковый запрос<textarea id="rag-query" rows="2" placeholder="Что найти в коллекции?"></textarea></label>
+              <div class="rag-search-actions"><label>Top K<input id="rag-top-k" type="number" min="1" max="100" step="1"></label><button id="rag-search" type="button" class="primary">Найти по смыслу</button><button id="rag-clear-search" type="button">Очистить</button></div>
+            </div>
+            <div id="rag-results" class="rag-records" hidden></div>
           </section>
         </div>
+        <section id="rag-create-document" class="ym-hide-content">
+          <label>Текст документа<textarea id="rag-new-text" rows="5" placeholder="Текст для базы знаний"></textarea></label>
+          <label class="rag-optional-document">Метаданные JSON (необязательно)<textarea id="rag-new-metadata" class="code" rows="3" spellcheck="false"></textarea></label>
+          <div class="actions"><button id="rag-create" type="button" class="primary">Создать документ</button></div>
+        </section>
       </div>
     </fieldset>
   </main>

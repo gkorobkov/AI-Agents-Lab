@@ -2,6 +2,10 @@
   const $ = id => document.getElementById(id);
   let lang = localStorage.getItem('n8n_lang') || (navigator.language.startsWith('ru') ? 'ru' : 'en');
   const sections = [...document.querySelectorAll('main details')];
+  const examples = [...document.querySelectorAll('[data-doc-json]')].map(pre => ({
+    body: pre.textContent,
+    viewer: JsonViewer.create({pre, heading:pre.previousElementSibling, language:() => lang})
+  }));
   function syncToggle() {
     const expanded = sections.length > 0 && sections.every(section => section.open);
     const caption = lang === 'ru' ? (expanded ? 'Свернуть все разделы' : 'Раскрыть все разделы') : (expanded ? 'Collapse all sections' : 'Expand all sections');
@@ -15,6 +19,7 @@
     document.documentElement.lang = lang;
     document.title = (lang === 'ru' ? 'Доки' : 'Docs') + ' — AI Agents Lab';
     document.querySelectorAll('[data-ru]').forEach(item => { item.textContent = item.dataset[lang]; });
+    examples.forEach(({body, viewer}) => viewer.update(body));
     $('lang').textContent = lang === 'ru' ? 'EN' : 'RU';
     syncToggle();
   }

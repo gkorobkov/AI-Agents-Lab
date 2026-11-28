@@ -1,11 +1,22 @@
 .http-debug-section { margin-top:7px; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--bg); }
-.http-debug-section > summary { display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:7px 9px; color:var(--text-muted,var(--muted)); background:rgba(136,152,184,.05); font:11px/1.5 var(--font-mono,var(--mono)); cursor:pointer; }
-.http-debug-section[open] > summary { border-bottom:1px solid var(--border); }
-.http-debug-section .debug-section-badge { padding:2px 5px; border:1px solid rgba(0,200,255,.2); border-radius:9px; color:var(--accent2,var(--cyan)); font-size:8px; }
-.http-debug-section .dbg-copy { margin-left:auto; flex:0 0 24px; width:24px; min-height:24px; padding:0; border:0; background:transparent; color:var(--text-muted,var(--muted)); cursor:pointer; }
+.http-debug-section > summary.http-debug-heading { box-sizing:border-box; display:flex; align-items:center; flex-wrap:nowrap; gap:6px; height:34px; min-height:34px; margin:0; padding:0 8px; border:0; border-bottom:1px solid transparent; border-radius:0; list-style:none; color:var(--text-muted,var(--muted)); background:rgba(136,152,184,.05); font:11px/1.5 var(--font-mono,var(--mono)); cursor:pointer; }
+.http-debug-section[open] > summary.http-debug-heading { border-bottom-color:var(--border); }
+.http-debug-section > summary.http-debug-heading::-webkit-details-marker { display:none; }
+.http-debug-section > summary.http-debug-heading::before { content:'▸'; flex:none; color:var(--accent2,var(--cyan)); transform:none; }
+.http-debug-section[open] > summary.http-debug-heading::before { content:'▾'; transform:none; }
+.http-debug-heading .http-debug-caption { display:flex; gap:6px; align-items:center; flex:1 1 auto; min-width:0; white-space:nowrap; }
+.http-debug-heading .http-debug-caption strong:first-child { flex:none; }
+.http-debug-url { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.http-debug-url a { color:inherit; }
+.http-debug-heading button.http-debug-copy { flex:0 0 24px; width:24px; padding:0; border:0; background:transparent; color:var(--text-muted,var(--muted)); cursor:pointer; }
+.http-debug-heading .debug-view-toggle { margin:0; }
+.http-debug-heading button.http-debug-copy,
+.http-debug-heading .debug-view-toggle > button,
+.http-debug-heading button.debug-response-headers-toggle { box-sizing:border-box; min-height:0; height:22px; line-height:1; margin:0; }
+.http-debug-heading .debug-view-toggle > button { padding:0 5px; }
 .http-debug-section pre { margin:0; padding:10px; max-height:260px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font:11px/1.6 var(--font-mono,var(--mono)); }
-.http-debug-metadata,.http-debug-section .debug-response-headers { margin:6px 10px; overflow-wrap:anywhere; font:11px/1.7 var(--font-mono,var(--mono)); }
-.http-debug-section .debug-response-headers-toggle { min-height:24px; padding:0; border:0; background:transparent; color:#89b6cb; font:11px/1.5 var(--font-mono,var(--mono)); cursor:pointer; }
+.http-debug-section .debug-response-headers { margin:6px 10px; overflow-wrap:anywhere; font:11px/1.7 var(--font-mono,var(--mono)); }
+.http-debug-heading button.debug-response-headers-toggle { flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0; border:0; background:transparent; color:#89b6cb; font:11px/1 var(--font-mono,var(--mono)); cursor:pointer; }
 .http-debug-section .debug-response-headers-toggle::before { content:'▸'; margin-right:4px; }
 .http-debug-section .debug-response-headers-toggle[aria-expanded=true]::before { content:'▾'; }
 .http-debug-record { margin:8px 0; }
@@ -13,6 +24,29 @@
 .http-debug-record + .http-debug-record { padding-top:8px; border-top:1px solid var(--border); }
 #api-field-tooltip:has(.http-debug-log) { width:min(760px,calc(100vw - 16px)); max-width:min(760px,calc(100vw - 16px)); white-space:normal; }
 .http-debug-log { min-width:0; }
-.rag-settings-panel .connection-resource button.http-debug-log-link { border:0; border-radius:0; background:transparent; box-shadow:none; padding:0 2px; color:color-mix(in srgb,var(--accent2,var(--cyan)) 36%,var(--text-muted,var(--muted))); text-decoration:underline; font:inherit; cursor:pointer; }
-.rag-settings-panel .rag-model-actions button.http-debug-log-link { min-height:0; padding:0; }
-.rag-settings-panel .http-debug-log-link:focus-visible { outline:1px solid var(--accent2,var(--cyan)); outline-offset:3px; }
+.http-debug-log .http-debug-filter { display:flex; flex-direction:row; align-items:center; gap:8px; margin:0 0 5px; white-space:nowrap; }
+.http-debug-filter input { min-width:0; width:100%; padding:2px 5px; height:26px; font:inherit; }
+.http-debug-filter input::-webkit-search-cancel-button {display:none;}
+.http-debug-log-heading {display:flex;align-items:flex-start;gap:6px;}
+.http-debug-log-heading > label {flex:1;min-width:0;}
+.http-debug-log-heading > .http-debug-log-close {flex:none;min-height:26px;min-width:26px;padding:0;font-size:15px;line-height:1;}
+.http-debug-log-heading > .http-debug-log-clear {flex:none;min-height:26px;padding:0 6px;}
+.http-debug-log-list .http-debug-record { margin:0; padding:0; border:0; border-bottom:1px solid var(--border); }
+.http-debug-record > summary.http-debug-record-heading { display:flex; align-items:center; gap:6px; min-height:28px; margin:0; padding:2px 4px; border:0; background:transparent; list-style:none; white-space:nowrap; }
+.http-debug-record-heading::-webkit-details-marker { display:none; }
+.http-debug-record > summary.http-debug-record-heading::before { content:'▸'; margin:0; }
+.http-debug-record[open] > .http-debug-record-heading::before { content:'▾'; }
+.http-debug-record-url { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.http-debug-record-url a { color:inherit; }
+.http-debug-record-time,.http-debug-record-status,.http-debug-record-duration,.http-debug-record-action { flex:none; color:var(--text-muted,var(--muted)); }
+.http-debug-record-action {width:8ch;overflow:hidden;text-overflow:ellipsis;}
+.http-debug-record-warning,.http-debug-client-issue {color:var(--error,#f17075);}
+.http-debug-client-issue {margin:0;padding:5px 8px;border-top:1px solid var(--border);white-space:normal;overflow-wrap:anywhere;}
+@media(max-width:480px){.http-debug-record-date{display:none;}}
+.http-debug-record[open] { padding-bottom:5px; }
+.http-debug-record .http-debug-exchange { border:1px solid var(--border); border-radius:6px; overflow:hidden; background:var(--bg); }
+.http-debug-record .http-debug-exchange > .http-debug-section { margin:0; border:0; border-radius:0; }
+.http-debug-record .http-debug-exchange > .http-debug-section + .http-debug-section { border-top:1px solid var(--border); }
+:root button.http-debug-log-link { border:0; border-radius:0; background:transparent; box-shadow:none; min-height:28px; padding:2px 6px; color:var(--text-muted,var(--muted)); text-decoration:underline; font:11px var(--font-mono,var(--mono)); cursor:pointer; }
+:root button.http-debug-log-link:hover {color:var(--accent2,var(--cyan));}
+:root button.http-debug-log-link:focus-visible { outline:1px solid var(--accent2,var(--cyan)); outline-offset:2px; }

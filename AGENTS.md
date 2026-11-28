@@ -31,7 +31,7 @@ Keep the site's UI vertically compact. Match navigation and lab bars to the stan
 
 Match the existing inline HTML/CSS/JavaScript style in `ui/index.html`: two-space indentation, compact DOM helpers, CSS custom properties for theme colors, and `CFG_` prefixes for configuration constants. Reuse existing components and variables instead of introducing a framework or external dependency. Keep mobile rules near the existing responsive media queries.
 
-- The RAG «Проверить подключение» button sends only GET `/readyz` to check server readiness. It must not fetch collections or their details. Collection loading belongs to the collection section's own controls.
+- The RAG «Проверить подключение» button checks readiness with GET `/readyz` and reads the responding Qdrant instance version with GET `/`. Display both results in the reserved connection status and record both requests in the connection log. Collection loading belongs to the collection section's own controls.
 
 ## Connection layout
 
@@ -43,14 +43,41 @@ Match the existing inline HTML/CSS/JavaScript style in `ui/index.html`: two-spac
 
 ## Shared UI consistency
 
+- Keep UI text selectable throughout the application, including tab captions. Selecting text within a tab must not activate it.
+- Keep layout stable when transient labels, statuses, progress, notices, or validation messages appear, change, or clear. Use space reserved in all states or an out-of-flow surface. Never insert a status row that moves nearby controls. Verify element coordinates during pending, success, and failure states.
+- Keep editable document metadata visible in the form and give it, text fields, and embedding model pickers standard help controls. Avoid duplicate headings and standalone explanations in semantic search. Put search scope in the query help and show the result area after a search.
+- Label the selected collection settings tab «Параметры». Put editable vector and collection fields first and synchronize their changes immediately with the editable JSON request below. Read the server configuration again after applying changes.
+- In «Добавить», show the target vector with its dimension and distance metric. Create a separate named dense vector from «Параметры» on supported Qdrant instances. Keep its dimension and metric fixed after creation, and guide users to a new collection if the existing schema uses an unnamed vector.
+- In the collection header and table, format named vectors as `name (dimension · metric)` and separate multiple vectors with a comma. For an unnamed vector show only `dimension · metric`.
+- Allow collection tabs to be reordered live with a dedicated drag handle at the far right and remember their order. Place the standard help control immediately after the tab caption, before auxiliary actions.
+- In collection headers, show vector size and metric alongside the other metadata. Keep document cards compact and show the text once. Use low-emphasis icon buttons for collection actions and compact summaries for JSON viewers.
+- In «Добавить», place one shared settings block above the source switch for text and files. Both sources use the same model, target vector, chunk length, overlap, and batch size. Use the same settings block style for document editing. Show a single filename with its size in file import. Assign new document IDs automatically. Label manually entered metadata optional and keep it in the text source.
+- Keep «По ID» as one tab with one lookup field and document and point JSON modes. Provide clear controls for ID lookup, semantic search, collection search, and the request journal's URL filter. Preserve the operation settings when clearing a search.
+- Give RAG collection tasks dedicated tabs for browsing, adding documents, lookup and editing by ID, semantic search, collection parameters, indexes, and snapshots. Put model, vector selection, and the relevant prefix in the operation that uses them. For adding and editing, prepend the document prefix to each fragment sent for embedding. For semantic search, prepend the query prefix to the search text. Preserve the original document text and the literal prefix, including trailing spaces. Offer horizontal and vertical tab layouts and remember the user's choice.
+
+- The RAG «Коллекция» panel has a static heading without a collapse control. Show the selected collection content while the panel is visible.
+
+- A tab that displays a list uses the label «Название (N)» followed by the standard help icon. Show «(…)» while the total is unknown and «(0)» for a confirmed empty list. The count refers to the whole list, not the current page. Place an available refresh action inside the tab outline, as in «Коллекции (2) ?». Avoid a duplicate title and refresh toolbar above the list.
+
+- Record each user-approved UI rule here and state in the handoff how it was interpreted and what was recorded.
+- All tabs use the same visual style across the UI, including their active and inactive states, unless the user explicitly requests an exception for a specific tab. If it is unclear whether a tab should follow the shared style or have a unique look, ask before changing it.
+- Highlight the entire tab outline on hover. The frame, label, and internal gaps all activate the tab. Help, refresh, and log controls inside the outline keep their own actions.
+- Keep the RAG collection table compact and use one help control for the collection column and its filter. Place the labelled icon buttons for editing, snapshots, and deletion in the rightmost column. Deleting a collection requires the exact phrase `удалить <collection name>` in a confirmation dialog.
+- In RAG, inactive tabs use the original «Коллекции» style: a visible border on the top and sides, transparent background, and a shared bottom baseline. Apply the same outline to every inactive tab. The «Коллекции» refresh control belongs inside its tab outline. Keep the active tab's accent fill and underline.
+
 - Preserve the site's established styles for parameter/value pairs, JSON viewers, panels, tabs, dropdowns, buttons, and help popovers. Reuse existing components, CSS classes, typography, colors, spacing, and interaction patterns before adding a new style. Present the same kind of element consistently across pages; avoid page-specific visual variants without a functional reason.
 - Display metadata (IDs, status, model, counts, timing and similar parameters) as the standard labelled parameter/value pairs. Keep artifact hierarchy explicit: collection operations belong inside their collection, and sibling operations use the same tab style. A document-list tab starts with the list; creation/import actions belong in their own clearly named place.
 
 ## URL request visibility
 
-- Every outgoing URL request must record the request before sending and then its response or network error. Provide a compact nearby button, link, icon, or collapsible panel to inspect these records, including pending and failed requests. Show method, URL, HTTP status, and timing as standard labelled parameter/value pairs; show request and response JSON with the shared JsonViewer. Mask credentials and secrets in headers and echoed responses, and keep diagnostics in memory rather than persistent storage.
+- Open RAG logs as compact collapsed rows ordered by action label, HTTP method, URL, HTTP status, response duration, and request timestamp within each row. Limit the action label to eight characters and expose the full action and request purpose in its tooltip. Preserve the actual HTTP status when validation fails in the application, and show the validation issue separately. Render standard HttpDebug request and response sections only in expanded rows. Filter by any URL substring and show all requests when the filter is empty. Document logs include automatic loads, refresh, and pagination.
 
-- Use the shared `HttpDebug` component (`ui/http-debug.js` and `ui/http-debug.css`) for request/response presentation everywhere, including chat Debug and log popups. Keep method and URL separate from collapsible HTTP headers, mask secrets, and use JsonViewer only for actual bodies. GET/HEAD requests have no body or JSON view. RAG connection settings show only Connect, the standard help control, and `view logs`; the popup shows the three latest requests, never an inline journal or a duplicate collection list.
+- Use the same shared trigger and popup styling for every `view logs`. Place it immediately after the refresh control on the RAG «Коллекции» tab for the latest inventory refresh. Inside the selected collection use exactly one `view logs` at the far right of the collection header. This journal contains every request made for the selected collection, including automatic loads, document operations, vectorization, indexes, configuration, and snapshots. Open it with the URL filter empty so the full journal is visible.
+- Keep `view logs` open when the surrounding page scrolls. Provide a close button and support Escape. Preserve token usage counters and their detail objects when masking credentials in HTTP logs.
+
+- Every outgoing URL request must record the request before sending and then its response or network error. Provide a compact control to inspect these records, including pending and failed requests. For collection operations use the shared collection journal in the header. Show method, URL, HTTP status, and timing as standard labelled parameter/value pairs; show request and response JSON with the shared JsonViewer. Mask credentials and secrets in headers and echoed responses, and keep diagnostics in memory rather than persistent storage.
+
+- Render the full HTTP exchange everywhere through `HttpDebug.record` (`ui/http-debug.js` and `ui/http-debug.css`), including Chat Debug and RAG logs. Keep the same request/response markup and styles across hosts. Hosts can set data and the initial expanded state. Show the request start date and time in the exchange heading when available. Use the same 34px header for requests and responses in every host, including Chat and RAG. Put bold method and URL in the request header without labels. Use «Response» for the response header. Put the respective HTTP headers toggle in each header and omit source badges. Mask secrets and use JsonViewer only for actual bodies. GET/HEAD requests have no body or JSON view. RAG connection settings show only Connect, the standard help control, and `view logs`; the popup shows the three latest requests, never an inline journal or a duplicate collection list.
 
 ## JSON presentation
 
@@ -59,6 +86,9 @@ Match the existing inline HTML/CSS/JavaScript style in `ui/index.html`: two-spac
 - Always render read-only JSON using the shared site `JsonViewer` component (`ui/json-viewer.js` and its CSS), with the standard syntax colors and expand/collapse behavior. Do not display JSON as uncolored plain text or introduce a separate highlighter. Editable JSON fields may remain text editors; provide the standard colored viewer for previews and results.
 
 ## Help and Documentation UI
+
+- In «Доки», explain protocols, concepts, and API behavior independently of AI Agents Lab. Use «Помощь» to explain which UI controls perform those operations.
+- Whenever documentation introduces an HTTP operation (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, etc.), follow it immediately with a compact example showing the method and concrete path, plus the body or query parameters where applicable.
 
 - Use the shared `.api-help` spacing between a field caption and its help icon. Do not add local margins or gaps that make this spacing larger or smaller.
 

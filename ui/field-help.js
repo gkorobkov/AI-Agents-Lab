@@ -4,6 +4,7 @@
   const content = new WeakMap();
   const anchors = new WeakMap();
   const clickOnly = new WeakSet();
+  const keepOnScroll = new WeakSet();
   let current, hideTimer, pinned = false;
   const cancelHide = () => clearTimeout(hideTimer);
   const hide = () => { cancelHide(); tooltip.hidden = true; current?.removeAttribute('aria-describedby'); if (current && content.has(current)) current.setAttribute('aria-expanded', 'false'); current = null; pinned = false; };
@@ -18,7 +19,8 @@
   tooltip.addEventListener('pointerenter', cancelHide);
   tooltip.addEventListener('pointerleave', scheduleHide);
   tooltip.addEventListener('pointerdown', cancelHide);
-  const show = button => {
+  const show = (button, explicit = false) => {
+    if (pinned && keepOnScroll.has(current) && current !== button && !explicit) return;
     if (current === button && content.has(button)) { cancelHide(); return; }
     hide(); current = button; tooltip.replaceChildren();
     if (button.dataset.helpPath) { const path = document.createElement('div'); path.className = 'help-parameter-path'; path.textContent = button.dataset.helpPath; tooltip.append(path); }
@@ -28,7 +30,7 @@
       tooltip.append(render()); button.setAttribute('aria-expanded', 'true');
     } else {
       tooltip.setAttribute('role', 'tooltip'); tooltip.removeAttribute('aria-label');
-      const text = document.createElement('div'); text.textContent = button.dataset.helpText; tooltip.append(text);
+      const text = document.createElement('div'); text.className='help-description'; text.textContent = button.dataset.helpText; tooltip.append(text);
       button.setAttribute('aria-describedby', tooltip.id);
     }
     tooltip.hidden = false;
@@ -85,8 +87,9 @@
     }
     return true;
   }
-  function attach(button, render, anchor, {openOnHover = true} = {}) {
+  function attach(button, render, anchor, {openOnHover = true, persistOnScroll = false} = {}) {
     if (anchor) anchors.set(button, anchor);
+    if (persistOnScroll) keepOnScroll.add(button);
     if (render) {
       content.set(button, render);
       button.setAttribute('aria-haspopup', 'dialog');
@@ -100,7 +103,7 @@
         event.preventDefault(); event.stopPropagation();
         if (current === button && pinned) hide();
         else {
-          show(button);
+          show(button, true);
           if (!tooltip.hidden) {
             pinned = true;
             tooltip.querySelector('input, button')?.focus({preventScroll:true});
@@ -111,10 +114,18 @@
     }
     button.addEventListener('pointerenter', () => show(button)); button.addEventListener('pointerleave', scheduleHide);
     button.addEventListener('focus', () => show(button)); button.addEventListener('blur', scheduleHide);
-    button.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); show(button); });
-    button.addEventListener('keydown', event => { if (['Enter', ' ', 'Escape'].includes(event.key)) { event.preventDefault(); event.stopPropagation(); if (event.key === 'Escape') hide(); else show(button); } });
+    button.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); show(button, true); });
+    button.addEventListener('keydown', event => { if (['Enter', ' ', 'Escape'].includes(event.key)) { event.preventDefault(); event.stopPropagation(); if (event.key === 'Escape') hide(); else show(button, true); } });
   }
-  const reposition = () => { if (current && !position(current)) hide(); };
+  const reposition = () => {
+    if (!current) return;
+    const persist = pinned && keepOnScroll.has(current);
+    const previousStyle = persist ? tooltip.style.cssText : '';
+    if (!position(current)) {
+      if (persist) tooltip.style.cssText = previousStyle;
+      else hide();
+    }
+  };
   new ResizeObserver(reposition).observe(tooltip);
   window.addEventListener('resize', reposition);
   window.visualViewport?.addEventListener('resize', reposition);
@@ -125,7 +136,11 @@
     if (current && content.has(current)) current.focus({preventScroll:true});
     hide();
   });
-  document.addEventListener('pointerdown', event => { if (!current?.contains(event.target) && !event.target.closest('.api-help, #api-field-tooltip')) hide(); });
-  document.addEventListener('scroll', event => { if (!tooltip.contains(event.target)) hide(); }, true);
+  document.addEventListener('pointerdown', event => { if (!(pinned && keepOnScroll.has(current)) && !current?.contains(event.target) && !event.target.closest('.api-help, #api-field-tooltip')) hide(); });
+  document.addEventListener('scroll', event => {
+    if (tooltip.contains(event.target)) return;
+    if (pinned && keepOnScroll.has(current)) reposition();
+    else hide();
+  }, true);
   window.FieldHelp = { attach, show, hide };
 })();

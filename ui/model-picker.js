@@ -15,10 +15,11 @@
     document.body.append(popup);
     input.setAttribute('role','combobox'); input.setAttribute('aria-autocomplete','list'); input.setAttribute('aria-controls',popup.id); input.setAttribute('aria-expanded','false');
     button.setAttribute('aria-controls',popup.id); button.setAttribute('aria-expanded','false');
-    let controller = null, ids = [], visible = [], active = -1;
-    const label = () => { button.title = text('Загрузить список моделей','Load available models'); button.setAttribute('aria-label',button.title); };
+    let controller = null, ids = [], visible = [], active = -1, opening = 0;
+    const label = () => { button.title = options.getIds ? text('Выбрать модель', 'Choose model') : text('Загрузить список моделей','Load available models'); button.setAttribute('aria-label',button.title); };
     label();
     function close() {
+      opening++;
       if (controller) { controller.abort(); options.onResult?.(); }
       controller = null; popup.hidden = true;
       input.setAttribute('aria-expanded','false'); button.setAttribute('aria-expanded','false'); input.removeAttribute('aria-activedescendant');
@@ -59,6 +60,19 @@
       if (input.matches(':disabled') || input.readOnly) return;
       close(); label(); ids = []; visible = []; active = -1;
       popup.hidden = false; input.setAttribute('aria-expanded','true'); button.setAttribute('aria-expanded','true');
+      if (options.getIds) {
+        const requestId = opening;
+        status(text('Загрузка моделей…','Loading models…'));
+        try {
+          const loaded = await options.getIds();
+          if (requestId !== opening || popup.hidden) return;
+          ids = loaded;
+          render();
+        } catch (error) {
+          if (requestId === opening && !popup.hidden) status(error.message);
+        }
+        return;
+      }
       const loading = text('Загрузка моделей…','Loading models…');
       status(loading); options.onResult?.('loading', loading);
       const request = new AbortController(); controller = request;

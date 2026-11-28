@@ -30,6 +30,10 @@ h1{font-size:24px}h2{font-size:20px}h3{font-size:16px}.lead{font-size:14px;margi
 .toc a{min-height:40px;margin:3px 0;padding:5px 0 5px 12px}
 .toc a[aria-current="location"]{color:var(--accent);border-left:2px solid var(--accent);background:var(--accent-dim)}
 pre{white-space:pre-wrap;overflow-wrap:anywhere}p,li,code{overflow-wrap:anywhere}
+.docs-http-example { padding:6px 10px; margin:0 0 8px; border-left:2px solid var(--border); color:var(--accent2); background:var(--code); }
+#embeddings .docs-json-example { margin:0 0 12px; --text-muted:var(--muted); }
+#embeddings .docs-json-example > summary { width:auto; font-weight:400; }
+#embeddings .docs-json-example > pre, #embeddings .docs-json-example > .debug-json-tree { background:var(--code); }
 #toggle-all-sections{flex-shrink:0;align-self:center;display:grid;place-items:center;width:26px;height:26px;padding:3px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--accent2);cursor:pointer}
 #toggle-all-sections:hover,#toggle-all-sections:focus-visible{border-color:var(--accent2);background:var(--cyan-dim)}
 #toggle-all-sections svg{width:16px;height:16px}
